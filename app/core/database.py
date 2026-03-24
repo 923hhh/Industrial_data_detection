@@ -59,18 +59,26 @@ def get_engine() -> AsyncEngine:
     return _async_engine
 
 
-# Async session factory - configured once, reused across requests
-async_session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(
-    bind=get_engine(),
-    class_=AsyncSession,
-    expire_on_commit=False,  # Don't expire objects after commit
-    autoflush=False,  # Manual control for performance
-)
+# 全局会话工厂 (惰性初始化，避免 alembic 迁移时过早创建 engine)
+_async_session_factory: async_sessionmaker[AsyncSession] | None = None
+
+
+def _get_session_factory() -> async_sessionmaker[AsyncSession]:
+    """惰性创建 session factory，在第一次访问时才初始化."""
+    global _async_session_factory
+    if _async_session_factory is None:
+        _async_session_factory = async_sessionmaker(
+            bind=get_engine(),
+            class_=AsyncSession,
+            expire_on_commit=False,
+            autoflush=False,
+        )
+    return _async_session_factory
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """Dependency for FastAPI to inject async session per request."""
-    async with async_session_factory() as session:
+    async with _get_session_factory()() as session:
         try:
             yield session
         finally:
@@ -80,7 +88,7 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 @asynccontextmanager
 async def get_session_context() -> AsyncGenerator[AsyncSession, None]:
     """Context manager for sessions outside request scope (e.g., scripts)."""
-    async with async_session_factory() as session:
+    async with _get_session_factory()() as session:
         try:
             yield session
             await session.commit()

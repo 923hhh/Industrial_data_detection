@@ -1,40 +1,203 @@
 # Project Context: Industrial Fault Detection Backend
 
 ## 1. Role & Objective
-你现在是一位资深的 Python 后端架构师。我们正在开发一个用于工业故障检测的 FastAPI 后端系统，该系统未来需要支持 LangChain 多智能体接入，并具备从当前开发环境平滑迁移至生产环境的能力。
+
+你是一位资深的 Python 后端架构师。我们正在开发一个用于工业故障检测的 FastAPI 后端系统，该系统未来需要支持 LangChain 多智能体接入，并具备从当前开发环境平滑迁移至生产环境的能力。
 
 ## 2. Technology Stack & Constraints
+
 - **Framework**: Python 3.10+, FastAPI
 - **ORM**: SQLAlchemy 2.0 (必须使用 2.0 风格的 API)
 - **Validation**: Pydantic V2 (利用其原生异步支持)
 - **Database**: 开发期使用 SQLite (`aiosqlite`)，生产期迁移至 PostgreSQL (`asyncpg`)。代码必须保证这两者的兼容性。
+- **Agent Framework**: LangChain >= 0.2.0 (使用 `langchain.agents.create_agent` 和 LangGraph 架构)
 
 ## 3. Key Architectural Decisions
+
 - **Async Engine**: 必须使用 SQLAlchemy 2.0 的 AsyncEngine 以完美支持 FastAPI 的异步特性。
 - **Hybrid Storage Strategy**: 针对 HAI 数据集（约 170 个传感器标签），采用混合存储策略。核心索引字段（如 `id`, `timestamp`, 关键传感器）作为独立列，其余扩展传感器数据打包存入 `extra_sensors` JSONB 字段。这兼顾了查询性能与 Schema 的灵活性。
 - **Repository Pattern**: 服务层（Services）必须隔离数据库逻辑，为未来的 Agent 集成保持模块化纯洁度。
+- **Multi-Model Support**: 通过 `model_provider` 参数动态切换 OpenAI/DeepSeek/Anthropic，无硬编码依赖。
+- **Statistical Aggregation**: 大模型数据查询工具返回统计摘要（均值/极值）而非原始波形，解决上下文爆炸问题。
 
-## 4. Current State & Progress
-我们把开发分为 8 个 Phase。
-- **已完成**: Phase 1 至 Phase 7 已全面竣工。数据流已打通，且 `app/agents/diagnosis_agent.py` 已经具备了完整的 LangChain 故障诊断闭环能力（包含工具调用与报告生成）。
-- **当前进行中**: Phase 8 (API Endpoint for Agent 智能体路由层暴露)。
+## 4. Project Structure
 
-## 5. Immediate Task Instructions (Next Steps)
-为了让前端能够触发 AI 诊断，请协助我完成以下工作：
+```
+dachuang_project/
+├── app/
+│   ├── __init__.py
+│   ├── main.py                      # FastAPI 应用入口，lifespan 管理
+│   ├── agents/
+│   │   ├── __init__.py
+│   │   ├── tools.py                 # LangChain Tool 封装（含统计聚合）
+│   │   └── diagnosis_agent.py        # 诊断专家智能体（LangGraph）
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── config.py               # Pydantic Settings 配置管理
+│   │   └── database.py              # SQLAlchemy 2.0 异步引擎
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── sensor_data.py           # ORM 模型（混合存储）
+│   ├── routers/
+│   │   ├── __init__.py
+│   │   ├── health.py                # GET /health
+│   │   └── diagnosis.py             # POST /api/v1/diagnose
+│   ├── schemas/
+│   │   ├── __init__.py
+│   │   ├── sensor_data.py           # 传感器数据 Pydantic 模型
+│   │   └── diagnosis.py             # 诊断请求/响应模型
+│   └── services/
+│       ├── __init__.py
+│       └── sensor_service.py         # 业务逻辑层（CRUD + 批量插入）
+├── scripts/
+│   ├── __init__.py
+│   └── init_db.py                   # 数据库初始化 + HAI CSV 导入
+├── tests/
+│   ├── __init__.py
+│   └── test_health.py
+├── requirements.txt
+└── .env                             # 环境变量配置
+```
 
-1. **编写智能体请求验证模型 (`app/schemas/diagnosis.py`)**：
-   - 创建 `DiagnosisRequest` 模型，包含 `start_time`, `end_time` (必填) 以及可选的 `symptom_description`。
-   - 创建 `DiagnosisResponse` 模型，用于规范化返回 AI 的诊断结果字符串及状态码。
+## 5. Development Phases (Updated)
 
-2. **编写智能体 API 路由 (`app/routers/diagnosis.py`)**：
-   - 编写 `POST /api/v1/diagnose` 接口。
-   - 接收 `DiagnosisRequest`，在内部调用 `app.agents.run_diagnosis` 异步函数。
-   - 做好异常处理（如大模型 API 超时、数据库查询失败等），并返回标准的 HTTP 错误码。
+| Phase | 内容 | 状态 | 关键文件 |
+|-------|------|------|---------|
+| Phase 1-8 | 基础架构、数据导入、单智能体闭环、API 暴露 | ✅ 已完成 | `main.py`, `sensor_service.py`, `diagnosis_agent.py`, `diagnosis.py` |
+| Phase 9 | 引入 Alembic 与 PostgreSQL 生产环境准备 | ✅ 已完成 | `alembic/env.py`, `docker-compose.yml`, `app/core/database.py` |
+| Phase 10 | LangGraph 多智能体工作流重构 (Multi-Agent) | ⏳ 待执行 | `app/agents/graph.py`, `app/agents/nodes/` |
+| Phase 11 | 长时任务与流式响应优化 (Streaming/SSE) | ⏳ 待执行 | `app/routers/diagnosis.py` |
+| Phase 12 | 核心链路异步测试与大模型 Mock 测试 | ⏳ 待执行 | `tests/test_diagnosis.py` |
+## 6. API Endpoints
 
-3. **注册新路由 (`app/main.py`)**：
-   - 将新写好的 `diagnosis_router` 引入主程序，并挂载到 FastAPI 实例上。
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | 健康检查（验证 DB 连接） |
+| POST | `/api/v1/diagnose` | AI 故障诊断接口 |
 
-**架构约束提醒**：API 路由层必须保持轻量，只负责参数校验和 HTTP 状态码转换，不要把 Agent 的业务逻辑（如 Prompt 拼接）泄露到路由层中。所有注释保持中文。
+### POST /api/v1/diagnose 请求示例
 
-全程使用中文回答和思考，回答结束加上完成
-所有注释也用中文
+```json
+{
+  "start_time": "2022-08-12 16:00:00",
+  "end_time": "2022-08-12 16:05:00",
+  "symptom_description": "产品温度异常",
+  "model_provider": "openai",
+  "model_name": "deepseek-chat"
+}
+```
+
+### POST /api/v1/diagnose 响应示例
+
+```json
+{
+  "code": 200,
+  "message": "诊断完成",
+  "data": "【诊断报告】\n时间范围：...\n..."
+}
+```
+
+## 7. Environment Variables (.env)
+
+```env
+# 数据库
+DATABASE_URL=sqlite+aiosqlite:///./sensor_data.db
+
+# LLM 配置（支持 DeepSeek/OpenAI/Anthropic）
+DEEPSEEK_API_KEY=sk-xxxxx
+DEEPSEEK_API_BASE=https://api.deepseek.com
+OPENAI_API_KEY=sk-xxxxx
+OPENAI_API_BASE=
+ANTHROPIC_API_KEY=sk-ant-xxxxx
+
+# 应用配置
+DEBUG=false
+```
+
+## 8. Key Implementation Details
+
+### 8.1 Hybrid Storage Model
+
+- **核心字段**（~60个）：独立列存储，支持高效索引查询
+- **扩展字段**（~110个）：JSONB 打包存入 `extra_sensors`
+
+### 8.2 Multi-Model Factory
+
+```python
+# 优先使用 DeepSeek，其次 OpenAI，最后 Anthropic
+create_llm(model_provider, model_name)
+```
+
+### 8.3 Statistical Aggregation (解决上下文爆炸)
+
+`get_sensor_data_by_time_range` 工具返回统计摘要而非原始波形：
+
+```
+【传感器统计摘要】
+时间范围: 2022-08-12 16:00:00 至 2022-08-12 16:05:00
+原始记录条数: 300
+
+  主泵运行状态(dm_pp01_r): 均值=75.32, 最小=0.00, 最大=100.00
+  温度传感器1(dm_tit01): 均值=45.23°C, 最小=44.10°C, 最大=48.90°C
+  压力传感器1(dm_pit01): 均值=325.50kPa, 最小=320.00kPa, 最大=380.00kPa
+```
+
+### 8.4 LangChain Agents (LangGraph)
+
+使用官方推荐的 `langchain.agents.create_agent` 构建 ReAct 智能体：
+
+```python
+from langchain.agents import create_agent
+
+agent = create_agent(
+    model=llm,
+    tools=[get_sensor_data_by_time_range],
+    system_prompt=DIAGNOSIS_AGENT_SYSTEM_PROMPT,
+)
+```
+
+## 9. Installation & Running
+
+```bash
+# 安装依赖
+pip install -r requirements.txt
+
+# 初始化数据库（仅表结构）
+python scripts/init_db.py --init-only
+
+# 导入 HAI 数据集
+python scripts/init_db.py --csv-path datasets/haiend-23.05/end-test1.csv
+
+# 启动服务
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# 访问 API 文档
+# http://localhost:8000/docs
+```
+
+## 10. Current State (Phase 9 Completed)
+
+**前 9 个 Phase 已全部完成**，系统当前具备以下能力：
+- ✅ FastAPI 异步后端（SQLite/PostgreSQL 混合存储策略已跑通）
+- ✅ 数据层支持：惰性初始化的 SQLAlchemy 2.0 异步引擎
+- ✅ 生产环境准备：`docker-compose.yml` (PostgreSQL 16) 与完整的异步 Alembic 迁移环境
+- ✅ HAI 数据集 CSV 导入与基于工具的统计聚合查询
+- ✅ 基于单个 LangChain ReAct Agent 的基础故障诊断与 API 暴露
+
+## 11. 架构约束提醒
+
+- API 路由层必须保持轻量，只负责参数校验、HTTP 状态码转换和流式数据转发。
+- 业务逻辑严格下沉到 Services 层，多智能体编排逻辑严格收敛于 Agents 层的 LangGraph 定义中。
+- 所有代码必须保证 Pydantic V2 和 SQLAlchemy 2.0 异步语法的纯洁性。
+- 考虑到生产环境要求，接下来的数据库表变更必须通过 Alembic 迁移脚本完成。
+- 所有注释必须使用中文。
+- 每次执行完一个阶段向我汇报完成了什么，并停止执行项目，等待我确认下一个阶段
+
+## 12. Next Immediate Goals
+
+基础设施与数据流均已就绪，当前**唯一核心任务**是进行多智能体架构重构：
+**Phase 10: LangGraph Multi-Agent Orchestration**
+将现有的单 Agent 升级为 LangGraph 架构。我们需要定义 Graph State，并实现至少三个核心节点（Node）：
+1. **Supervisor**: 负责意图识别与任务路由。
+2. **Data Analyst**: 负责调用 `get_sensor_data_by_time_range` 分析统计数据。
+3. **Diagnosis Expert**: 结合分析数据进行故障归因并生成最终报告。
