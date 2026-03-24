@@ -6,7 +6,8 @@ by simply changing the DATABASE_URL environment variable.
 """
 import os
 from functools import lru_cache
-from pydantic_settings import BaseSettings
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -25,12 +26,20 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     debug: bool = os.getenv("DEBUG", "false").lower() == "true"
 
+    # LLM API credentials
+    deepseek_api_key: str | None = None
+    openai_api_key: str | None = None
+    openai_api_base: str | None = None
+    anthropic_api_key: str | None = None
+
     # CORS settings
     cors_origins: list[str] = ["*"]
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",  # 允许 .env 中存在未声明的字段（如 DEEPSEEK_API_KEY 等）
+    )
 
 
 @lru_cache()

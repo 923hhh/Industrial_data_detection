@@ -15,27 +15,26 @@
 - **Repository Pattern**: 服务层（Services）必须隔离数据库逻辑，为未来的 Agent 集成保持模块化纯洁度。
 
 ## 4. Current State & Progress
-我们把开发分为 7 个 Phase。
-- **已完成**: Phase 1 至 Phase 6 已全面竣工。核心业务服务层 (`app/services/sensor_service.py`) 提供了带事务控制的批量插入与按时间范围查询功能。数据导入脚本 (`scripts/init_db.py`) 已通过 Pandas 分块读取，成功将 HAI 宽表数据映射并安全灌入 SQLite 数据库。
-- **当前进行中**: Phase 7 (LangChain Agent Integration 智能体接入与工具封装)。
+我们把开发分为 8 个 Phase。
+- **已完成**: Phase 1 至 Phase 7 已全面竣工。数据流已打通，且 `app/agents/diagnosis_agent.py` 已经具备了完整的 LangChain 故障诊断闭环能力（包含工具调用与报告生成）。
+- **当前进行中**: Phase 8 (API Endpoint for Agent 智能体路由层暴露)。
 
 ## 5. Immediate Task Instructions (Next Steps)
-请协助我完成 Phase 7 的初步工作，核心目标是**让大模型能够自主查询数据库中的工业时序数据**。
+为了让前端能够触发 AI 诊断，请协助我完成以下工作：
 
-1. **编写智能体工具 (`app/agents/tools.py`)**：
-   - 导入 LangChain 相关的工具模块（如 `@tool` 装饰器）。
-   - 将 `app/services/sensor_service.py` 中的 `get_sensor_data_by_time_range` 封装为一个供大模型调用的工具（Tool）。
-   - **核心约束**：必须为该工具编写极其详尽的**中文 docstring（文档字符串）**。明确说明它的功能（获取特定时间段的传感器数据）、入参格式（时间戳字符串标准）以及返回的 JSON 结构。大模型依赖此描述来决定何时以及如何调用该工具。
+1. **编写智能体请求验证模型 (`app/schemas/diagnosis.py`)**：
+   - 创建 `DiagnosisRequest` 模型，包含 `start_time`, `end_time` (必填) 以及可选的 `symptom_description`。
+   - 创建 `DiagnosisResponse` 模型，用于规范化返回 AI 的诊断结果字符串及状态码。
 
-2. **初始化诊断专家智能体 (`app/agents/diagnosis_agent.py`)**：
-   - 搭建基础的 LangChain Agent 架构（推荐使用支持 Tool Calling 的标准实现或 LangGraph 基础结构）。
-   - 为该 Agent 编写强设定的**中文 System Prompt（系统提示词）**，赋予其“工业级设备故障诊断专家”的身份，并说明 HAI 数据集中那些核心传感器（如 DM- 系列）的基本判断逻辑。
-   - 将编写好的数据查询 Tool 绑定给该 Agent。
-   - 编写一个对外暴露的异步入口函数（例如 `async def run_diagnosis(start_time: str, end_time: str) -> str:`），用于接收外部传入的异常时间窗口，触发 Agent 执行分析。
+2. **编写智能体 API 路由 (`app/routers/diagnosis.py`)**：
+   - 编写 `POST /api/v1/diagnose` 接口。
+   - 接收 `DiagnosisRequest`，在内部调用 `app.agents.run_diagnosis` 异步函数。
+   - 做好异常处理（如大模型 API 超时、数据库查询失败等），并返回标准的 HTTP 错误码。
 
-**架构约束提醒**：
-- 代码中的所有注释（Comments）、文档字符串（Docstrings）以及提示词（Prompts）**必须全程使用中文**。
-- 当前阶段只关注单个“诊断专家 Agent”的工具调用是否能跑通，暂时不要编写复杂的多智能体（Multi-Agent）路由逻辑。保持逻辑闭环。
+3. **注册新路由 (`app/main.py`)**：
+   - 将新写好的 `diagnosis_router` 引入主程序，并挂载到 FastAPI 实例上。
+
+**架构约束提醒**：API 路由层必须保持轻量，只负责参数校验和 HTTP 状态码转换，不要把 Agent 的业务逻辑（如 Prompt 拼接）泄露到路由层中。所有注释保持中文。
 
 全程使用中文回答和思考，回答结束加上完成
 所有注释也用中文
