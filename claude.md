@@ -15,25 +15,27 @@
 - **Repository Pattern**: 服务层（Services）必须隔离数据库逻辑，为未来的 Agent 集成保持模块化纯洁度。
 
 ## 4. Current State & Progress
-我们把开发分为 6 个 Phase。
-- **已完成**: Phase 1 至 Phase 5 已全面竣工。底层 AsyncEngine、混合存储模型 (`models`)、Pydantic 验证体系 (`schemas`) 以及应用生命周期与 `/health` 路由全部测试通过，并成功启动。
-- **当前进行中**: Phase 6 (Service Layer & Data Ingestion 核心服务与数据导入)。
+我们把开发分为 7 个 Phase。
+- **已完成**: Phase 1 至 Phase 6 已全面竣工。核心业务服务层 (`app/services/sensor_service.py`) 提供了带事务控制的批量插入与按时间范围查询功能。数据导入脚本 (`scripts/init_db.py`) 已通过 Pandas 分块读取，成功将 HAI 宽表数据映射并安全灌入 SQLite 数据库。
+- **当前进行中**: Phase 7 (LangChain Agent Integration 智能体接入与工具封装)。
 
 ## 5. Immediate Task Instructions (Next Steps)
-请严格遵守我们的“Repository Pattern (仓储模式)”架构，确保路由层和数据访问层分离。协助我完成以下工作：
+请协助我完成 Phase 7 的初步工作，核心目标是**让大模型能够自主查询数据库中的工业时序数据**。
 
-1. **编写核心业务逻辑 (`app/services/sensor_service.py`)**：
-   - 编写异步函数 `create_sensor_data`，支持单条和批量写入。
-   - 编写异步函数 `get_sensor_data_by_time_range`，支持按 `timestamp` 范围进行高效查询（未来将供 LangChain Tool 调用）。
-   - 代码需注入 `AsyncSession`，并做好异常捕获与回滚。
+1. **编写智能体工具 (`app/agents/tools.py`)**：
+   - 导入 LangChain 相关的工具模块（如 `@tool` 装饰器）。
+   - 将 `app/services/sensor_service.py` 中的 `get_sensor_data_by_time_range` 封装为一个供大模型调用的工具（Tool）。
+   - **核心约束**：必须为该工具编写极其详尽的**中文 docstring（文档字符串）**。明确说明它的功能（获取特定时间段的传感器数据）、入参格式（时间戳字符串标准）以及返回的 JSON 结构。大模型依赖此描述来决定何时以及如何调用该工具。
 
-2. **编写数据初始化脚本 (`scripts/init_db.py`)**：
-   - 编写一个独立的 Python 脚本，使用 `pandas` 或内置 `csv` 模块读取 HAI 数据集文件（如 `end-test1.csv`）。
-   - 将这约 170 列的宽表数据动态映射为我们设计的混合模型（匹配 60 个核心 `dm_` 等字段，其余塞入 `extra_sensors` JSON 字段）。
-   - 使用 SQLAlchemy 2.0 的批量插入（如 `insert().values()` 或 `add_all()`）将数据高效灌入 SQLite 开发数据库。
+2. **初始化诊断专家智能体 (`app/agents/diagnosis_agent.py`)**：
+   - 搭建基础的 LangChain Agent 架构（推荐使用支持 Tool Calling 的标准实现或 LangGraph 基础结构）。
+   - 为该 Agent 编写强设定的**中文 System Prompt（系统提示词）**，赋予其“工业级设备故障诊断专家”的身份，并说明 HAI 数据集中那些核心传感器（如 DM- 系列）的基本判断逻辑。
+   - 将编写好的数据查询 Tool 绑定给该 Agent。
+   - 编写一个对外暴露的异步入口函数（例如 `async def run_diagnosis(start_time: str, end_time: str) -> str:`），用于接收外部传入的异常时间窗口，触发 Agent 执行分析。
 
-**架构约束提醒**：在写 `init_db.py` 批量导入脚本时，必须考虑内存占用，建议采用分块读取（chunking）策略，避免一次性加载几十万行数据导致 OOM。
-**禁止行为**：当前阶段请勿编写任何关于 LangChain Agent 或 API Router 的业务逻辑代码，保持绝对专注。
+**架构约束提醒**：
+- 代码中的所有注释（Comments）、文档字符串（Docstrings）以及提示词（Prompts）**必须全程使用中文**。
+- 当前阶段只关注单个“诊断专家 Agent”的工具调用是否能跑通，暂时不要编写复杂的多智能体（Multi-Agent）路由逻辑。保持逻辑闭环。
 
 全程使用中文回答和思考，回答结束加上完成
 所有注释也用中文
