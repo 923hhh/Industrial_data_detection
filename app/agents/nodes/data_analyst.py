@@ -3,12 +3,15 @@
 该节点负责:
 1. 调用 get_sensor_data_by_time_range 工具获取传感器统计数据
 2. 将原始统计数据存入共享状态，供后续 Diagnosis Expert 使用
+
+【修复记录】
+- Bug 2: 改为 async def，配合 @tool async def，避免 asyncio.run() 冲突
 """
 from app.agents.state import DiagnosisState
 from app.agents.tools import get_sensor_data_by_time_range
 
 
-def data_analyst_node(state: DiagnosisState) -> DiagnosisState:
+async def data_analyst_node(state: DiagnosisState) -> DiagnosisState:
     """Data Analyst 节点 - 查询并分析传感器统计数据
 
     调用 LangChain Tool 获取指定时间范围的传感器统计摘要，
@@ -26,12 +29,11 @@ def data_analyst_node(state: DiagnosisState) -> DiagnosisState:
     if not start_time or not end_time:
         return {
             "sensor_stats": "错误：未提供有效的时间范围参数。",
-            "next_node": "diagnosis_expert",
         }
 
     try:
-        # 调用已封装的 LangChain Tool
-        sensor_stats = get_sensor_data_by_time_range.invoke({
+        # Bug 2 fix: 使用 ainvoke() 调用异步工具
+        sensor_stats = await get_sensor_data_by_time_range.ainvoke({
             "start_time": start_time,
             "end_time": end_time,
             "limit": 5000,

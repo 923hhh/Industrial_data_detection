@@ -1,11 +1,13 @@
-# File: app/agents/tools.py
 """LangChain 工具封装模块
 
 本模块将业务服务层封装为可供大模型调用的 LangChain Tool。
 每个工具都附带详细的中文文档字符串，供 Agent 理解何时以及如何调用。
+
+【修复记录】
+- Bug 1: _aggregate_sensor_stats 使用 pop("sum", None) 避免 KeyError
+- Bug 2: 改为原生异步工具 @tool async def，避免 asyncio.run() 事件循环冲突
 """
 from datetime import datetime
-from typing import Any
 
 from langchain_core.tools import tool
 
@@ -14,27 +16,17 @@ from app.services.sensor_service import SensorService
 
 
 # 核心传感器字段列表（需要计算统计量的关键字段）
-# 仅包含与工业故障诊断强相关的核心测量点
 CORE_SENSOR_FIELDS = [
-    # 泵与动力单元
     "dm_pp01_r", "dm_pp01a_d", "dm_pp01a_r", "dm_pp01b_d", "dm_pp01b_r",
     "dm_pp02_d", "dm_pp02_r", "dm_pp04_d", "dm_pp04_ao",
-    # 流量传感器
     "dm_ft01", "dm_ft01z", "dm_ft02", "dm_ft02z", "dm_ft03", "dm_ft03z",
-    # 温度传感器
     "dm_tit01", "dm_tit02",
-    # 压力传感器
     "dm_pit01", "dm_pit01_hh", "dm_pit02",
-    # 液位传感器
     "dm_lit01",
-    # 控制阀
     "dm_lcv01_d", "dm_lcv01_z",
     "dm_fcv01_d", "dm_fcv01_z", "dm_fcv02_d", "dm_fcv02_z", "dm_fcv03_d", "dm_fcv03_z",
-    # 压力控制阀
     "dm_pcv01_d", "dm_pcv01_z", "dm_pcv01_dev", "dm_pcv02_d", "dm_pcv02_z",
-    # 分析仪器
     "dm_ait_do", "dm_ait_ph",
-    # 阀门状态（部分代表性字段）
     "dm_cool_on", "dm_cool_r",
 ]
 
@@ -78,16 +70,17 @@ def _aggregate_sensor_stats(records: list) -> dict[str, dict[str, float | None]]
                     stats[field]["count"] = 1
                 else:
                     # 增量更新
-                    stats[field]["sum"] = stats[field]["sum"] + value
+                    stats[field]["sum"] = stats[field]["sum"] + value  # type: ignore
                     stats[field]["min"] = min(stats[field]["min"], value)  # type: ignore
                     stats[field]["max"] = max(stats[field]["max"], value)  # type: ignore
                     stats[field]["count"] = stats[field]["count"] + 1  # type: ignore
 
-    # 计算平均值并清理临时字段
+    # 计算平均值并清理临时字段（使用 pop 避免 KeyError）
     for field in CORE_SENSOR_FIELDS:
         if stats[field]["count"] > 0:
             stats[field]["mean"] = round(stats[field]["sum"] / stats[field]["count"], 4)  # type: ignore
-        del stats[field]["sum"]  # type: ignore
+        # Bug 1 fix: pop 不存在的键不会抛 KeyError
+        stats[field].pop("sum", None)
 
     return stats
 
@@ -97,59 +90,39 @@ def _format_stats_as_text(
     time_range: str,
     record_count: int
 ) -> str:
-    """将统计字典格式化为易读的文本摘要
-
-    Args:
-        stats: 统计字典
-        time_range: 时间范围描述
-        record_count: 原始记录条数
-
-    Returns:
-        格式化的文本报告
-    """
+    """将统计字典格式化为易读的文本摘要"""
     if not stats or all(s["count"] == 0 for s in stats.values()):
         return f"时间范围内无有效传感器数据记录。\n时间范围: {time_range}"
 
     lines = [
-        f"【传感器统计摘要】",
+        "【传感器统计摘要】",
         f"时间范围: {time_range}",
         f"原始记录条数: {record_count}",
         "",
     ]
 
-    # 定义字段的中文描述映射（供 LLM 理解）
     field_descriptions = {
-        # 泵与动力
         "dm_pp01_r": "主泵运行状态",
         "dm_pp01a_d": "主泵A开度", "dm_pp01a_r": "主泵A转速",
         "dm_pp01b_d": "主泵B开度", "dm_pp01b_r": "主泵B转速",
         "dm_pp02_d": "泵2开度", "dm_pp02_r": "泵2转速",
         "dm_pp04_d": "泵4开度", "dm_pp04_ao": "泵4输出",
-        # 流量
         "dm_ft01": "流量计1", "dm_ft01z": "流量计1(mA)",
         "dm_ft02": "流量计2", "dm_ft02z": "流量计2(mA)",
         "dm_ft03": "流量计3", "dm_ft03z": "流量计3(mA)",
-        # 温度
         "dm_tit01": "温度传感器1", "dm_tit02": "温度传感器2",
-        # 压力
         "dm_pit01": "压力传感器1", "dm_pit01_hh": "压力高报", "dm_pit02": "压力传感器2",
-        # 液位
         "dm_lit01": "液位传感器1",
-        # 控制阀
         "dm_lcv01_d": "阀LCV01开度", "dm_lcv01_z": "阀LCV01位置",
         "dm_fcv01_d": "阀FCV01开度", "dm_fcv01_z": "阀FCV01位置",
         "dm_fcv02_d": "阀FCV02开度", "dm_fcv02_z": "阀FCV02位置",
         "dm_fcv03_d": "阀FCV03开度", "dm_fcv03_z": "阀FCV03位置",
-        # 压力控制阀
         "dm_pcv01_d": "PCV01开度", "dm_pcv01_z": "PCV01位置",
         "dm_pcv01_dev": "PCV01偏差", "dm_pcv02_d": "PCV02开度", "dm_pcv02_z": "PCV02位置",
-        # 分析仪
         "dm_ait_do": "溶解氧", "dm_ait_ph": "pH值",
-        # 辅助
         "dm_cool_on": "冷却系统", "dm_cool_r": "冷却回流",
     }
 
-    # 单位映射
     field_units = {
         "dm_tit01": "°C", "dm_tit02": "°C",
         "dm_pit01": "kPa", "dm_pit01_hh": "kPa", "dm_pit02": "kPa",
@@ -160,7 +133,6 @@ def _format_stats_as_text(
         "dm_ait_do": "mg/L", "dm_ait_ph": "",
     }
 
-    # 生成每行摘要
     for field, desc in field_descriptions.items():
         s = stats.get(field)
         if s and s["count"] > 0:
@@ -174,15 +146,14 @@ def _format_stats_as_text(
                 f"最小={min_val}{unit_str}, 最大={max_val}{unit_str}"
             )
 
-    # 如果有数据点但没有任何匹配的核心字段
     if len(lines) == 3:
-        lines.append("  (该时间段内有数据，但核心字段均为空)")
+        lines.append("  （该时间段内有数据，但核心字段均为空）")
 
     return "\n".join(lines)
 
 
 @tool
-def get_sensor_data_by_time_range(
+async def get_sensor_data_by_time_range(
     start_time: str,
     end_time: str,
     limit: int = 5000
@@ -221,7 +192,7 @@ def get_sensor_data_by_time_range(
     **注意事项**：
     - 返回的是统计摘要，**不是**秒级原始序列
     - 如果时间范围内数据量超过 limit，会截断后计算，可能影响统计准确性
-    - extra_sensors（NNNN.OUT 系列）中的辅助字段不参与统计聚合，仅作为参考信息在数据量大时会被忽略
+    - extra_sensors（NNNN.OUT 系列）中的辅助字段不参与统计聚合
 
     Args:
         start_time: 查询起始时间，格式 "YYYY-MM-DD HH:MM:SS"
@@ -239,42 +210,30 @@ def get_sensor_data_by_time_range(
         return f"时间格式错误: {e}。请使用格式 'YYYY-MM-DD HH:MM:SS'，例如 '2022-08-12 16:00:00'"
 
     try:
-        # 通过 SessionContext 获取数据库会话并查询
-        async def query_and_aggregate():
-            async with get_session_context() as session:
-                service = SensorService(session)
-                records = await service.get_sensor_data_by_time_range(
-                    start=start_dt,
-                    end=end_dt,
-                    limit=limit
+        # Bug 2 fix: 直接使用 await 调用异步数据库查询，不再用 asyncio.run()
+        async with get_session_context() as session:
+            service = SensorService(session)
+            records = await service.get_sensor_data_by_time_range(
+                start=start_dt,
+                end=end_dt,
+                limit=limit
+            )
+
+            if not records:
+                return _format_stats_as_text(
+                    stats={},
+                    time_range=f"{start_time} 至 {end_time}",
+                    record_count=0
                 )
 
-                if not records:
-                    return {
-                        "stats": {},
-                        "record_count": 0,
-                        "time_range": f"{start_time} 至 {end_time}"
-                    }
+            # 计算统计摘要
+            stats = _aggregate_sensor_stats(records)
 
-                # 计算统计摘要
-                stats = _aggregate_sensor_stats(records)
-
-                return {
-                    "stats": stats,
-                    "record_count": len(records),
-                    "time_range": f"{start_time} 至 {end_time}"
-                }
-
-        # 在异步上下文中执行查询
-        import asyncio
-        result = asyncio.run(query_and_aggregate())
-
-        # 格式化为易读的文本
-        return _format_stats_as_text(
-            stats=result["stats"],
-            time_range=result["time_range"],
-            record_count=result["record_count"]
-        )
+            return _format_stats_as_text(
+                stats=stats,
+                time_range=f"{start_time} 至 {end_time}",
+                record_count=len(records)
+            )
 
     except Exception as e:
         return f"查询执行失败: {str(e)}"

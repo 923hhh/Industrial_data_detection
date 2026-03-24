@@ -4,7 +4,7 @@
 将单智能体诊断系统升级为**生产可用的多智能体 (Multi-Agent) 协作架构**，完成数据库版本控制、流式响应和完整测试覆盖。
 
 ## Current Phase
-Phase 11: 流式响应与接口优化
+Phase 12: 核心链路测试覆盖
 
 ## Phases
 
@@ -43,15 +43,20 @@ Phase 11: 流式响应与接口优化
 - `app/routers/diagnosis.py` - 切换至多智能体入口
 
 ### Phase 11: 流式响应与接口优化
-- [ ] 实现 `StreamingResponse` 或 WebSocket 流式输出
-- [ ] LangGraph 中间思考步骤实时返回
-- [ ] 处理请求超时风险
-- **Status:** in_progress
+- [x] 实现 `StreamingResponse` SSE 流式输出
+- [x] LangGraph `astream()` 节点级中间结果实时返回
+- [x] 保留原有 `/diagnose` 同步接口（向后兼容）
+- [x] 新增 `/diagnose/stream` SSE 接口
+- **Status:** complete
+
+**Phase 11 产出:**
+- `app/routers/diagnosis.py` - 新增 `POST /api/v1/diagnose/stream` SSE 端点
+- SSE 事件: `node_start`, `node_finish`, `report`, `error`, `done`
 
 ### Phase 12: 核心链路测试覆盖
 - [ ] 编写 pytest + httpx 异步接口测试
 - [ ] Mock 大模型 API，测试智能体路由和错误捕获
-- **Status:** pending
+- **Status:** in_progress
 
 ## Key Questions
 1. Alembic env.py 如何正确处理 aiosqlite 与 asyncpg 的异步 session？

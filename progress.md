@@ -48,11 +48,16 @@
   - app/routers/diagnosis.py (updated)
 
 ### Phase 11: 流式响应与接口优化
-- **Status:** pending
+- **Status:** complete
+- **Started:** 2026-03-24
 - Actions taken:
-  -
+  - 实现 `POST /api/v1/diagnose/stream` SSE 流式端点
+  - 通过 `graph.astream()` 遍历 LangGraph 节点执行结果
+  - SSE 事件格式: node_start / node_finish / report / error / done
+  - 保留原有 `/diagnose` 同步接口（向后兼容）
+  - 验证 astream 节点执行序列: supervisor→data_analyst→supervisor→diagnosis_expert→supervisor→END
 - Files created/modified:
-  -
+  - app/routers/diagnosis.py (updated - 新增流式端点)
 
 ### Phase 12: 核心链路测试覆盖
 - **Status:** pending

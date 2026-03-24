@@ -63,11 +63,12 @@ dachuang_project/
 
 | Phase | 内容 | 状态 | 关键文件 |
 |-------|------|------|---------|
-| Phase 1-8 | 基础架构、数据导入、单智能体闭环、API 暴露 | ✅ 已完成 | `main.py`, `sensor_service.py`, `diagnosis_agent.py`, `diagnosis.py` |
-| Phase 9 | 引入 Alembic 与 PostgreSQL 生产环境准备 | ✅ 已完成 | `alembic/env.py`, `docker-compose.yml`, `app/core/database.py` |
-| Phase 10 | LangGraph 多智能体工作流重构 (Multi-Agent) | ⏳ 待执行 | `app/agents/graph.py`, `app/agents/nodes/` |
-| Phase 11 | 长时任务与流式响应优化 (Streaming/SSE) | ⏳ 待执行 | `app/routers/diagnosis.py` |
+| Phase 1-8 | 基础架构、单智能体闭环、API 暴露 | ✅ 已完成 | `main.py`, `sensor_service.py`, `diagnosis.py` |
+| Phase 9 | Alembic 与 PostgreSQL 生产环境准备 | ✅ 已完成 | `alembic/env.py`, `docker-compose.yml` |
+| Phase 10 | LangGraph 多智能体工作流重构 (Multi-Agent) | ✅ 已完成 | `app/agents/graph.py`, `app/agents/state.py`, `nodes/` |
+| Phase 11 | 长时任务与流式响应优化 (Streaming/SSE) | ⏳ 待执行 | `app/routers/diagnosis.py`, `app/agents/graph.py` |
 | Phase 12 | 核心链路异步测试与大模型 Mock 测试 | ⏳ 待执行 | `tests/test_diagnosis.py` |
+
 ## 6. API Endpoints
 
 | Method | Path | Description |
@@ -175,14 +176,13 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 # http://localhost:8000/docs
 ```
 
-## 10. Current State (Phase 9 Completed)
+## 10. Current State (Phase 10 Completed)
 
-**前 9 个 Phase 已全部完成**，系统当前具备以下能力：
-- ✅ FastAPI 异步后端（SQLite/PostgreSQL 混合存储策略已跑通）
-- ✅ 数据层支持：惰性初始化的 SQLAlchemy 2.0 异步引擎
-- ✅ 生产环境准备：`docker-compose.yml` (PostgreSQL 16) 与完整的异步 Alembic 迁移环境
-- ✅ HAI 数据集 CSV 导入与基于工具的统计聚合查询
-- ✅ 基于单个 LangChain ReAct Agent 的基础故障诊断与 API 暴露
+**前 10 个 Phase 已全部完成**，系统当前具备强大的工业级多智能体诊断能力：
+- ✅ 基础设施：FastAPI 异步架构 + PostgreSQL/SQLite 灵活切换 + Alembic 异步版本控制。
+- ✅ 核心业务层：成功构建基于 LangGraph 的多智能体工作流。
+- ✅ 节点架构：实现了 `Supervisor` (路由分配) → `Data Analyst` (数据分析) → `Diagnosis Expert` (故障归因) 的标准流转。
+- ✅ 状态管理：独立出 `app/agents/state.py` 严格管理 Graph State，避免了模块循环导入。
 
 ## 11. 架构约束提醒
 
@@ -191,13 +191,13 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - 所有代码必须保证 Pydantic V2 和 SQLAlchemy 2.0 异步语法的纯洁性。
 - 考虑到生产环境要求，接下来的数据库表变更必须通过 Alembic 迁移脚本完成。
 - 所有注释必须使用中文。
-- 每次执行完一个阶段向我汇报完成了什么，并停止执行项目，等待我确认下一个阶段
+- 每次执行完一个阶段向我汇报完成了什么并给出测试代码，并停止执行项目，等待我确认下一个阶段
 
 ## 12. Next Immediate Goals
 
-基础设施与数据流均已就绪，当前**唯一核心任务**是进行多智能体架构重构：
-**Phase 10: LangGraph Multi-Agent Orchestration**
-将现有的单 Agent 升级为 LangGraph 架构。我们需要定义 Graph State，并实现至少三个核心节点（Node）：
-1. **Supervisor**: 负责意图识别与任务路由。
-2. **Data Analyst**: 负责调用 `get_sensor_data_by_time_range` 分析统计数据。
-3. **Diagnosis Expert**: 结合分析数据进行故障归因并生成最终报告。
+系统底层和业务层均已通关，当前面临的关键挑战是**长时请求导致的前端超时问题**：
+**Phase 11: Streaming & UX Optimization (流式响应)**
+由于 LangGraph 多节点流转耗时较长（可能达到几十秒），同步的 `POST /api/v1/diagnose` 接口不符合生产标准。
+我们需要：
+1. **重构 API 端点**：使用 FastAPI 的 `StreamingResponse` (Server-Sent Events, SSE) 或者 WebSocket。
+2. **暴露中间状态**：将 LangGraph 运行时的中间过程（如 "Data Analyst 正在读取数据..."、"Diagnosis Expert 正在分析..."）以及最终的 token 实时流式推送到前端。
