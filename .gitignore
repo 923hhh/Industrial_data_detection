@@ -1,0 +1,50 @@
+# ========================
+# 1. Python & 虚拟环境
+# ========================
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/
+.env
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ========================
+# 2. 数据库文件 (极其重要)
+# ========================
+# 忽略所有本地 SQLite 数据库，避免污染代码库
+*.db
+*.sqlite
+*.sqlite3
+# 如果后续用 alembic 做迁移，可以忽略本地生成的某些临时文件
+alembic.ini.bak
+
+# ========================
+# 3. 数据集与日志 (极其重要)
+# ========================
+# 绝对不能把 HAI Security Dataset 提交到 Git，太大了！
+*.csv
+*.tsv
+*.dat
+data/
+dataset/
+logs/
+*.log
+
+# ========================
+# 4. IDE & 操作系统缓存
+# ========================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ========================
+# 5. 测试与覆盖率
+# ========================
+.pytest_cache/
+.coverage
+htmlcov/
