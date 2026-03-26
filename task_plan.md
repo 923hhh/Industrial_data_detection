@@ -47,11 +47,20 @@ Phase 12: 核心链路测试覆盖
 - [x] LangGraph `astream()` 节点级中间结果实时返回
 - [x] 保留原有 `/diagnose` 同步接口（向后兼容）
 - [x] 新增 `/diagnose/stream` SSE 接口
+- [x] Bug 1: `pop("sum", None)` 避免全空传感器 KeyError
+- [x] Bug 2: `@tool async def` + `ainvoke()` 避免 asyncio.run() 冲突
+- [x] Bug 3: 所有 System Prompt 强制中文输出，5 处 json.dumps 加 ensure_ascii=False
+- [x] Phase 11 测试: 4/4 通过
 - **Status:** complete
 
 **Phase 11 产出:**
-- `app/routers/diagnosis.py` - 新增 `POST /api/v1/diagnose/stream` SSE 端点
-- SSE 事件: `node_start`, `node_finish`, `report`, `error`, `done`
+- `app/routers/diagnosis.py` - `POST /api/v1/diagnose/stream` SSE 端点
+- `app/agents/tools.py` - 异步工具重构
+- `app/agents/nodes/supervisor.py` - 中文 System Prompt
+- `app/agents/nodes/diagnosis_expert.py` - 中文 System Prompt
+- `tests/test_phase11_streaming.py` - 4 个流式测试用例
+- `pytest.ini` - pytest-asyncio v1.x 配置
+- `requirements.txt` - 新增 pytest, pytest-asyncio, httpx
 
 ### Phase 12: 核心链路测试覆盖
 - [ ] 编写 pytest + httpx 异步接口测试

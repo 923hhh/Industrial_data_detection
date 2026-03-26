@@ -65,8 +65,8 @@ dachuang_project/
 |-------|------|------|---------|
 | Phase 1-8 | 基础架构、单智能体闭环、API 暴露 | ✅ 已完成 | `main.py`, `sensor_service.py`, `diagnosis.py` |
 | Phase 9 | Alembic 与 PostgreSQL 生产环境准备 | ✅ 已完成 | `alembic/env.py`, `docker-compose.yml` |
-| Phase 10 | LangGraph 多智能体工作流重构 (Multi-Agent) | ✅ 已完成 | `app/agents/graph.py`, `app/agents/state.py`, `nodes/` |
-| Phase 11 | 长时任务与流式响应优化 (Streaming/SSE) | ⏳ 待执行 | `app/routers/diagnosis.py`, `app/agents/graph.py` |
+| Phase 10 | LangGraph 多智能体工作流重构 | ✅ 已完成 | `app/agents/graph.py`, `app/agents/state.py` |
+| Phase 11 | 长时任务与流式响应优化 (Streaming/SSE) | ✅ 已完成 | `app/routers/diagnosis.py`, `tests/test_phase11_streaming.py` |
 | Phase 12 | 核心链路异步测试与大模型 Mock 测试 | ⏳ 待执行 | `tests/test_diagnosis.py` |
 
 ## 6. API Endpoints
@@ -176,13 +176,13 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 # http://localhost:8000/docs
 ```
 
-## 10. Current State (Phase 10 Completed)
+## 10. Current State (Phase 11 Completed)
 
-**前 10 个 Phase 已全部完成**，系统当前具备强大的工业级多智能体诊断能力：
+**前 11 个 Phase 已全部完成**，系统当前具备强大的工业级诊断能力及极其完善的交互体验：
 - ✅ 基础设施：FastAPI 异步架构 + PostgreSQL/SQLite 灵活切换 + Alembic 异步版本控制。
-- ✅ 核心业务层：成功构建基于 LangGraph 的多智能体工作流。
-- ✅ 节点架构：实现了 `Supervisor` (路由分配) → `Data Analyst` (数据分析) → `Diagnosis Expert` (故障归因) 的标准流转。
-- ✅ 状态管理：独立出 `app/agents/state.py` 严格管理 Graph State，避免了模块循环导入。
+- ✅ 核心业务层：成功构建基于 LangGraph 的工作流，实现 Supervisor → Data Analyst → Diagnosis Expert 的流转。
+- ✅ 实时流式响应：新增 `POST /api/v1/diagnose/stream` SSE 接口，实现了 `astream()` 节点级执行状态与最终报告的纯中文实时推送。
+- ✅ 稳定性与重构：彻底移除了工具底层的 `asyncio.run` 阻塞隐患，修复了统计字典的 KeyError，并完善了流式与同步接口的向后兼容。
 
 ## 11. 架构约束提醒
 
@@ -192,12 +192,14 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - 考虑到生产环境要求，接下来的数据库表变更必须通过 Alembic 迁移脚本完成。
 - 所有注释必须使用中文。
 - 每次执行完一个阶段向我汇报完成了什么并给出测试代码，并停止执行项目，等待我确认下一个阶段
+- 每个阶段结束总结成一句话让我上传git
 
 ## 12. Next Immediate Goals
 
-系统底层和业务层均已通关，当前面临的关键挑战是**长时请求导致的前端超时问题**：
-**Phase 11: Streaming & UX Optimization (流式响应)**
-由于 LangGraph 多节点流转耗时较长（可能达到几十秒），同步的 `POST /api/v1/diagnose` 接口不符合生产标准。
+系统功能开发已基本闭环，当前需要攻克最后一道质量与工程化关卡：
+**Phase 12: 核心链路异步测试与大模型 Mock 测试**
+为了保证在没有真实 API 密钥或网络隔离的环境下依然能验证核心代码的正确性，我们需要引入隔离测试机制。
 我们需要：
-1. **重构 API 端点**：使用 FastAPI 的 `StreamingResponse` (Server-Sent Events, SSE) 或者 WebSocket。
-2. **暴露中间状态**：将 LangGraph 运行时的中间过程（如 "Data Analyst 正在读取数据..."、"Diagnosis Expert 正在分析..."）以及最终的 token 实时流式推送到前端。
+1. **LLM Mocking**：使用 `pytest-mock` (mocker) 拦截 LangChain 对外部大模型的网络调用，返回预设的固定格式数据。
+2. **Graph 路由测试**：构造模拟的 LLM 返回，专门测试 LangGraph 的状态流转（如：模拟 Analyst 获取数据后，验证 Supervisor 是否会正确切给 Expert）。
+3. **隔离依赖**：确保测试套件在执行时不会消耗真实的 Token 成本，且运行速度达到毫秒级。

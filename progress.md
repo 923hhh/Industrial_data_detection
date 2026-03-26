@@ -56,8 +56,22 @@
   - SSE 事件格式: node_start / node_finish / report / error / done
   - 保留原有 `/diagnose` 同步接口（向后兼容）
   - 验证 astream 节点执行序列: supervisor→data_analyst→supervisor→diagnosis_expert→supervisor→END
+  - Bug 1 fix: `pop("sum", None)` 避免全空传感器 KeyError
+  - Bug 2 fix: 工具改为 `@tool async def` + `ainvoke()`，移除 `asyncio.run()`
+  - Bug 3 fix: 所有 System Prompt 强制中文输出
+  - 5 处 `json.dumps` 添加 `ensure_ascii=False`
+  - 添加 pytest.ini 配置 pytest-asyncio
+  - 新增测试依赖: pytest, pytest-asyncio, httpx
+  - Phase 11 测试: 4/4 通过
 - Files created/modified:
-  - app/routers/diagnosis.py (updated - 新增流式端点)
+  - app/routers/diagnosis.py (SSE 流式端点 + ensure_ascii)
+  - app/agents/tools.py (async tool + pop fix)
+  - app/agents/nodes/supervisor.py (中文 prompt)
+  - app/agents/nodes/diagnosis_expert.py (中文 prompt)
+  - app/agents/nodes/data_analyst.py (async def)
+  - requirements.txt (新增 pytest, pytest-asyncio, httpx)
+  - pytest.ini (pytest-asyncio 配置)
+  - tests/test_phase11_streaming.py (新增)
 
 ### Phase 12: 核心链路测试覆盖
 - **Status:** pending
