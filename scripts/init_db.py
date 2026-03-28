@@ -106,6 +106,17 @@ CORE_COLUMN_MAPPING: dict[str, str] = {
 # 模型中的所有核心字段名集合
 CORE_FIELDS: set[str] = set(CORE_COLUMN_MAPPING.values())
 
+MISSING_DB_DRIVER_MESSAGE = """错误: 当前 Python 环境缺少数据库驱动依赖: {driver}
+
+请先使用项目虚拟环境，或安装 requirements.txt 中的依赖后再重试。
+
+推荐命令:
+  .\\venv\\Scripts\\python.exe scripts/init_db.py --init-only
+
+如果还没有安装依赖:
+  pip install -r requirements.txt
+"""
+
 
 def parse_timestamp(ts_str: str) -> datetime:
     """解析 CSV 中的时间戳字符串"""
@@ -150,8 +161,12 @@ def dataframe_to_records(df: pd.DataFrame) -> list[dict]:
     return records
 
 
-async def init_database():
-    """通过 Alembic 创建数据库表."""
+def init_database():
+    """通过 Alembic 创建数据库表.
+
+    Alembic 的 env.py 会自行管理异步迁移生命周期，这里必须保持同步调用，
+    否则会在已经运行的事件循环里再次触发 asyncio.run()。
+    """
     print("正在执行数据库迁移...")
 
     alembic_cfg = Config(str(Path(__file__).parent.parent / "alembic.ini"))
@@ -228,12 +243,19 @@ def main():
 
     args = parser.parse_args()
 
-    # 初始化数据库表
-    asyncio.run(init_database())
+    try:
+        # 初始化数据库表
+        init_database()
 
-    # 导入数据（如果指定）
-    if not args.init_only:
-        asyncio.run(import_csv(args.csv_path, args.chunk_size))
+        # 导入数据（如果指定）
+        if not args.init_only:
+            asyncio.run(import_csv(args.csv_path, args.chunk_size))
+    except ModuleNotFoundError as exc:
+        if exc.name in {"aiosqlite", "asyncpg"}:
+            raise SystemExit(
+                MISSING_DB_DRIVER_MESSAGE.format(driver=exc.name)
+            ) from exc
+        raise
 
 
 if __name__ == "__main__":
