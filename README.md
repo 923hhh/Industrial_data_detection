@@ -12,11 +12,16 @@
 - `GET /api/v1/diagnose/stream`：通过 SSE 返回节点进度和最终报告
 - `POST /api/v1/knowledge/documents`：导入检修知识文本并自动拆分为可检索分段
 - `POST /api/v1/knowledge/search`：按文本、设备型号、单张故障图片联合检索知识条目并返回出处
+- `POST /api/v1/tasks`：根据知识引用生成标准化检修任务和作业步骤
+- `PATCH /api/v1/tasks/{id}/steps/{step_id}`：更新检修步骤执行状态与备注
+- `GET /api/v1/history`：查看最近的检修任务历史
+- `GET /api/v1/export/{id}`：导出检修任务摘要、步骤和知识引用
 - `GET /health`：检查服务和数据库连通性
 - `index.html`：静态调试页，支持自定义后端地址、基础输入校验和错误提示
 - `knowledge_search.html`：多模态知识检索联调页，支持图片预览、识别线索展示和知识引用结果
+- `maintenance_tasks.html`：标准化检修任务联调页，支持任务生成、步骤执行、历史查看和导出摘要
 - Alembic 管理数据库 schema，不再依赖隐式建表
-- 当前测试结果：`24 passed, 4 skipped`
+- 当前测试结果：`29 passed, 4 skipped`
 
 ## 软件杯赛题适配（当前冻结版）
 
@@ -150,6 +155,6 @@ deploy/systemd/         Linux 部署示例
 
 - 检修知识库与知识检索主体
 - 多模态输入（文本、设备型号、图片）最小入口已打通，正式统一前端仍待后续阶段重构
-- 标准化作业指引闭环
+- 标准化作业指引闭环最小后端与静态任务页已打通，正式统一前端仍待后续阶段重构
 - 案例沉淀、审核与人工修正
 - 正式前端与竞赛材料收口

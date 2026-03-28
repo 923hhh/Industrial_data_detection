@@ -94,7 +94,7 @@ Phase 14：软件杯赛题适配（Stage 1 已冻结）
 - 必须保持 Pydantic V2 和 SQLAlchemy 2.0 异步语法
 
 ## Current Verified Status
-- `pytest -q` 当前结果：19 通过 / 4 跳过
+- `pytest -q` 当前结果：29 通过 / 4 跳过
 - SSE 流式接口契约：`GET /api/v1/diagnose/stream`
 - 数据库初始化方式：`scripts/init_db.py --init-only` 或 `alembic upgrade head`
 - 前端调试页已支持可配置后端地址、基础参数校验和更明确的失败提示
@@ -114,7 +114,7 @@ Phase 14：软件杯赛题适配（Stage 1 已冻结）
 - [x] 输出固定演示主线
 - [x] 建设知识库与知识检索主体（最小后端闭环）
 - [x] 补齐多模态输入（最小后端 + 静态入口页）
-- [ ] 建设标准化作业指引闭环
+- [x] 建设标准化作业指引闭环（最小后端 + 静态任务页）
 - [ ] 建设案例上传、审核与人工修正机制
 - [ ] 重构正式前端
 - [ ] 完成测试报告、PPT、视频与正式提交物

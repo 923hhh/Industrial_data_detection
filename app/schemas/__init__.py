@@ -14,6 +14,16 @@ from app.schemas.knowledge import (
     KnowledgeSearchHit,
     KnowledgeSearchResponse,
 )
+from app.schemas.tasks import (
+    KnowledgeReference,
+    MaintenanceTaskCreate,
+    MaintenanceTaskExportResponse,
+    MaintenanceTaskHistoryItem,
+    MaintenanceTaskHistoryResponse,
+    MaintenanceTaskResponse,
+    MaintenanceTaskStepResponse,
+    MaintenanceTaskStepUpdate,
+)
 
 __all__ = [
     "SensorDataBase",
@@ -26,4 +36,12 @@ __all__ = [
     "KnowledgeSearchRequest",
     "KnowledgeSearchHit",
     "KnowledgeSearchResponse",
+    "KnowledgeReference",
+    "MaintenanceTaskCreate",
+    "MaintenanceTaskStepUpdate",
+    "MaintenanceTaskStepResponse",
+    "MaintenanceTaskResponse",
+    "MaintenanceTaskHistoryItem",
+    "MaintenanceTaskHistoryResponse",
+    "MaintenanceTaskExportResponse",
 ]

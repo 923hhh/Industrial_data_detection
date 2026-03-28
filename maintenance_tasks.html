@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>标准化检修任务 - 作业闭环联调页</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --panel-soft: #0f1724;
+      --line: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --good: #3fb950;
+      --warn: #f0883e;
+      --bad: #ff7b72;
+    }
+
+    body {
+      min-height: 100vh;
+      background:
+        linear-gradient(180deg, rgba(88, 166, 255, 0.08), transparent 22%),
+        radial-gradient(circle at top right, rgba(240, 136, 62, 0.10), transparent 20%),
+        var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      padding: 28px 16px 40px;
+    }
+
+    .shell {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .hero h1 {
+      font-size: 1.7rem;
+      margin-bottom: 10px;
+    }
+
+    .hero p {
+      color: var(--muted);
+      line-height: 1.65;
+      max-width: 760px;
+    }
+
+    .hero-nav {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .hero-nav a {
+      text-decoration: none;
+      color: var(--accent);
+      border: 1px solid rgba(88, 166, 255, 0.35);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 0.84rem;
+      transition: 0.2s ease;
+    }
+
+    .hero-nav a:hover {
+      background: rgba(88, 166, 255, 0.10);
+      border-color: rgba(88, 166, 255, 0.55);
+    }
+
+    .panel {
+      background: rgba(22, 27, 34, 0.95);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
+    }
+
+    .panel-header {
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .panel-header h2 {
+      font-size: 1rem;
+    }
+
+    .panel-header span {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .config-body,
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(360px, 420px) minmax(0, 1fr);
+    }
+
+    .config-body {
+      padding: 18px 22px;
+      gap: 14px;
+      align-items: end;
+    }
+
+    .form-side,
+    .result-side {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .form-side {
+      border-right: 1px solid var(--line);
+      background: rgba(13, 17, 23, 0.32);
+    }
+
+    .field,
+    .field-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    label {
+      font-size: 0.76rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    input[type="text"],
+    textarea,
+    select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 11px 12px;
+      outline: none;
+      font-size: 0.92rem;
+      transition: 0.2s ease;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+      line-height: 1.6;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus,
+    select:focus {
+      border-color: rgba(88, 166, 255, 0.85);
+      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.12);
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      padding: 8px 12px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .status-pill.good { color: #9be9a8; border-color: rgba(63, 185, 80, 0.45); }
+    .status-pill.bad { color: #ffb4ae; border-color: rgba(255, 123, 114, 0.45); }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 1px solid transparent;
+      border-radius: 12px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: white;
+      background: linear-gradient(135deg, #1f6feb, #238636);
+      transition: 0.2s ease;
+    }
+
+    button.secondary {
+      background: transparent;
+      border-color: var(--line);
+      color: var(--muted);
+    }
+
+    button.mini {
+      padding: 7px 12px;
+      font-size: 0.8rem;
+      border-radius: 10px;
+    }
+
+    button:hover { filter: brightness(1.08); }
+    button.secondary:hover {
+      color: var(--accent);
+      border-color: rgba(88, 166, 255, 0.5);
+      background: rgba(88, 166, 255, 0.08);
+    }
+
+    button:disabled {
+      background: #21262d;
+      border-color: var(--line);
+      color: var(--muted);
+      cursor: not-allowed;
+      filter: none;
+    }
+
+    .source-list,
+    .steps-list,
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .source-card,
+    .advice-card,
+    .step-card,
+    .history-card,
+    .export-card,
+    .empty-card {
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px 18px;
+    }
+
+    .source-card label {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      text-transform: none;
+      letter-spacing: normal;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .source-card input[type="checkbox"] {
+      margin-top: 3px;
+      accent-color: #238636;
+    }
+
+    .source-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .badge {
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 0.75rem;
+      color: #9ecbff;
+      background: rgba(88, 166, 255, 0.11);
+      border: 1px solid rgba(88, 166, 255, 0.22);
+    }
+
+    .section-title {
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+    }
+
+    .advice-card {
+      border-left: 3px solid var(--good);
+      line-height: 1.7;
+    }
+
+    .step-card.pending { border-left: 3px solid rgba(139, 148, 158, 0.6); }
+    .step-card.in_progress { border-left: 3px solid var(--accent); }
+    .step-card.completed { border-left: 3px solid var(--good); }
+    .step-card.skipped { border-left: 3px solid var(--warn); }
+
+    .step-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+
+    .step-header h3 {
+      font-size: 1rem;
+    }
+
+    .step-status {
+      font-size: 0.78rem;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 10px;
+      white-space: nowrap;
+    }
+
+    .step-card p {
+      line-height: 1.65;
+      color: #d0d7de;
+      font-size: 0.92rem;
+    }
+
+    .step-details {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .detail-block {
+      background: rgba(13, 17, 23, 0.44);
+      border: 1px solid rgba(48, 54, 61, 0.95);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .detail-label {
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .detail-value {
+      line-height: 1.6;
+      font-size: 0.88rem;
+      color: var(--text);
+    }
+
+    .step-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .step-actions textarea {
+      min-height: 74px;
+    }
+
+    .step-actions-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .history-card h4 {
+      margin-bottom: 6px;
+      font-size: 0.95rem;
+    }
+
+    .history-meta {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.6;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.6;
+      color: #d0d7de;
+      font-size: 0.88rem;
+    }
+
+    @media (max-width: 980px) {
+      .config-body,
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .form-side {
+        border-right: none;
+        border-bottom: 1px solid var(--line);
+      }
+    }
+
+    @media (max-width: 680px) {
+      .field-grid,
+      .step-details {
+        grid-template-columns: 1fr;
+      }
+
+      .hero,
+      .panel-header,
+      .step-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div>
+        <h1>标准化检修任务 / 作业闭环联调页</h1>
+        <p>本页对应 TODO-SB-4：从知识检索结果生成标准化检修任务、输出智能建议卡、执行步骤确认，并支持历史回看与导出摘要。</p>
+      </div>
+      <div class="hero-nav">
+        <a href="./knowledge_search.html">返回知识检索页</a>
+        <a href="./index.html">返回诊断控制台</a>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>连接配置</h2>
+        <span>当前会调用 `/api/v1/tasks`、`/api/v1/history`、`/api/v1/export/{id}`</span>
+      </div>
+      <div class="config-body">
+        <div class="field">
+          <label for="baseUrl">后端地址</label>
+          <input type="text" id="baseUrl" placeholder="http://127.0.0.1:8000">
+          <div class="note">默认读取与知识检索页相同的后端地址。任务页会自动读取上一个知识检索结果作为知识引用候选。</div>
+        </div>
+        <div class="status-pill" id="taskStatus">● 就绪</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>生成检修任务</h2>
+        <span>知识引用 -> 标准步骤 -> 执行确认</span>
+      </div>
+      <div class="layout">
+        <div class="form-side">
+          <div class="field">
+            <label for="taskTitle">任务标题</label>
+            <input type="text" id="taskTitle" placeholder="留空时自动生成任务标题">
+          </div>
+
+          <div class="field-grid">
+            <div class="field">
+              <label for="equipmentType">设备类型</label>
+              <input type="text" id="equipmentType" value="摩托车发动机">
+            </div>
+            <div class="field">
+              <label for="equipmentModel">设备型号</label>
+              <input type="text" id="equipmentModel" value="LX200">
+            </div>
+          </div>
+
+          <div class="field-grid">
+            <div class="field">
+              <label for="maintenanceLevel">检修等级</label>
+              <select id="maintenanceLevel">
+                <option value="routine">routine / 例行检修</option>
+                <option value="standard" selected>standard / 标准检修</option>
+                <option value="emergency">emergency / 应急检修</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="faultType">故障类型</label>
+              <input type="text" id="faultType" value="启动困难">
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="symptomDescription">故障现象描述</label>
+            <textarea id="symptomDescription">发动机启动困难，怀疑点火系统异常。</textarea>
+          </div>
+
+          <div class="field">
+            <div class="section-title">知识引用候选</div>
+            <div class="note" id="contextNote">等待读取上一页的知识检索结果...</div>
+            <div class="source-list" id="sourceList">
+              <div class="empty-card">当前还没有知识引用候选。请先到知识检索页跑一次查询。</div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button id="createTaskBtn" onclick="createMaintenanceTask()">生成检修任务</button>
+            <button class="secondary" onclick="reloadHistory()">刷新历史</button>
+          </div>
+        </div>
+
+        <div class="result-side">
+          <div>
+            <div class="section-title">智能建议卡</div>
+            <div class="advice-card" id="adviceCard">生成检修任务后，这里会显示“智能建议”卡片，用于答辩时说明系统并非只返回知识片段，而是形成了标准化作业指引。</div>
+          </div>
+
+          <div>
+            <div class="section-title">任务步骤</div>
+            <div class="steps-list" id="stepsContainer">
+              <div class="empty-card">尚未生成检修任务。选择知识引用后点击“生成检修任务”，这里会出现标准步骤、风险提示、注意事项和执行确认入口。</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-title">任务历史</div>
+            <div class="history-list" id="historyContainer">
+              <div class="empty-card">历史记录尚未加载。</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-title">导出摘要</div>
+            <div class="export-card">
+              <pre id="exportSummary">尚未导出任务。完成若干步骤后，可点击历史中的“导出摘要”查看当前任务总结。</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const BASE_URL_STORAGE_KEY = 'fault-diagnosis-base-url';
+    const KNOWLEDGE_SEARCH_CONTEXT_KEY = 'knowledge-search-last-context';
+
+    let currentTaskId = null;
+    let currentTask = null;
+
+    function initializePage() {
+      document.getElementById('baseUrl').value = getInitialBaseUrl();
+      hydrateFromKnowledgeSearch();
+      reloadHistory();
+    }
+
+    function getInitialBaseUrl() {
+      const saved = localStorage.getItem(BASE_URL_STORAGE_KEY);
+      if (saved) return saved;
+
+      if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+        return window.location.origin;
+      }
+
+      return 'http://127.0.0.1:8000';
+    }
+
+    function normalizeBaseUrl(rawValue) {
+      const candidate = (rawValue || '').trim() || getInitialBaseUrl();
+      let parsed;
+      try {
+        parsed = new URL(candidate);
+      } catch {
+        throw new Error('后端地址格式无效，请输入 http:// 或 https:// 开头的地址。');
+      }
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        throw new Error('后端地址只支持 http:// 或 https://。');
+      }
+      return parsed.href.replace(/\/$/, '');
+    }
+
+    function setStatus(text, mode = '') {
+      const el = document.getElementById('taskStatus');
+      el.textContent = text;
+      el.className = `status-pill ${mode}`.trim();
+    }
+
+    function setCreateRunning(isRunning) {
+      document.getElementById('createTaskBtn').disabled = isRunning;
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function hydrateFromKnowledgeSearch() {
+      const raw = localStorage.getItem(KNOWLEDGE_SEARCH_CONTEXT_KEY);
+      if (!raw) {
+        document.getElementById('contextNote').textContent = '尚未检测到上一页知识检索结果，请先在知识检索页运行一次查询。';
+        return;
+      }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        document.getElementById('contextNote').textContent = '上一页知识检索结果无法解析，请重新执行一次知识检索。';
+        return;
+      }
+
+      const query = parsed.query || '';
+      const equipmentType = parsed.equipment_type || '';
+      const equipmentModel = parsed.equipment_model || '';
+      const response = parsed.response || {};
+      const results = response.results || [];
+
+      if (equipmentType) document.getElementById('equipmentType').value = equipmentType;
+      if (equipmentModel) document.getElementById('equipmentModel').value = equipmentModel;
+      if (query) document.getElementById('symptomDescription').value = query;
+
+      document.getElementById('contextNote').textContent = `已读取上一页检索结果：${results.length} 条候选知识条目。建议至少勾选 1 条，用于生成步骤引用。`;
+      renderSourceCandidates(results);
+    }
+
+    function renderSourceCandidates(results) {
+      const container = document.getElementById('sourceList');
+      if (!results || results.length === 0) {
+        container.innerHTML = '<div class="empty-card">当前没有知识引用候选，请先回到知识检索页执行一次查询。</div>';
+        return;
+      }
+
+      container.innerHTML = results.map((item, index) => `
+        <article class="source-card">
+          <label>
+            <input type="checkbox" value="${item.chunk_id}" ${index < 2 ? 'checked' : ''}>
+            <div>
+              <div class="source-meta">
+                <span class="badge">${escapeHtml(item.equipment_type || '未标注设备')}</span>
+                ${item.equipment_model ? `<span class="badge">${escapeHtml(item.equipment_model)}</span>` : ''}
+                ${item.fault_type ? `<span class="badge">${escapeHtml(item.fault_type)}</span>` : ''}
+              </div>
+              <strong>${escapeHtml(item.title)}</strong>
+              <div class="note" style="margin-top: 8px;">${escapeHtml(item.excerpt)}</div>
+              <div class="note" style="margin-top: 6px;">来源：${escapeHtml(item.source_name)}${item.section_reference ? ` | 章节：${escapeHtml(item.section_reference)}` : ''}${item.page_reference ? ` | 页码：${escapeHtml(item.page_reference)}` : ''}</div>
+            </div>
+          </label>
+        </article>
+      `).join('');
+    }
+
+    function getSelectedChunkIds() {
+      return Array.from(document.querySelectorAll('#sourceList input[type="checkbox"]:checked'))
+        .map((el) => Number(el.value))
+        .filter((value) => Number.isFinite(value));
+    }
+
+    function buildTaskPayload() {
+      const title = document.getElementById('taskTitle').value.trim();
+      const equipmentType = document.getElementById('equipmentType').value.trim();
+      const equipmentModel = document.getElementById('equipmentModel').value.trim();
+      const maintenanceLevel = document.getElementById('maintenanceLevel').value;
+      const faultType = document.getElementById('faultType').value.trim();
+      const symptomDescription = document.getElementById('symptomDescription').value.trim();
+      const sourceChunkIds = getSelectedChunkIds();
+
+      if (!equipmentType) {
+        throw new Error('设备类型不能为空。');
+      }
+      if (!symptomDescription && sourceChunkIds.length === 0) {
+        throw new Error('至少填写故障现象或勾选一条知识引用。');
+      }
+
+      return {
+        title: title || null,
+        equipment_type: equipmentType,
+        equipment_model: equipmentModel || null,
+        maintenance_level: maintenanceLevel,
+        fault_type: faultType || null,
+        symptom_description: symptomDescription || null,
+        source_chunk_ids: sourceChunkIds,
+      };
+    }
+
+    async function createMaintenanceTask() {
+      let baseUrl;
+      let payload;
+      try {
+        baseUrl = normalizeBaseUrl(document.getElementById('baseUrl').value);
+        payload = buildTaskPayload();
+      } catch (error) {
+        setStatus(`● ${error.message}`, 'bad');
+        return;
+      }
+
+      setCreateRunning(true);
+      setStatus('● 任务生成中...', '');
+      localStorage.setItem(BASE_URL_STORAGE_KEY, baseUrl);
+
+      try {
+        const response = await fetch(new URL('/api/v1/tasks', `${baseUrl}/`).toString(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          const detail = Array.isArray(data.detail)
+            ? data.detail.map((item) => item.msg).join('；')
+            : data.detail || '检修任务创建失败。';
+          throw new Error(detail);
+        }
+
+        currentTaskId = data.id;
+        currentTask = data;
+        renderTask(data);
+        setStatus(`● 任务 ${data.id} 已生成`, 'good');
+        await reloadHistory();
+      } catch (error) {
+        setStatus(`● ${error.message}`, 'bad');
+      } finally {
+        setCreateRunning(false);
+      }
+    }
+
+    function renderTask(task) {
+      currentTask = task;
+      currentTaskId = task.id;
+      document.getElementById('adviceCard').textContent = task.advice_card || '当前未生成智能建议。';
+      renderSteps(task.steps || []);
+    }
+
+    function renderSteps(steps) {
+      const container = document.getElementById('stepsContainer');
+      if (!steps || steps.length === 0) {
+        container.innerHTML = '<div class="empty-card">当前任务还没有步骤。</div>';
+        return;
+      }
+
+      container.innerHTML = steps.map((step) => `
+        <article class="step-card ${escapeHtml(step.status)}">
+          <div class="step-header">
+            <div>
+              <h3>Step ${step.step_order}. ${escapeHtml(step.title)}</h3>
+              <div class="note" style="margin-top: 6px;">${step.confirmation_text ? `确认口径：${escapeHtml(step.confirmation_text)}` : '当前步骤无单独确认口径。'}</div>
+            </div>
+            <div class="step-status">${escapeHtml(step.status)}</div>
+          </div>
+          <p>${escapeHtml(step.instruction)}</p>
+          <div class="step-details">
+            <div class="detail-block">
+              <div class="detail-label">风险提示</div>
+              <div class="detail-value">${escapeHtml(step.risk_warning || '当前步骤无额外风险提示。')}</div>
+            </div>
+            <div class="detail-block">
+              <div class="detail-label">注意事项</div>
+              <div class="detail-value">${escapeHtml(step.caution || '当前步骤无额外注意事项。')}</div>
+            </div>
+          </div>
+          <div class="detail-block" style="margin-top: 12px;">
+            <div class="detail-label">知识引用</div>
+            <div class="detail-value">${renderKnowledgeRefs(step.knowledge_refs || [])}</div>
+          </div>
+          <div class="step-actions">
+            <textarea id="step-note-${step.id}" placeholder="填写该步骤的执行备注、现场发现或复核结论。">${escapeHtml(step.completion_note || '')}</textarea>
+            <div class="step-actions-row">
+              <button class="mini" onclick="updateStepStatus(${step.id}, 'in_progress')">标记进行中</button>
+              <button class="mini" onclick="updateStepStatus(${step.id}, 'completed')">标记完成</button>
+              <button class="mini secondary" onclick="updateStepStatus(${step.id}, 'skipped')">跳过</button>
+            </div>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    function renderKnowledgeRefs(refs) {
+      if (!refs || refs.length === 0) {
+        return '当前步骤未挂接知识引用。';
+      }
+
+      return refs.map((ref) => {
+        const meta = [
+          ref.source_name,
+          ref.section_reference ? `章节 ${ref.section_reference}` : '',
+          ref.page_reference ? `页码 ${ref.page_reference}` : '',
+        ].filter(Boolean).join(' | ');
+        return `${escapeHtml(ref.title)}（${escapeHtml(meta)}）`;
+      }).join('<br>');
+    }
+
+    async function updateStepStatus(stepId, status) {
+      if (!currentTaskId) {
+        setStatus('● 请先生成检修任务。', 'bad');
+        return;
+      }
+
+      let baseUrl;
+      try {
+        baseUrl = normalizeBaseUrl(document.getElementById('baseUrl').value);
+      } catch (error) {
+        setStatus(`● ${error.message}`, 'bad');
+        return;
+      }
+
+      const noteField = document.getElementById(`step-note-${stepId}`);
+      const completionNote = noteField ? noteField.value.trim() : '';
+      setStatus(`● 正在更新步骤 ${stepId}...`, '');
+
+      try {
+        const response = await fetch(new URL(`/api/v1/tasks/${currentTaskId}/steps/${stepId}`, `${baseUrl}/`).toString(), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status,
+            completion_note: completionNote || null,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || '更新步骤失败。');
+        }
+        renderTask(data);
+        setStatus(`● 步骤 ${stepId} 已更新`, 'good');
+        await reloadHistory();
+      } catch (error) {
+        setStatus(`● ${error.message}`, 'bad');
+      }
+    }
+
+    async function reloadHistory() {
+      let baseUrl;
+      try {
+        baseUrl = normalizeBaseUrl(document.getElementById('baseUrl').value);
+      } catch (error) {
+        setStatus(`● ${error.message}`, 'bad');
+        return;
+      }
+
+      try {
+        const response = await fetch(new URL('/api/v1/history?limit=8', `${baseUrl}/`).toString());
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || '加载任务历史失败。');
+        }
+        renderHistory(data.tasks || []);
+      } catch (error) {
+        document.getElementById('historyContainer').innerHTML = `<div class="empty-card">历史加载失败：${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    function renderHistory(tasks) {
+      const container = document.getElementById('historyContainer');
+      if (!tasks || tasks.length === 0) {
+        container.innerHTML = '<div class="empty-card">当前还没有检修任务历史。</div>';
+        return;
+      }
+
+      container.innerHTML = tasks.map((task) => `
+        <article class="history-card">
+          <h4>${escapeHtml(task.title)}</h4>
+          <div class="history-meta">
+            设备：${escapeHtml(task.equipment_type)}${task.equipment_model ? ` / ${escapeHtml(task.equipment_model)}` : ''}<br>
+            检修等级：${escapeHtml(task.maintenance_level)} | 状态：${escapeHtml(task.status)} | 已完成：${task.completed_steps}/${task.total_steps}
+          </div>
+          <div class="actions" style="margin-top: 12px;">
+            <button class="mini" onclick="loadTask(${task.id})">查看任务</button>
+            <button class="mini secondary" onclick="exportTask(${task.id})">导出摘要</button>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    async function loadTask(taskId) {
+      let baseUrl;
+      try {
+        baseUrl = normalizeBaseUrl(document.getElementById('baseUrl').value);
+      } catch (error) {
+        setStatus(`● ${error.message}`, 'bad');
+        return;
+      }
+
+      try {
+        const response = await fetch(new URL(`/api/v1/tasks/${taskId}`, `${baseUrl}/`).toString());
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || '加载任务详情失败。');
+        }
+        renderTask(data);
+        setStatus(`● 已加载任务 ${taskId}`, 'good');
+      } catch (error) {
+        setStatus(`● ${error.message}`, 'bad');
+      }
+    }
+
+    async function exportTask(taskId) {
+      let baseUrl;
+      try {
+        baseUrl = normalizeBaseUrl(document.getElementById('baseUrl').value);
+      } catch (error) {
+        setStatus(`● ${error.message}`, 'bad');
+        return;
+      }
+
+      try {
+        const response = await fetch(new URL(`/api/v1/export/${taskId}`, `${baseUrl}/`).toString());
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || '导出任务失败。');
+        }
+        document.getElementById('exportSummary').textContent = `${data.export_summary}\n\n---\n\n${JSON.stringify(data.task, null, 2)}`;
+        setStatus(`● 已导出任务 ${taskId}`, 'good');
+      } catch (error) {
+        setStatus(`● ${error.message}`, 'bad');
+      }
+    }
+
+    initializePage();
+  </script>
+</body>
+</html>

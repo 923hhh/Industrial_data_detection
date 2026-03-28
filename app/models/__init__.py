@@ -8,6 +8,12 @@ from app.models.knowledge import (
     MaintenanceCase,
     KnowledgeRelation,
 )
+from app.models.tasks import (
+    MaintenanceTask,
+    MaintenanceTaskStep,
+    MaintenanceTaskTemplate,
+    MaintenanceTaskTemplateStep,
+)
 
 __all__ = [
     "Base",
@@ -17,4 +23,8 @@ __all__ = [
     "KnowledgeChunk",
     "MaintenanceCase",
     "KnowledgeRelation",
+    "MaintenanceTask",
+    "MaintenanceTaskStep",
+    "MaintenanceTaskTemplate",
+    "MaintenanceTaskTemplateStep",
 ]

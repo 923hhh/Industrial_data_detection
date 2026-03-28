@@ -301,3 +301,36 @@
   - `README.md` (updated)
   - `todo_softbei.md` (updated)
   - `findings.md` (updated)
+
+## Session: 2026-03-28 (Phase 15 / 软件杯赛题适配 Stage 4)
+
+### 标准化作业指引闭环
+- **Status:** minimum workflow loop complete
+- Actions taken:
+  - 新增检修任务相关模型：`MaintenanceTaskTemplate`、`MaintenanceTaskTemplateStep`、`MaintenanceTask`、`MaintenanceTaskStep`
+  - 新增标准化作业服务 `MaintenanceTaskService`，支持模板生成、任务创建、步骤更新、历史查看和导出摘要
+  - 新增任务路由，开放 `POST /api/v1/tasks`、`GET /api/v1/tasks/{id}`、`PATCH /api/v1/tasks/{id}/steps/{step_id}`、`GET /api/v1/history`、`GET /api/v1/export/{id}`
+  - 新增 `maintenance_tasks.html` 静态任务页，串联“知识检索 -> 任务创建 -> 步骤执行 -> 导出摘要”
+  - 更新 `knowledge_search.html`，在成功检索后将结果缓存到本地，供任务页直接读取引用候选
+  - 新增 `tests/test_phase15_tasks.py`
+  - 使用 `node --check` 验证 `knowledge_search.html` 和 `maintenance_tasks.html` 的内联脚本语法
+  - 验证全量 `pytest -q` 结果更新为 29 通过 / 4 跳过
+- Files created/modified:
+  - `app/models/tasks.py` (created)
+  - `app/schemas/tasks.py` (created)
+  - `app/services/maintenance_task_service.py` (created)
+  - `app/routers/tasks.py` (created)
+  - `alembic/versions/7e3c4af6d1b2_add_maintenance_task_workflow_tables.py` (created)
+  - `maintenance_tasks.html` (created)
+  - `tests/test_phase15_tasks.py` (created)
+  - `knowledge_search.html` (updated)
+  - `app/models/__init__.py` (updated)
+  - `app/schemas/__init__.py` (updated)
+  - `app/services/__init__.py` (updated)
+  - `app/routers/__init__.py` (updated)
+  - `app/main.py` (updated)
+  - `alembic/env.py` (updated)
+  - `README.md` (updated)
+  - `todo_softbei.md` (updated)
+  - `findings.md` (updated)
+  - `task_plan.md` (updated)

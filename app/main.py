@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.core.database import get_engine
 from app.core.logging import configure_logging
-from app.routers import health_router, diagnosis_router, knowledge_router
+from app.routers import health_router, diagnosis_router, knowledge_router, tasks_router
 
 
 @asynccontextmanager
@@ -64,6 +64,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
     app.include_router(diagnosis_router)
     app.include_router(knowledge_router)
+    app.include_router(tasks_router)
 
     @app.middleware("http")
     async def log_requests(request: Request, call_next):

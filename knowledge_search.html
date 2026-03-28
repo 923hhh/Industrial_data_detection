@@ -418,6 +418,7 @@
       </div>
       <div class="hero-nav">
         <a href="./index.html">返回诊断控制台</a>
+        <a href="./maintenance_tasks.html">进入检修任务页</a>
         <a href="./docs/SOFTBEI_DEMO_STORYLINE.md">查看演示主线</a>
       </div>
     </section>
@@ -508,6 +509,7 @@
 
   <script>
     const BASE_URL_STORAGE_KEY = 'fault-diagnosis-base-url';
+    const KNOWLEDGE_SEARCH_CONTEXT_KEY = 'knowledge-search-last-context';
     const FALLBACK_BASE_URL = 'http://127.0.0.1:8000';
     const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 
@@ -727,6 +729,13 @@
           throw new Error(detail);
         }
 
+        localStorage.setItem(KNOWLEDGE_SEARCH_CONTEXT_KEY, JSON.stringify({
+          query: formData.query || '',
+          equipment_type: formData.equipmentType || '',
+          equipment_model: formData.equipmentModel || '',
+          image_filename: formData.imageFile ? formData.imageFile.name : null,
+          response: data,
+        }));
         renderAnalysis(data);
         renderResults(data.results || []);
         setStatus(`● 已返回 ${data.total} 条结果`, 'good');
