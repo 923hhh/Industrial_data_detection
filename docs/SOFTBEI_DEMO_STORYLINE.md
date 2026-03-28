@@ -4,6 +4,8 @@
 
 在 5 分钟内让评委看懂这不是“调试页 + 大模型问答”，而是一套可用于设备检修的知识与作业辅助系统。
 
+当前正式入口：`softbei_workbench.html`
+
 ## 固定演示对象
 
 - 设备类型：`摩托车发动机`
@@ -68,6 +70,7 @@
 
 - 智能分析子模块
 - 不是主输出页面
+- 可在正式工作台右侧辅助面板或 `diagnosis_console.html` 中展示
 
 ### Step 5：沉淀新案例
 
@@ -91,6 +94,14 @@
 - 智能分析区
 - 案例沉淀区
 - 历史记录区
+
+当前页面组织：
+
+- `softbei_workbench.html`：正式统一入口
+- `knowledge_search.html`：检索详细操作页
+- `maintenance_tasks.html`：作业步骤与导出页
+- `case_reviews.html`：案例沉淀与审核页
+- `diagnosis_console.html`：智能分析子模块
 
 ## 现场演示禁忌
 

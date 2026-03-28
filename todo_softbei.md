@@ -159,7 +159,7 @@
 - 验收标准：
   - 正式前端可在 3 到 5 分钟内完成完整演示。
 - 依赖关系：依赖 `TODO-SB-2` 到 `TODO-SB-5`。
-- 状态：未开始
+- 状态：已完成（正式工作台 + 子页联动）
 
 ### TODO-SB-7 效果证据与测试报告
 
@@ -291,3 +291,19 @@
 - 遗留问题：
   - 当前附件仍以“名称 + URL”占位为主，尚未做真实文件上传与存储。
   - 当前案例页仍属于静态联调页，正式统一前端与角色化审核界面留待 TODO-SB-6 处理。
+
+### 2026-03-28（TODO-SB-6）
+
+- 已完成 `TODO-SB-6 正式前端与演示界面重构` 的最小可演示版本。
+- 当前处理：
+  - 已新增 `softbei_workbench.html` 作为正式统一工作台，聚合知识检索、检修任务、案例沉淀、历史记录和智能分析辅助面板。
+  - 已将 `index.html` 改为前端入口页，默认跳转到正式工作台。
+  - 已将旧 SSE 调试页拆分为 `diagnosis_console.html`，明确降级为“智能分析子模块”。
+  - 已更新 `knowledge_search.html`、`maintenance_tasks.html`、`case_reviews.html` 的导航，使三类业务子页均可返回正式工作台。
+  - 已在案例页持久化最近案例上下文，使正式工作台可以直接展示最新案例状态。
+- 验证结果：
+  - 已使用 Node 静态校验 `softbei_workbench.html`、`diagnosis_console.html`、`knowledge_search.html`、`maintenance_tasks.html`、`case_reviews.html` 的内联脚本语法。
+  - 已执行全量 `pytest -q`，当前结果保持为 `34 passed, 4 skipped`。
+- 遗留问题：
+  - 当前正式工作台仍基于静态页面聚合，尚未进入更复杂的角色权限、上传存储和竞赛包装阶段。
+  - 测试报告、PPT、视频和正式提交物仍待 TODO-SB-7 ~ TODO-SB-8 继续收口。

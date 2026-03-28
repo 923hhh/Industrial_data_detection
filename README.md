@@ -21,7 +21,9 @@
 - `GET /api/v1/history`：查看最近的检修任务历史
 - `GET /api/v1/export/{id}`：导出检修任务摘要、步骤和知识引用
 - `GET /health`：检查服务和数据库连通性
-- `index.html`：静态调试页，支持自定义后端地址、基础输入校验和错误提示
+- `index.html`：前端入口页，默认跳转到正式工作台
+- `softbei_workbench.html`：正式工作台，统一聚合知识检索、检修任务、案例沉淀、历史记录与智能分析辅助
+- `diagnosis_console.html`：智能分析子模块，保留原有 SSE 流式控制台
 - `knowledge_search.html`：多模态知识检索联调页，支持图片预览、识别线索展示和知识引用结果
 - `maintenance_tasks.html`：标准化检修任务联调页，支持任务生成、步骤执行、历史查看和导出摘要
 - `case_reviews.html`：案例沉淀与审核联调页，支持案例上传、人工修正、审核入库和后续回流展示
@@ -94,11 +96,11 @@ python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - `http://127.0.0.1:8000/docs`
 - `http://127.0.0.1:8000/health`
 
-### 5. 打开前端调试页
+### 5. 打开前端入口
 
-直接用浏览器打开 [index.html](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/index.html)。
+直接用浏览器打开 [index.html](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/index.html) 或 [softbei_workbench.html](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/softbei_workbench.html)。
 
-建议先确认页面中的“后端地址”与实际启动地址一致，再发起诊断。
+`index.html` 会自动跳转到正式工作台；建议先确认页面中的“后端地址”与实际启动地址一致，再开始演示。
 
 ## 演示流程
 
@@ -106,10 +108,11 @@ python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 1. 启动后端服务
 2. 访问 `/health`
-3. 打开 `index.html`
-4. 填写时间范围和模型
-5. 发起一次流式诊断，观察 `connected -> node_start -> node_finish -> report -> done`
-6. 如需展示接口文档，再打开 `/docs`
+3. 打开 `softbei_workbench.html`
+4. 先展示知识检索命中结果和引用来源
+5. 再进入标准化检修任务和案例沉淀页面
+6. 如需展示智能分析过程，再打开内置辅助面板或 `diagnosis_console.html`
+7. 如需展示接口文档，再打开 `/docs`
 
 更细的手工联调清单见 [docs/DEMO_CHECKLIST.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/DEMO_CHECKLIST.md)。
 
@@ -141,7 +144,9 @@ app/                    FastAPI 应用、路由、服务、智能体
 alembic/                Alembic 迁移环境与版本脚本
 scripts/                初始化数据库和导入数据脚本
 tests/                  异步接口、流式链路和回归测试
-index.html              静态调试页
+index.html              前端入口页（跳转到正式工作台）
+softbei_workbench.html  正式工作台
+diagnosis_console.html  智能分析子模块控制台
 docs/                   MVP 级部署和演示文档
 deploy/systemd/         Linux 部署示例
 ```
@@ -159,7 +164,7 @@ deploy/systemd/         Linux 部署示例
 如果目标转向软件杯正式参赛，当前优先级已切换为：
 
 - 检修知识库与知识检索主体
-- 多模态输入（文本、设备型号、图片）最小入口已打通，正式统一前端仍待后续阶段重构
-- 标准化作业指引闭环最小后端与静态任务页已打通，正式统一前端仍待后续阶段重构
-- 案例沉淀、审核与人工修正最小闭环已打通，正式统一前端与竞赛材料仍待后续阶段推进
-- 正式前端与竞赛材料收口
+- 多模态输入（文本、设备型号、图片）最小入口已打通，并已接入正式工作台
+- 标准化作业指引闭环最小后端与正式工作台已打通，后续重点转向测试报告与竞赛材料
+- 案例沉淀、审核与人工修正最小闭环已打通，并已接入正式工作台
+- 测试报告、PPT、视频与正式提交物收口

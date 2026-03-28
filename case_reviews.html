@@ -382,9 +382,10 @@
         <p>本页对应 TODO-SB-5：把检修任务结果沉淀为待审核案例，支持人工修正，并在审核通过后自动纳入知识库供后续检索命中。</p>
       </div>
       <div class="hero-nav">
+        <a href="./softbei_workbench.html">返回正式工作台</a>
         <a href="./maintenance_tasks.html">返回检修任务页</a>
         <a href="./knowledge_search.html">返回知识检索页</a>
-        <a href="./index.html">返回诊断控制台</a>
+        <a href="./diagnosis_console.html">打开智能分析子模块</a>
       </div>
     </section>
 
@@ -504,6 +505,7 @@
   <script>
     const BASE_URL_STORAGE_KEY = 'fault-diagnosis-base-url';
     const TASK_CONTEXT_STORAGE_KEY = 'maintenance-task-last-context';
+    const CASE_CONTEXT_STORAGE_KEY = 'maintenance-case-last-context';
 
     let currentCaseId = null;
     let currentCase = null;
@@ -745,6 +747,7 @@
     }
 
     function renderCaseDetail(data) {
+      localStorage.setItem(CASE_CONTEXT_STORAGE_KEY, JSON.stringify(data));
       const container = document.getElementById('caseDetail');
       const refs = data.knowledge_refs || [];
       const corrections = data.corrections || [];

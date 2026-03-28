@@ -370,3 +370,30 @@
   - `todo_softbei.md` (updated)
   - `findings.md` (updated)
   - `task_plan.md` (updated)
+
+## Session: 2026-03-28 (Phase 17 / 软件杯赛题适配 Stage 6)
+
+### 正式前端与演示界面重构
+- **Status:** formal unified frontend complete
+- Actions taken:
+  - 新增 `softbei_workbench.html` 作为正式工作台，统一展示知识检索、检修任务、案例沉淀、历史记录和智能分析辅助面板
+  - 将 `index.html` 改为前端入口页，默认跳转到正式工作台
+  - 将原有 SSE 调试控制台拆分为 `diagnosis_console.html`，明确降级为智能分析子模块
+  - 更新 `knowledge_search.html`、`maintenance_tasks.html`、`case_reviews.html` 的导航，使业务子页统一回到正式工作台
+  - 在 `case_reviews.html` 中持久化最近案例上下文，供正式工作台直接显示最新案例状态
+  - 使用 Node 静态校验 `softbei_workbench.html`、`diagnosis_console.html` 与已修改业务子页的内联脚本语法
+  - 验证全量 `pytest -q` 结果保持为 `34 passed, 4 skipped`
+- Files created/modified:
+  - `softbei_workbench.html` (created)
+  - `diagnosis_console.html` (created)
+  - `index.html` (updated)
+  - `knowledge_search.html` (updated)
+  - `maintenance_tasks.html` (updated)
+  - `case_reviews.html` (updated)
+  - `README.md` (updated)
+  - `docs/DEMO_CHECKLIST.md` (updated)
+  - `docs/SOFTBEI_DEMO_STORYLINE.md` (updated)
+  - `todo_softbei.md` (updated)
+  - `progress.md` (updated)
+  - `findings.md` (updated)
+  - `task_plan.md` (updated)

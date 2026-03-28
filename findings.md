@@ -55,6 +55,9 @@
 | TODO-SB-5 审核通过案例直接转成 `knowledge_documents + knowledge_chunks` | 复用现有检索基础设施，最快形成“案例入库后可被搜索命中”的闭环 |
 | TODO-SB-5 人工修正先落到结构化关系表与 JSON 快照 | 先保留可解释的修正记录，不引入额外图数据库或复杂标注系统 |
 | TODO-SB-5 单独新增 `case_reviews.html` 静态案例页 | 先把“任务执行 -> 案例沉淀 -> 审核入库”链路跑通，再在正式前端阶段统一重构 |
+| TODO-SB-6 使用 `softbei_workbench.html` 作为正式统一入口，`index.html` 只保留为跳转壳页 | 保持浏览器默认入口稳定，同时把正式演示界面和旧调试控制台彻底分离 |
+| TODO-SB-6 将原 SSE 诊断页拆分为 `diagnosis_console.html` 智能分析子模块 | 让时间窗诊断只作为辅助分析能力存在，不再破坏软件杯主产品叙事 |
+| TODO-SB-6 正式前端采用“统一工作台 + 保留独立业务子页”而不是一次性重写单页应用 | 赛前优先确保主路径可演示、上下文可串联，避免为前端工程化过度消耗时间 |
 
 ## Issues Encountered
 | Issue | Resolution |
