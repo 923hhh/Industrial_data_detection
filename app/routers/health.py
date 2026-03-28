@@ -3,12 +3,15 @@
 
 Executes a lightweight database query to verify connectivity.
 """
+import logging
+
 from fastapi import APIRouter, status
 from pydantic import BaseModel
 
 from app.core.database import check_database_connection
 
 router = APIRouter(tags=["Health"])
+logger = logging.getLogger(__name__)
 
 
 class HealthResponse(BaseModel):
@@ -32,8 +35,11 @@ async def health_check() -> HealthResponse:
         HealthResponse with status and database connection state.
     """
     db_connected = await check_database_connection()
+    overall_status = "healthy" if db_connected else "degraded"
+    database_status = "connected" if db_connected else "disconnected"
+    logger.info("health_check status=%s database=%s", overall_status, database_status)
 
     return HealthResponse(
-        status="healthy" if db_connected else "degraded",
-        database="connected" if db_connected else "disconnected"
+        status=overall_status,
+        database=database_status,
     )

@@ -274,13 +274,13 @@ class TestAPISchemaValidation:
 
     @pytest.mark.asyncio
     async def test_stream_endpoint_exists(self):
-        """流式端点：存在且返回 text/event-stream content-type"""
+        """流式端点：GET + query params 可访问并返回事件流"""
         from httpx import AsyncClient, ASGITransport
         from app.main import app
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test", timeout=30) as client:
-            response = await client.post("/api/v1/diagnose/stream", json={
+            response = await client.get("/api/v1/diagnose/stream", params={
                 "start_time": "2022-08-12 16:00:00",
                 "end_time": "2022-08-12 16:05:00",
                 "model_provider": "deepseek",

@@ -51,7 +51,7 @@
 - **Status:** complete
 - **Started:** 2026-03-24
 - Actions taken:
-  - 实现 `POST /api/v1/diagnose/stream` SSE 流式端点
+  - 实现 `GET /api/v1/diagnose/stream` SSE 流式端点
   - 通过 `graph.astream()` 遍历 LangGraph 节点执行结果
   - SSE 事件格式: node_start / node_finish / report / error / done
   - 保留原有 `/diagnose` 同步接口（向后兼容）
@@ -74,11 +74,13 @@
   - tests/test_phase11_streaming.py (新增)
 
 ### Phase 12: 核心链路测试覆盖
-- **Status:** pending
+- **Status:** complete
 - Actions taken:
-  -
+  - 编写 pytest + httpx 异步接口测试
+  - Mock 大模型 API，验证智能体路由和错误捕获
+  - `pytest -q` 当前结果更新为 19 通过 / 4 跳过
 - Files created/modified:
-  -
+  - `tests/test_phase12_core链路.py` (created/updated)
 
 ## Test Results
 | Test | Input | Expected | Actual | Status |
@@ -91,6 +93,8 @@
 | | | 1 | |
 
 ## 5-Question Reboot Check
+> 注：以下为 2026-03-24 当日历史快照，不代表当前状态。
+
 | Question | Answer |
 |----------|--------|
 | Where am I? | Phase 9 (刚开始) |
@@ -98,3 +102,128 @@
 | What's the goal? | 多智能体协作架构 + 流式响应 + 测试覆盖 |
 | What have I learned? | See findings.md |
 | What have I done? | 初始化了 Phase 9~12 的规划文件 |
+
+## Session: 2026-03-28
+
+### Todo1: 当前项目整改
+- **Status:** TODO-1 complete
+- **Started:** 2026-03-28
+- Actions taken:
+  - 创建 `todo1.md`，固定整改范围、顺序和验收标准
+  - 启动 `TODO-1 配置与启动稳定性整改`
+  - 统一 `app/core/config.py` 配置来源为 `BaseSettings`
+  - 为 `DEBUG` 增加容错解析，兼容 `release` 等非标准值
+  - 保留现有默认数据库配置，避免导入阶段因环境变量异常失败
+  - 验证 `from app.main import app` 在 `DEBUG=release` 下可成功导入
+  - 验证 `pytest -q tests/test_health.py` 通过
+- Files created/modified:
+  - `todo1.md` (created)
+  - `app/core/config.py` (updated)
+
+### Todo1: TODO-2 SSE 契约对齐
+- **Status:** complete
+- **Started:** 2026-03-28
+- Actions taken:
+  - 确认后端流式接口实际契约为 `GET /api/v1/diagnose/stream`
+  - 将流式测试从 `POST + json` 改为 `GET + query params`
+  - 同步修正 `task_plan.md` 中错误的流式接口记录
+  - 在 `findings.md` 记录 SSE 契约固定决策
+  - 验证 `tests/test_phase11_streaming.py` 全部通过
+  - 验证 `tests/test_phase12_core链路.py -k stream_endpoint_exists` 通过
+- Files created/modified:
+  - `tests/test_phase11_streaming.py` (updated)
+  - `tests/test_phase12_core链路.py` (updated)
+  - `task_plan.md` (updated)
+  - `findings.md` (updated)
+
+### Todo1: TODO-3 Alembic 迁移真实性整改
+- **Status:** complete
+- **Started:** 2026-03-28
+- Actions taken:
+  - 确认初始 Alembic 迁移脚本为空，当前 schema 真实性不足
+  - 将初始迁移脚本改为真实建表和索引语句
+  - 统一 Alembic 与应用使用同一数据库 URL
+  - 移除应用启动阶段的 `create_all`，避免掩盖迁移缺失
+  - 将 `scripts/init_db.py` 改为执行 `alembic upgrade head`
+  - 使用 `venv` Python 在 SQLite 共享内存空库上执行 `alembic upgrade head`
+  - 验证迁移后存在 `sensor_data` 和 `ix_sensor_data_timestamp`
+  - 回归验证 `pytest -q tests/test_health.py` 通过
+- Files created/modified:
+  - `alembic/env.py` (updated)
+  - `alembic/versions/388d25b1856f_initial_sensor_data_schema.py` (updated)
+  - `app/main.py` (updated)
+  - `scripts/init_db.py` (updated)
+  - `findings.md` (updated)
+
+### Todo1: TODO-4 密钥与安全配置整改
+- **Status:** complete
+- **Started:** 2026-03-28
+- Actions taken:
+  - 删除 `TODO-3` 留下的临时 SQLite 验证文件
+  - 将 `.env` 中的真实密钥替换为占位值
+  - 新增 `.env.example` 作为安全模板
+  - 扩展 `.gitignore`，忽略 `.env.*` 但保留 `.env.example`
+  - 将 `docker-compose.yml` 改为环境变量插值，避免硬编码数据库凭据
+  - 验证 `todo3*` 临时文件已清理完毕
+  - 验证旧的真实密钥和 `fault_pass` 已不在当前仓库内容中
+- Files created/modified:
+  - `.env` (updated)
+  - `.env.example` (created)
+  - `.gitignore` (updated)
+  - `docker-compose.yml` (updated)
+  - `findings.md` (updated)
+
+### Todo1: TODO-5 文档与代码状态一致性整改
+- **Status:** complete
+- **Started:** 2026-03-28
+- Actions taken:
+  - 修正 `CLAUDE.md` 中“后端 100% 完成”“生产交付标准”等失真表述
+  - 修正 `CLAUDE.md` 中测试结果、迁移方式、配置模板和下一步目标描述
+  - 将 `task_plan.md` 标记为历史开发记录，并补充当前真实状态
+  - 将 `progress.md` 中的 Phase 12 状态更新为 complete，并标注历史快照
+  - 在 `findings.md` 中补充当前测试结果与文档来源约定
+- Files created/modified:
+  - `CLAUDE.md` (updated)
+  - `task_plan.md` (updated)
+  - `progress.md` (updated)
+  - `findings.md` (updated)
+
+### Todo1: TODO-6 前端联调页最小可交付整改
+- **Status:** complete
+- **Started:** 2026-03-28
+- Actions taken:
+  - 为 `index.html` 增加可编辑且本地持久化的后端地址输入
+  - 为时间范围和后端地址增加浏览器侧基础校验
+  - 优化 SSE 连接超时、服务端错误和断线提示
+  - 优化运行中按钮状态，避免重复发起连接
+  - 在 `findings.md` 记录前端调试页配置与校验决策
+  - 使用 `node --check` 验证 `index.html` 内联脚本语法有效
+  - 回归验证 `pytest -q` 结果仍为 19 通过 / 4 跳过
+- Files created/modified:
+  - `index.html` (updated)
+  - `findings.md` (updated)
+
+## Session: 2026-03-28 (Phase 13 / MVP 交付补齐)
+
+### MVP 交付层补齐
+- **Status:** complete
+- Actions taken:
+  - 新增 `README.md`，补齐项目简介、启动方式、演示流程和接口入口
+  - 新增 `docs/DEPLOYMENT.md`，提供比赛/MVP 级部署说明
+  - 新增 `docs/DEMO_CHECKLIST.md`，提供真实浏览器联调验收清单
+  - 新增 `Dockerfile` 与 `.dockerignore`，补齐最小容器化产物
+  - 新增 GitHub Actions workflow，自动运行 `pytest -q`
+  - 新增最小日志策略，请求、健康检查和诊断接口会输出关键日志
+  - 回归验证 `pytest -q` 仍为 19 通过 / 4 跳过
+- Files created/modified:
+  - `README.md` (created)
+  - `docs/DEPLOYMENT.md` (created)
+  - `docs/DEMO_CHECKLIST.md` (created)
+  - `deploy/systemd/fault-detection.service.example` (created)
+  - `Dockerfile` (created)
+  - `.dockerignore` (created)
+  - `.github/workflows/ci.yml` (created)
+  - `app/core/logging.py` (created)
+  - `app/main.py` (updated)
+  - `app/routers/health.py` (updated)
+  - `app/routers/diagnosis.py` (updated)

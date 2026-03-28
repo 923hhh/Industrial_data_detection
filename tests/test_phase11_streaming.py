@@ -15,20 +15,27 @@ from app.main import app
 class TestPhase11Streaming:
     """Phase 11 流式响应测试套件"""
 
+    @staticmethod
+    def _stream_params() -> dict[str, str]:
+        """构造与 EventSource 一致的 GET 查询参数。"""
+        return {
+            "start_time": "2022-08-12 16:00:00",
+            "end_time": "2022-08-12 16:05:00",
+            "symptom_description": "产品温度异常",
+            "model_provider": "deepseek",
+            "model_name": "deepseek-chat",
+        }
+
     @pytest.mark.asyncio
     async def test_sse_endpoint_connected(self):
         """测试：SSE 端点连接成功，返回 connected 事件"""
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            payload = {
-                "start_time": "2022-08-12 16:00:00",
-                "end_time": "2022-08-12 16:05:00",
-                "symptom_description": "产品温度异常",
-                "model_provider": "deepseek",
-                "model_name": "deepseek-chat",
-            }
-
-            async with client.stream("POST", "/api/v1/diagnose/stream", json=payload) as response:
+            async with client.stream(
+                "GET",
+                "/api/v1/diagnose/stream",
+                params=self._stream_params(),
+            ) as response:
                 assert response.status_code == 200
                 assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
 
@@ -49,16 +56,12 @@ class TestPhase11Streaming:
         """测试：SSE 事件遵循 supervisor → data_analyst → diagnosis_expert 的顺序"""
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            payload = {
-                "start_time": "2022-08-12 16:00:00",
-                "end_time": "2022-08-12 16:05:00",
-                "symptom_description": "产品温度异常",
-                "model_provider": "deepseek",
-                "model_name": "deepseek-chat",
-            }
-
             event_order = []
-            async with client.stream("POST", "/api/v1/diagnose/stream", json=payload) as response:
+            async with client.stream(
+                "GET",
+                "/api/v1/diagnose/stream",
+                params=self._stream_params(),
+            ) as response:
                 async for line in response.aiter_lines():
                     if line.startswith("event:"):
                         event_order.append(line.removeprefix("event:").strip())
@@ -77,15 +80,11 @@ class TestPhase11Streaming:
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            payload = {
-                "start_time": "2022-08-12 16:00:00",
-                "end_time": "2022-08-12 16:05:00",
-                "symptom_description": "产品温度异常",
-                "model_provider": "deepseek",
-                "model_name": "deepseek-chat",
-            }
-
-            async with client.stream("POST", "/api/v1/diagnose/stream", json=payload) as response:
+            async with client.stream(
+                "GET",
+                "/api/v1/diagnose/stream",
+                params=self._stream_params(),
+            ) as response:
                 async for line in response.aiter_lines():
                     if line.startswith("data:") and "message" in line:
                         data_str = line.removeprefix("data:").strip()

@@ -1,10 +1,12 @@
-# Task Plan: 工业故障检测系统 - Phase 9~12 开发计划
+# Task Plan Archive: 工业故障检测系统 - Phase 9~12 开发记录
+
+> 当前整改与真实状态以 `todo1.md` 为准；本文件主要保留 Phase 9~12 的历史开发记录。
 
 ## Goal
 将单智能体诊断系统升级为**生产可用的多智能体 (Multi-Agent) 协作架构**，完成数据库版本控制、流式响应和完整测试覆盖。
 
 ## Current Phase
-Phase 12: 核心链路测试覆盖
+Phase 13：前端联调与云端部署准备
 
 ## Phases
 
@@ -54,7 +56,7 @@ Phase 12: 核心链路测试覆盖
 - **Status:** complete
 
 **Phase 11 产出:**
-- `app/routers/diagnosis.py` - `POST /api/v1/diagnose/stream` SSE 端点
+- `app/routers/diagnosis.py` - `GET /api/v1/diagnose/stream` SSE 端点
 - `app/agents/tools.py` - 异步工具重构
 - `app/agents/nodes/supervisor.py` - 中文 System Prompt
 - `app/agents/nodes/diagnosis_expert.py` - 中文 System Prompt
@@ -63,9 +65,9 @@ Phase 12: 核心链路测试覆盖
 - `requirements.txt` - 新增 pytest, pytest-asyncio, httpx
 
 ### Phase 12: 核心链路测试覆盖
-- [ ] 编写 pytest + httpx 异步接口测试
-- [ ] Mock 大模型 API，测试智能体路由和错误捕获
-- **Status:** in_progress
+- [x] 编写 pytest + httpx 异步接口测试
+- [x] Mock 大模型 API，测试智能体路由和错误捕获
+- **Status:** complete
 
 ## Key Questions
 1. Alembic env.py 如何正确处理 aiosqlite 与 asyncpg 的异步 session？
@@ -90,3 +92,16 @@ Phase 12: 核心链路测试覆盖
 - 保持路由层轻量，业务逻辑下沉到 Services 和 Agents
 - 所有代码注释必须使用中文
 - 必须保持 Pydantic V2 和 SQLAlchemy 2.0 异步语法
+
+## Current Verified Status
+- `pytest -q` 当前结果：19 通过 / 4 跳过
+- SSE 流式接口契约：`GET /api/v1/diagnose/stream`
+- 数据库初始化方式：`scripts/init_db.py --init-only` 或 `alembic upgrade head`
+- 前端调试页已支持可配置后端地址、基础参数校验和更明确的失败提示
+
+## Phase 13: MVP 交付补齐
+- [x] 补 README 和演示说明
+- [x] 补部署文档和最小 systemd 样例
+- [x] 补 Dockerfile 与 `.dockerignore`
+- [x] 补 GitHub Actions CI
+- [x] 补最小日志策略

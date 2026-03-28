@@ -2,7 +2,7 @@
 """数据库初始化与数据导入脚本
 
 功能：
-1. 创建所有数据库表
+1. 通过 Alembic 迁移创建数据库表
 2. 将 HAI 数据集 CSV 文件分块读取并导入
 
 使用方式:
@@ -20,8 +20,11 @@ from datetime import datetime
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pandas as pd
+from alembic import command
+from alembic.config import Config
+
+from app.core.config import get_settings
 from app.core.database import get_engine, get_session_context
-from app.models import Base
 from app.models.sensor_data import SensorData
 
 
@@ -148,15 +151,14 @@ def dataframe_to_records(df: pd.DataFrame) -> list[dict]:
 
 
 async def init_database():
-    """创建所有数据库表"""
-    engine = get_engine()
+    """通过 Alembic 创建数据库表."""
+    print("正在执行数据库迁移...")
 
-    print("正在创建数据库表...")
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    alembic_cfg = Config(str(Path(__file__).parent.parent / "alembic.ini"))
+    alembic_cfg.set_main_option("sqlalchemy.url", get_settings().database_url)
+    command.upgrade(alembic_cfg, "head")
 
-    print("数据库表创建成功。")
-    await engine.dispose()
+    print("数据库迁移完成。")
 
 
 async def import_csv(csv_path: str, chunk_size: int = 5000):

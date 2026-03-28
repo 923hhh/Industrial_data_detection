@@ -21,11 +21,9 @@ from app.models.sensor_data import Base, SensorData  # noqa: F401 - Base 用于 
 # Alembic Config 对象
 config = context.config
 
-# 从环境变量加载数据库 URL
-# 优先级: alembic.ini 中的 sqlalchemy.url > .env 中的 DATABASE_URL
 settings = get_settings()
-if config.get_main_option("sqlalchemy.url") is None:
-    config.set_main_option("sqlalchemy.url", settings.database_url)
+# 统一以应用配置为准，避免 Alembic 与应用连接到不同数据库
+config.set_main_option("sqlalchemy.url", settings.database_url)
 
 # 模型元数据 (用于 autogenerate 支持)
 target_metadata = Base.metadata
