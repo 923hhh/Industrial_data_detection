@@ -6,6 +6,7 @@ from app.models.knowledge import (
     KnowledgeDocument,
     KnowledgeChunk,
     MaintenanceCase,
+    MaintenanceCaseCorrection,
     KnowledgeRelation,
 )
 from app.models.tasks import (
@@ -22,6 +23,7 @@ __all__ = [
     "KnowledgeDocument",
     "KnowledgeChunk",
     "MaintenanceCase",
+    "MaintenanceCaseCorrection",
     "KnowledgeRelation",
     "MaintenanceTask",
     "MaintenanceTaskStep",

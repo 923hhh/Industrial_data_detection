@@ -13,7 +13,7 @@
 - LangGraph 官方 Multi-Agent 模式使用 `StateGraph` + `add_node` + `add_edge`
 - FastAPI `StreamingResponse` 需要 `generate()` 生成器配合
 - `pytest-asyncio` 支持异步测试函数，`httpx.AsyncClient` 用于异步 HTTP 测试
-- 当前全量测试结果为 `19 passed, 4 skipped`
+- 当前全量测试结果为 `34 passed, 4 skipped`
 - 仓库此前缺少面向评审和部署的正式 README、部署文档、CI workflow 和 Dockerfile
 
 ## Technical Decisions
@@ -52,6 +52,9 @@
 | TODO-SB-4 任务闭环采用“模板自动生成 + 知识引用快照” | 先用标准步骤模板稳定落地作业闭环，再在后续阶段叠加更复杂的审核和个性化逻辑 |
 | 检修任务与步骤的知识引用直接存为 JSON 快照 | 保证导出摘要和历史回看不依赖后续知识条目被修改或删除 |
 | TODO-SB-4 单独新增 `maintenance_tasks.html` 而不是立刻重写统一前端 | 先确保“检索 -> 作业 -> 导出”可演示，再在正式前端阶段统一视觉与信息架构 |
+| TODO-SB-5 审核通过案例直接转成 `knowledge_documents + knowledge_chunks` | 复用现有检索基础设施，最快形成“案例入库后可被搜索命中”的闭环 |
+| TODO-SB-5 人工修正先落到结构化关系表与 JSON 快照 | 先保留可解释的修正记录，不引入额外图数据库或复杂标注系统 |
+| TODO-SB-5 单独新增 `case_reviews.html` 静态案例页 | 先把“任务执行 -> 案例沉淀 -> 审核入库”链路跑通，再在正式前端阶段统一重构 |
 
 ## Issues Encountered
 | Issue | Resolution |

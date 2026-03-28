@@ -24,6 +24,15 @@ from app.schemas.tasks import (
     MaintenanceTaskStepResponse,
     MaintenanceTaskStepUpdate,
 )
+from app.schemas.cases import (
+    MaintenanceCaseCorrectionCreate,
+    MaintenanceCaseCorrectionResponse,
+    MaintenanceCaseCreate,
+    MaintenanceCaseListItem,
+    MaintenanceCaseListResponse,
+    MaintenanceCaseResponse,
+    MaintenanceCaseReviewRequest,
+)
 
 __all__ = [
     "SensorDataBase",
@@ -44,4 +53,11 @@ __all__ = [
     "MaintenanceTaskHistoryItem",
     "MaintenanceTaskHistoryResponse",
     "MaintenanceTaskExportResponse",
+    "MaintenanceCaseCreate",
+    "MaintenanceCaseCorrectionCreate",
+    "MaintenanceCaseReviewRequest",
+    "MaintenanceCaseCorrectionResponse",
+    "MaintenanceCaseResponse",
+    "MaintenanceCaseListItem",
+    "MaintenanceCaseListResponse",
 ]

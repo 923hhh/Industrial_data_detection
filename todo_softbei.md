@@ -138,7 +138,7 @@
 - 验收标准：
   - 新增案例可在审核后被后续检索命中。
 - 依赖关系：依赖 `TODO-SB-2`。
-- 状态：未开始
+- 状态：已完成（最小后端 + 静态案例页）
 
 ### TODO-SB-6 正式前端与演示界面重构
 
@@ -275,3 +275,19 @@
 - 遗留问题：
   - 当前“智能建议”仍是任务级规则化摘要卡片，未把更复杂的案例审核/人工修正逻辑并入此阶段。
   - 正式统一前端、案例沉淀审核和竞赛材料仍待后续 TODO-SB-5 ~ TODO-SB-8 继续补齐。
+
+### 2026-03-28（TODO-SB-5）
+
+- 已完成 `TODO-SB-5 知识沉淀、审核与人工修正` 的最小可演示版本。
+- 当前处理：
+  - 已扩展 `maintenance_cases`，新增关联任务、处理步骤、附件字段、知识引用快照和审核信息。
+  - 已新增 `maintenance_case_corrections`，记录对检索结果、模型输出、总结和步骤的人工修正。
+  - 已新增 `POST /api/v1/cases`、`GET /api/v1/cases`、`GET /api/v1/cases/{id}`、`POST /api/v1/cases/{id}/corrections`、`POST /api/v1/cases/{id}/review`。
+  - 已支持审核通过后自动生成 `knowledge_documents` / `knowledge_chunks`，让新案例能回流到后续知识检索。
+  - 已新增 `case_reviews.html` 静态联调页，并从 `maintenance_tasks.html` 传递任务上下文，形成“任务执行 -> 案例沉淀 -> 审核入库”的最小主链路。
+- 验证结果：
+  - 已新增 `tests/test_phase16_cases.py` 覆盖案例上传、列表、人工修正和审核接口。
+  - 当前全量测试结果更新为 `34 passed, 4 skipped`。
+- 遗留问题：
+  - 当前附件仍以“名称 + URL”占位为主，尚未做真实文件上传与存储。
+  - 当前案例页仍属于静态联调页，正式统一前端与角色化审核界面留待 TODO-SB-6 处理。

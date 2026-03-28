@@ -1,7 +1,7 @@
 """Knowledge base models for the 软件杯检修知识系统."""
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.sensor_data import Base
@@ -89,14 +89,46 @@ class MaintenanceCase(Base):
     equipment_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     equipment_model: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     fault_type: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    task_id: Mapped[int | None] = mapped_column(
+        ForeignKey("maintenance_tasks.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     symptom_description: Mapped[str] = mapped_column(Text, nullable=False)
+    processing_steps: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     resolution_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    attachment_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    attachment_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    knowledge_refs: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
     status: Mapped[str] = mapped_column(
         String(30), default="pending_review", nullable=False, index=True
     )
+    reviewer_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     source_document_id: Mapped[int | None] = mapped_column(
         ForeignKey("knowledge_documents.id", ondelete="SET NULL"), nullable=True
     )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+
+class MaintenanceCaseCorrection(Base):
+    """Manual correction records for retrieval/model outputs tied to a case."""
+
+    __tablename__ = "maintenance_case_corrections"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    case_id: Mapped[int] = mapped_column(
+        ForeignKey("maintenance_cases.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    correction_target: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
+    original_content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    corrected_content: Mapped[str] = mapped_column(Text, nullable=False)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(30), default="accepted", nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False

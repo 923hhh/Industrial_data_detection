@@ -23,6 +23,7 @@ from app.models import (  # noqa: F401 - 导入所有模型以注册 metadata
     KnowledgeDocument,
     KnowledgeRelation,
     MaintenanceCase,
+    MaintenanceCaseCorrection,
     MaintenanceTask,
     MaintenanceTaskStep,
     MaintenanceTaskTemplate,

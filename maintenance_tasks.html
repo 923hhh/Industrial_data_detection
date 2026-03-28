@@ -439,6 +439,7 @@
       </div>
       <div class="hero-nav">
         <a href="./knowledge_search.html">返回知识检索页</a>
+        <a href="./case_reviews.html">进入案例沉淀页</a>
         <a href="./index.html">返回诊断控制台</a>
       </div>
     </section>
@@ -549,6 +550,7 @@
   <script>
     const BASE_URL_STORAGE_KEY = 'fault-diagnosis-base-url';
     const KNOWLEDGE_SEARCH_CONTEXT_KEY = 'knowledge-search-last-context';
+    const TASK_CONTEXT_STORAGE_KEY = 'maintenance-task-last-context';
 
     let currentTaskId = null;
     let currentTask = null;
@@ -736,6 +738,7 @@
     function renderTask(task) {
       currentTask = task;
       currentTaskId = task.id;
+      localStorage.setItem(TASK_CONTEXT_STORAGE_KEY, JSON.stringify(task));
       document.getElementById('adviceCard').textContent = task.advice_card || '当前未生成智能建议。';
       renderSteps(task.steps || []);
     }
@@ -917,6 +920,7 @@
         if (!response.ok) {
           throw new Error(data.detail || '导出任务失败。');
         }
+        localStorage.setItem(TASK_CONTEXT_STORAGE_KEY, JSON.stringify(data.task));
         document.getElementById('exportSummary').textContent = `${data.export_summary}\n\n---\n\n${JSON.stringify(data.task, null, 2)}`;
         setStatus(`● 已导出任务 ${taskId}`, 'good');
       } catch (error) {

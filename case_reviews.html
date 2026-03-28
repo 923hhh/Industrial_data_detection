@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>案例沉淀与审核 - 经验回流联调页</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --panel-soft: #111827;
+      --line: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --good: #3fb950;
+      --warn: #f0883e;
+      --bad: #ff7b72;
+    }
+
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(63, 185, 80, 0.12), transparent 24%),
+        radial-gradient(circle at top right, rgba(88, 166, 255, 0.12), transparent 26%),
+        var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      padding: 28px 16px 40px;
+    }
+
+    .shell {
+      max-width: 1220px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .hero h1 {
+      font-size: 1.7rem;
+      margin-bottom: 10px;
+    }
+
+    .hero p {
+      color: var(--muted);
+      max-width: 760px;
+      line-height: 1.6;
+    }
+
+    .hero-nav {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .hero-nav a {
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid rgba(88, 166, 255, 0.35);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 0.84rem;
+      transition: 0.2s ease;
+    }
+
+    .hero-nav a:hover {
+      background: rgba(88, 166, 255, 0.10);
+      border-color: rgba(88, 166, 255, 0.55);
+    }
+
+    .panel {
+      background: rgba(22, 27, 34, 0.94);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
+    }
+
+    .panel-header {
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .panel-header h2 {
+      font-size: 1rem;
+    }
+
+    .panel-header span {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .config-body,
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(360px, 430px) minmax(0, 1fr);
+    }
+
+    .config-body {
+      padding: 18px 22px;
+      gap: 14px;
+      align-items: end;
+    }
+
+    .form-side,
+    .result-side {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .form-side {
+      border-right: 1px solid var(--line);
+      background: rgba(13, 17, 23, 0.32);
+    }
+
+    .field,
+    .field-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    label {
+      font-size: 0.76rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    input[type="text"],
+    textarea,
+    select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 11px 12px;
+      outline: none;
+      font-size: 0.92rem;
+      transition: 0.2s ease;
+    }
+
+    textarea {
+      min-height: 110px;
+      resize: vertical;
+      line-height: 1.6;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus,
+    select:focus {
+      border-color: rgba(88, 166, 255, 0.85);
+      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.12);
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      padding: 8px 12px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .status-pill.good { color: #9be9a8; border-color: rgba(63, 185, 80, 0.45); }
+    .status-pill.bad { color: #ffb4ae; border-color: rgba(255, 123, 114, 0.45); }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 1px solid transparent;
+      border-radius: 12px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: white;
+      background: linear-gradient(135deg, #1f6feb, #238636);
+      transition: 0.2s ease;
+    }
+
+    button.secondary {
+      background: transparent;
+      border-color: var(--line);
+      color: var(--muted);
+    }
+
+    button.warn {
+      background: linear-gradient(135deg, #f0883e, #b7791f);
+    }
+
+    button:hover { filter: brightness(1.08); }
+    button.secondary:hover {
+      color: var(--accent);
+      border-color: rgba(88, 166, 255, 0.5);
+      background: rgba(88, 166, 255, 0.08);
+    }
+
+    button:disabled {
+      background: #21262d;
+      border-color: var(--line);
+      color: var(--muted);
+      cursor: not-allowed;
+      filter: none;
+    }
+
+    .case-list,
+    .detail-stack,
+    .refs-list,
+    .corrections-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .case-card,
+    .detail-card,
+    .ref-card,
+    .correction-card,
+    .empty-card {
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px 18px;
+    }
+
+    .badge-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .badge {
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 0.75rem;
+      color: #9ecbff;
+      background: rgba(88, 166, 255, 0.11);
+      border: 1px solid rgba(88, 166, 255, 0.22);
+    }
+
+    .badge.pending_review {
+      color: #ffcf88;
+      border-color: rgba(240, 136, 62, 0.35);
+      background: rgba(240, 136, 62, 0.08);
+    }
+
+    .badge.approved {
+      color: #9be9a8;
+      border-color: rgba(63, 185, 80, 0.35);
+      background: rgba(63, 185, 80, 0.10);
+    }
+
+    .badge.rejected {
+      color: #ffb4ae;
+      border-color: rgba(255, 123, 114, 0.35);
+      background: rgba(255, 123, 114, 0.08);
+    }
+
+    .section-title {
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+    }
+
+    .detail-card h3,
+    .case-card h3 {
+      font-size: 1rem;
+      margin-bottom: 8px;
+    }
+
+    .detail-card p,
+    .case-card p,
+    .ref-card,
+    .correction-card {
+      line-height: 1.65;
+      color: #d0d7de;
+      font-size: 0.92rem;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .meta-block {
+      background: rgba(13, 17, 23, 0.44);
+      border: 1px solid rgba(48, 54, 61, 0.95);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .meta-label {
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .meta-value {
+      font-size: 0.88rem;
+      line-height: 1.6;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    @media (max-width: 980px) {
+      .config-body,
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .form-side {
+        border-right: none;
+        border-bottom: 1px solid var(--line);
+      }
+    }
+
+    @media (max-width: 680px) {
+      .field-grid,
+      .meta-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero,
+      .panel-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div>
+        <h1>案例沉淀 / 审核 / 人工修正联调页</h1>
+        <p>本页对应 TODO-SB-5：把检修任务结果沉淀为待审核案例，支持人工修正，并在审核通过后自动纳入知识库供后续检索命中。</p>
+      </div>
+      <div class="hero-nav">
+        <a href="./maintenance_tasks.html">返回检修任务页</a>
+        <a href="./knowledge_search.html">返回知识检索页</a>
+        <a href="./index.html">返回诊断控制台</a>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>连接配置</h2>
+        <span>当前会调用 `/api/v1/cases`、`/api/v1/cases/{id}/corrections`、`/api/v1/cases/{id}/review`</span>
+      </div>
+      <div class="config-body">
+        <div class="field">
+          <label for="baseUrl">后端地址</label>
+          <input type="text" id="baseUrl" placeholder="http://127.0.0.1:8000">
+          <div class="note">默认读取与任务页一致的后端地址。页面会优先使用上一页缓存的检修任务上下文，预填案例表单。</div>
+        </div>
+        <div class="status-pill" id="caseStatus">● 就绪</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>案例上传与审核</h2>
+        <span>任务结果 -> 待审核案例 -> 人工修正 -> 审核入库</span>
+      </div>
+      <div class="layout">
+        <div class="form-side">
+          <div class="field">
+            <label for="caseTitle">案例标题</label>
+            <input type="text" id="caseTitle" placeholder="例如：摩托车发动机 LX200 启动困难案例">
+          </div>
+
+          <div class="field-grid">
+            <div class="field">
+              <label for="equipmentType">设备类型</label>
+              <input type="text" id="equipmentType" value="摩托车发动机">
+            </div>
+            <div class="field">
+              <label for="equipmentModel">设备型号</label>
+              <input type="text" id="equipmentModel" value="LX200">
+            </div>
+          </div>
+
+          <div class="field-grid">
+            <div class="field">
+              <label for="faultType">故障类型</label>
+              <input type="text" id="faultType" value="启动困难">
+            </div>
+            <div class="field">
+              <label for="taskId">关联任务 ID</label>
+              <input type="text" id="taskId" placeholder="例如：101">
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="symptomDescription">故障现象描述</label>
+            <textarea id="symptomDescription"></textarea>
+          </div>
+
+          <div class="field">
+            <label for="processingSteps">处理步骤</label>
+            <textarea id="processingSteps" placeholder="每行一条步骤，便于后续审核入库。"></textarea>
+          </div>
+
+          <div class="field">
+            <label for="resolutionSummary">处理结果总结</label>
+            <textarea id="resolutionSummary" placeholder="总结本次检修结论、试车结果和建议。"></textarea>
+          </div>
+
+          <div class="field-grid">
+            <div class="field">
+              <label for="attachmentName">附件名称</label>
+              <input type="text" id="attachmentName" placeholder="例如：spark-plug.jpg">
+            </div>
+            <div class="field">
+              <label for="attachmentUrl">附件地址</label>
+              <input type="text" id="attachmentUrl" placeholder="例如：https://example.com/spark-plug.jpg">
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="section-title">当前任务上下文</div>
+            <div class="note" id="taskContextNote">等待读取上一页检修任务结果...</div>
+          </div>
+
+          <div class="actions">
+            <button id="createCaseBtn" onclick="createCase()">上传案例</button>
+            <button class="secondary" onclick="reloadCases()">刷新案例列表</button>
+          </div>
+        </div>
+
+        <div class="result-side">
+          <div>
+            <div class="section-title">案例列表</div>
+            <div class="actions" style="margin-bottom: 12px;">
+              <select id="statusFilter" onchange="reloadCases()">
+                <option value="">全部状态</option>
+                <option value="pending_review">pending_review / 待审核</option>
+                <option value="approved">approved / 已通过</option>
+                <option value="rejected">rejected / 已驳回</option>
+              </select>
+            </div>
+            <div class="case-list" id="caseList">
+              <div class="empty-card">尚未加载案例列表。</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-title">案例详情</div>
+            <div class="detail-stack" id="caseDetail">
+              <div class="empty-card">还没有选中的案例。上传或加载一条案例后，这里会显示案例详情、知识引用、人工修正和审核入口。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const BASE_URL_STORAGE_KEY = 'fault-diagnosis-base-url';
+    const TASK_CONTEXT_STORAGE_KEY = 'maintenance-task-last-context';
+
+    let currentCaseId = null;
+    let currentCase = null;
+    let currentTaskContext = null;
+
+    function initializePage() {
+      document.getElementById('baseUrl').value = getInitialBaseUrl();
+      hydrateFromTaskContext();
+      reloadCases();
+    }
+
+    function getInitialBaseUrl() {
+      const saved = localStorage.getItem(BASE_URL_STORAGE_KEY);
+      if (saved) return saved;
+
+      if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+        return window.location.origin;
+      }
+
+      return 'http://127.0.0.1:8000';
+    }
+
+    function normalizeBaseUrl(rawValue) {
+      const candidate = (rawValue || '').trim() || getInitialBaseUrl();
+      let parsed;
+      try {
+        parsed = new URL(candidate);
+      } catch {
+        throw new Error('后端地址格式无效，请输入 http:// 或 https:// 开头的地址。');
+      }
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        throw new Error('后端地址只支持 http:// 或 https://。');
+      }
+      return parsed.href.replace(/\/$/, '');
+    }
+
+    function setStatus(text, mode = '') {
+      const el = document.getElementById('caseStatus');
+      el.textContent = text;
+      el.className = `status-pill ${mode}`.trim();
+    }
+
+    function setCreateRunning(isRunning) {
+      document.getElementById('createCaseBtn').disabled = isRunning;
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function hydrateFromTaskContext() {
+      const raw = localStorage.getItem(TASK_CONTEXT_STORAGE_KEY);
+      if (!raw) {
+        document.getElementById('taskContextNote').textContent = '当前没有上一页任务上下文。建议先在检修任务页完成一次任务创建或加载。';
+        return;
+      }
+
+      try {
+        currentTaskContext = JSON.parse(raw);
+      } catch {
+        document.getElementById('taskContextNote').textContent = '上一页任务上下文解析失败，请重新进入检修任务页生成或加载一次任务。';
+        return;
+      }
+
+      const task = currentTaskContext;
+      document.getElementById('caseTitle').value = `${task.title || '检修任务'}案例`;
+      document.getElementById('equipmentType').value = task.equipment_type || '摩托车发动机';
+      document.getElementById('equipmentModel').value = task.equipment_model || '';
+      document.getElementById('faultType').value = task.fault_type || '';
+      document.getElementById('taskId').value = task.id || '';
+      document.getElementById('symptomDescription').value = task.symptom_description || '';
+      document.getElementById('processingSteps').value = (task.steps || [])
+        .map((step) => {
+          const note = step.completion_note ? `；执行备注：${step.completion_note}` : '';
+          return `Step ${step.step_order} ${step.title}：${step.instruction}${note}`;
+        })
+        .join('\n');
+      document.getElementById('resolutionSummary').value = task.advice_card || '';
+
+      const refs = (task.source_refs || []).map((ref) => ref.title).join('、') || '无知识引用';
+      document.getElementById('taskContextNote').textContent = `已读取任务 ${task.id || '-'}：${task.title || '未命名任务'}。当前会自动带上 ${refs} 作为案例知识引用。`;
+    }
+
+    function buildCasePayload() {
+      const title = document.getElementById('caseTitle').value.trim();
+      const equipmentType = document.getElementById('equipmentType').value.trim();
+      const equipmentModel = document.getElementById('equipmentModel').value.trim();
+      const faultType = document.getElementById('faultType').value.trim();
+      const taskIdValue = document.getElementById('taskId').value.trim();
+      const symptomDescription = document.getElementById('symptomDescription').value.trim();
+      const processingSteps = document.getElementById('processingSteps').value
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+      const resolutionSummary = document.getElementById('resolutionSummary').value.trim();
+      const attachmentName = document.getElementById('attachmentName').value.trim();
+      const attachmentUrl = document.getElementById('attachmentUrl').value.trim();
+
+      if (!title) throw new Error('案例标题不能为空。');
+      if (!equipmentType) throw new Error('设备类型不能为空。');
+      if (!symptomDescription) throw new Error('故障现象描述不能为空。');
+      if (processingSteps.length === 0 && !resolutionSummary) {
+        throw new Error('至少需要填写处理步骤或结果总结中的一项。');
+      }
+
+      return {
+        title,
+        equipment_type: equipmentType,
+        equipment_model: equipmentModel || null,
+        fault_type: faultType || null,
+        task_id: taskIdValue ? Number(taskIdValue) : null,
+        symptom_description: symptomDescription,
+        processing_steps: processingSteps,
+        resolution_summary: resolutionSummary || null,
+        attachment_name: attachmentName || null,
+        attachment_url: attachmentUrl || null,
+        knowledge_refs: currentTaskContext && Array.isArray(currentTaskContext.source_refs)
+          ? currentTaskContext.source_refs
+          : [],
+      };
+    }
+
+    async function createCase() {
+      let baseUrl;
+      let payload;
+      try {
+        baseUrl = normalizeBaseUrl(document.getElementById('baseUrl').value);
+        payload = buildCasePayload();
+      } catch (error) {
+        setStatus(`● ${error.message}`, 'bad');
+        return;
+      }
+
+      setCreateRunning(true);
+      setStatus('● 案例上传中...', '');
+      localStorage.setItem(BASE_URL_STORAGE_KEY, baseUrl);
+
+      try {
+        const response = await fetch(new URL('/api/v1/cases', `${baseUrl}/`).toString(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          const detail = Array.isArray(data.detail)
+            ? data.detail.map((item) => item.msg).join('；')
+            : data.detail || '案例上传失败。';
+          throw new Error(detail);
+        }
+
+        currentCaseId = data.id;
+        currentCase = data;
+        renderCaseDetail(data);
+        setStatus(`● 案例 ${data.id} 已创建，等待审核`, 'good');
+        await reloadCases();
+      } catch (error) {
+        setStatus(`● ${error.message}`, 'bad');
+      } finally {
+        setCreateRunning(false);
+      }
+    }
+
+    async function reloadCases() {
+      let baseUrl;
+      try {
+        baseUrl = normalizeBaseUrl(document.getElementById('baseUrl').value);
+      } catch (error) {
+        setStatus(`● ${error.message}`, 'bad');
+        return;
+      }
+
+      const statusFilter = document.getElementById('statusFilter').value;
+      const query = new URLSearchParams({ limit: '8' });
+      if (statusFilter) query.set('status', statusFilter);
+
+      try {
+        const response = await fetch(new URL(`/api/v1/cases?${query.toString()}`, `${baseUrl}/`).toString());
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || '加载案例列表失败。');
+        }
+        renderCaseList(data.cases || []);
+      } catch (error) {
+        document.getElementById('caseList').innerHTML = `<div class="empty-card">案例列表加载失败：${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    function renderCaseList(cases) {
+      const container = document.getElementById('caseList');
+      if (!cases || cases.length === 0) {
+        container.innerHTML = '<div class="empty-card">当前筛选条件下没有案例。你可以先从检修任务页生成一次案例并回到这里审核。</div>';
+        return;
+      }
+
+      container.innerHTML = cases.map((item) => `
+        <article class="case-card">
+          <div class="badge-row">
+            <span class="badge ${escapeHtml(item.status)}">${escapeHtml(item.status)}</span>
+            <span class="badge">${escapeHtml(item.equipment_type)}</span>
+            ${item.equipment_model ? `<span class="badge">${escapeHtml(item.equipment_model)}</span>` : ''}
+          </div>
+          <h3>${escapeHtml(item.title)}</h3>
+          <p>任务 ID：${item.task_id || '无关联任务'}${item.source_document_id ? ` | 知识文档：${item.source_document_id}` : ''}</p>
+          <div class="actions" style="margin-top: 12px;">
+            <button onclick="loadCase(${item.id})">查看详情</button>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    async function loadCase(caseId) {
+      let baseUrl;
+      try {
+        baseUrl = normalizeBaseUrl(document.getElementById('baseUrl').value);
+      } catch (error) {
+        setStatus(`● ${error.message}`, 'bad');
+        return;
+      }
+
+      try {
+        const response = await fetch(new URL(`/api/v1/cases/${caseId}`, `${baseUrl}/`).toString());
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || '加载案例详情失败。');
+        }
+        currentCaseId = data.id;
+        currentCase = data;
+        renderCaseDetail(data);
+        setStatus(`● 已加载案例 ${caseId}`, 'good');
+      } catch (error) {
+        setStatus(`● ${error.message}`, 'bad');
+      }
+    }
+
+    function renderCaseDetail(data) {
+      const container = document.getElementById('caseDetail');
+      const refs = data.knowledge_refs || [];
+      const corrections = data.corrections || [];
+
+      container.innerHTML = `
+        <article class="detail-card">
+          <div class="badge-row">
+            <span class="badge ${escapeHtml(data.status)}">${escapeHtml(data.status)}</span>
+            <span class="badge">${escapeHtml(data.equipment_type)}</span>
+            ${data.equipment_model ? `<span class="badge">${escapeHtml(data.equipment_model)}</span>` : ''}
+            ${data.fault_type ? `<span class="badge">${escapeHtml(data.fault_type)}</span>` : ''}
+          </div>
+          <h3>${escapeHtml(data.title)}</h3>
+          <p>${escapeHtml(data.symptom_description)}</p>
+          <div class="meta-grid">
+            <div class="meta-block">
+              <div class="meta-label">处理步骤</div>
+              <div class="meta-value">${escapeHtml((data.processing_steps || []).join('\n') || '暂无处理步骤。')}</div>
+            </div>
+            <div class="meta-block">
+              <div class="meta-label">处理结果总结</div>
+              <div class="meta-value">${escapeHtml(data.resolution_summary || '暂无结果总结。')}</div>
+            </div>
+            <div class="meta-block">
+              <div class="meta-label">审核信息</div>
+              <div class="meta-value">审核人：${escapeHtml(data.reviewer_name || '未审核')}\n审核意见：${escapeHtml(data.review_note || '暂无审核意见')}\n知识文档：${data.source_document_id || '尚未入库'}</div>
+            </div>
+            <div class="meta-block">
+              <div class="meta-label">附件信息</div>
+              <div class="meta-value">附件名称：${escapeHtml(data.attachment_name || '无')}\n附件地址：${escapeHtml(data.attachment_url || '无')}</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="detail-card">
+          <div class="section-title">知识引用</div>
+          <div class="refs-list">
+            ${refs.length ? refs.map((ref) => `
+              <div class="ref-card">
+                <strong>${escapeHtml(ref.title)}</strong><br>
+                来源：${escapeHtml(ref.source_name)}${ref.section_reference ? ` | 章节：${escapeHtml(ref.section_reference)}` : ''}${ref.page_reference ? ` | 页码：${escapeHtml(ref.page_reference)}` : ''}<br>
+                ${escapeHtml(ref.excerpt)}
+              </div>
+            `).join('') : '<div class="empty-card">当前案例没有挂接知识引用。</div>'}
+          </div>
+        </article>
+
+        <article class="detail-card">
+          <div class="section-title">人工修正记录</div>
+          <div class="corrections-list">
+            ${corrections.length ? corrections.map((item) => `
+              <div class="correction-card">
+                <strong>${escapeHtml(item.correction_target)}</strong><br>
+                原始内容：${escapeHtml(item.original_content || '无')}<br>
+                修正内容：${escapeHtml(item.corrected_content)}<br>
+                备注：${escapeHtml(item.note || '无')}
+              </div>
+            `).join('') : '<div class="empty-card">当前没有人工修正记录。</div>'}
+          </div>
+        </article>
+
+        <article class="detail-card">
+          <div class="section-title">新增人工修正</div>
+          <div class="field-grid">
+            <div class="field">
+              <label for="correctionTarget">修正目标</label>
+              <select id="correctionTarget">
+                <option value="retrieval_result">retrieval_result / 检索结果</option>
+                <option value="model_output">model_output / 模型输出</option>
+                <option value="summary" selected>summary / 总结结论</option>
+                <option value="procedure">procedure / 操作步骤</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="reviewerName">审核人</label>
+              <input type="text" id="reviewerName" placeholder="例如：评审老师 / 指导教师">
+            </div>
+          </div>
+          <div class="field">
+            <label for="originalContent">原始内容</label>
+            <textarea id="originalContent" placeholder="例如：模型输出中写成更换点火线圈。"></textarea>
+          </div>
+          <div class="field">
+            <label for="correctedContent">修正后内容</label>
+            <textarea id="correctedContent" placeholder="例如：根据现场记录，应为更换火花塞并清理积碳。"></textarea>
+          </div>
+          <div class="field">
+            <label for="reviewNote">修正/审核说明</label>
+            <textarea id="reviewNote" placeholder="例如：根据照片和维修记录修正。"></textarea>
+          </div>
+          <div class="actions">
+            <button onclick="submitCorrection()">保存人工修正</button>
+            <button class="secondary" onclick="reviewCase('approve')">审核通过并入库</button>
+            <button class="warn" onclick="reviewCase('reject')">驳回案例</button>
+          </div>
+        </article>
+      `;
+    }
+
+    async function submitCorrection() {
+      if (!currentCaseId) {
+        setStatus('● 请先加载一条案例。', 'bad');
+        return;
+      }
+
+      let baseUrl;
+      try {
+        baseUrl = normalizeBaseUrl(document.getElementById('baseUrl').value);
+      } catch (error) {
+        setStatus(`● ${error.message}`, 'bad');
+        return;
+      }
+
+      const correctedContent = document.getElementById('correctedContent').value.trim();
+      if (!correctedContent) {
+        setStatus('● 修正后内容不能为空。', 'bad');
+        return;
+      }
+
+      try {
+        const response = await fetch(new URL(`/api/v1/cases/${currentCaseId}/corrections`, `${baseUrl}/`).toString(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            correction_target: document.getElementById('correctionTarget').value,
+            original_content: document.getElementById('originalContent').value.trim() || null,
+            corrected_content: correctedContent,
+            note: document.getElementById('reviewNote').value.trim() || null,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || '保存人工修正失败。');
+        }
+        currentCase = data;
+        renderCaseDetail(data);
+        setStatus(`● 已为案例 ${currentCaseId} 新增修正`, 'good');
+      } catch (error) {
+        setStatus(`● ${error.message}`, 'bad');
+      }
+    }
+
+    async function reviewCase(action) {
+      if (!currentCaseId) {
+        setStatus('● 请先加载一条案例。', 'bad');
+        return;
+      }
+
+      let baseUrl;
+      try {
+        baseUrl = normalizeBaseUrl(document.getElementById('baseUrl').value);
+      } catch (error) {
+        setStatus(`● ${error.message}`, 'bad');
+        return;
+      }
+
+      try {
+        const response = await fetch(new URL(`/api/v1/cases/${currentCaseId}/review`, `${baseUrl}/`).toString(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action,
+            reviewer_name: document.getElementById('reviewerName').value.trim() || null,
+            review_note: document.getElementById('reviewNote').value.trim() || null,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || '审核案例失败。');
+        }
+        currentCase = data;
+        renderCaseDetail(data);
+        setStatus(`● 案例 ${currentCaseId} 已${action === 'approve' ? '通过审核' : '驳回'}`, 'good');
+        await reloadCases();
+      } catch (error) {
+        setStatus(`● ${error.message}`, 'bad');
+      }
+    }
+
+    initializePage();
+  </script>
+</body>
+</html>

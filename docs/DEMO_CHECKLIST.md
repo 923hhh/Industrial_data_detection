@@ -62,7 +62,7 @@ pytest -q
 
 当前参考结果：
 
-- `19 passed`
+- `34 passed`
 - `4 skipped`
 
 ## 演示结论

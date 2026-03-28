@@ -1,0 +1,390 @@
+"""Case upload, review and knowledge feedback service for TODO-SB-5."""
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Any
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.models.knowledge import (
+    KnowledgeChunk,
+    KnowledgeDocument,
+    KnowledgeRelation,
+    MaintenanceCase,
+    MaintenanceCaseCorrection,
+)
+from app.models.tasks import MaintenanceTask
+from app.schemas.cases import (
+    MaintenanceCaseCorrectionCreate,
+    MaintenanceCaseCreate,
+    MaintenanceCaseReviewRequest,
+)
+from app.services.knowledge_service import split_text_into_chunks
+
+
+class MaintenanceCaseService:
+    """Service layer for case upload, review and knowledge feedback."""
+
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def create_case(self, data: MaintenanceCaseCreate) -> dict[str, Any]:
+        """Create a maintenance case pending review."""
+        task = await self._load_task(data.task_id) if data.task_id else None
+        knowledge_refs = self._normalize_knowledge_refs(data.knowledge_refs, task)
+
+        case = MaintenanceCase(
+            title=data.title,
+            equipment_type=data.equipment_type,
+            equipment_model=data.equipment_model,
+            fault_type=data.fault_type,
+            task_id=data.task_id,
+            symptom_description=data.symptom_description,
+            processing_steps=list(data.processing_steps),
+            resolution_summary=data.resolution_summary,
+            attachment_name=data.attachment_name,
+            attachment_url=data.attachment_url,
+            knowledge_refs=knowledge_refs,
+            status="pending_review",
+        )
+        self.session.add(case)
+        await self.session.flush()
+
+        if task is not None:
+            await self._ensure_relation(
+                source_kind="maintenance_case",
+                source_id=case.id,
+                target_kind="maintenance_task",
+                target_id=task.id,
+                relation_type="derived_from",
+                notes="TODO-SB-5 案例由标准化检修任务沉淀生成",
+            )
+
+        for ref in knowledge_refs:
+            chunk_id = ref.get("chunk_id")
+            if chunk_id is None:
+                continue
+            await self._ensure_relation(
+                source_kind="maintenance_case",
+                source_id=case.id,
+                target_kind="knowledge_chunk",
+                target_id=chunk_id,
+                relation_type="references",
+                notes="TODO-SB-5 案例保留原始知识引用",
+            )
+
+        await self.session.commit()
+        return await self.get_case_detail(case.id)
+
+    async def list_cases(
+        self,
+        *,
+        limit: int = 20,
+        status_filter: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return recent maintenance cases with optional status filter."""
+        stmt = select(MaintenanceCase).order_by(MaintenanceCase.updated_at.desc()).limit(limit)
+        if status_filter:
+            stmt = stmt.where(MaintenanceCase.status == status_filter)
+
+        cases = (await self.session.execute(stmt)).scalars().all()
+        return [
+            {
+                "id": item.id,
+                "title": item.title,
+                "equipment_type": item.equipment_type,
+                "equipment_model": item.equipment_model,
+                "fault_type": item.fault_type,
+                "status": item.status,
+                "task_id": item.task_id,
+                "source_document_id": item.source_document_id,
+                "created_at": item.created_at,
+                "updated_at": item.updated_at,
+            }
+            for item in cases
+        ]
+
+    async def get_case_detail(self, case_id: int) -> dict[str, Any]:
+        """Return full case detail including manual corrections."""
+        case = await self._load_case(case_id)
+        corrections = await self._load_corrections(case_id)
+
+        return {
+            "id": case.id,
+            "title": case.title,
+            "equipment_type": case.equipment_type,
+            "equipment_model": case.equipment_model,
+            "fault_type": case.fault_type,
+            "task_id": case.task_id,
+            "symptom_description": case.symptom_description,
+            "processing_steps": case.processing_steps or [],
+            "resolution_summary": case.resolution_summary,
+            "attachment_name": case.attachment_name,
+            "attachment_url": case.attachment_url,
+            "knowledge_refs": case.knowledge_refs or [],
+            "status": case.status,
+            "reviewer_name": case.reviewer_name,
+            "review_note": case.review_note,
+            "reviewed_at": case.reviewed_at,
+            "source_document_id": case.source_document_id,
+            "corrections": [
+                {
+                    "id": item.id,
+                    "correction_target": item.correction_target,
+                    "original_content": item.original_content,
+                    "corrected_content": item.corrected_content,
+                    "note": item.note,
+                    "status": item.status,
+                    "created_at": item.created_at,
+                }
+                for item in corrections
+            ],
+            "created_at": case.created_at,
+            "updated_at": case.updated_at,
+        }
+
+    async def add_correction(
+        self,
+        case_id: int,
+        data: MaintenanceCaseCorrectionCreate,
+    ) -> dict[str, Any]:
+        """Persist a manual correction linked to a case."""
+        case = await self._load_case(case_id)
+        correction = MaintenanceCaseCorrection(
+            case_id=case.id,
+            correction_target=data.correction_target,
+            original_content=data.original_content,
+            corrected_content=data.corrected_content,
+            note=data.note,
+            status="accepted",
+        )
+        self.session.add(correction)
+        case.updated_at = datetime.utcnow()
+
+        await self.session.commit()
+        return await self.get_case_detail(case_id)
+
+    async def review_case(
+        self,
+        case_id: int,
+        data: MaintenanceCaseReviewRequest,
+    ) -> dict[str, Any]:
+        """Approve or reject a case and sync it to the knowledge base."""
+        case = await self._load_case(case_id)
+        case.reviewer_name = data.reviewer_name
+        case.review_note = data.review_note
+        case.reviewed_at = datetime.utcnow()
+
+        if data.action == "approve":
+            document = await self._publish_case_document(case)
+            case.status = "approved"
+            case.source_document_id = document.id
+
+            await self._ensure_relation(
+                source_kind="maintenance_case",
+                source_id=case.id,
+                target_kind="knowledge_document",
+                target_id=document.id,
+                relation_type="approved_into",
+                notes="TODO-SB-5 审核通过后自动沉淀为知识文档",
+            )
+        else:
+            case.status = "rejected"
+            if case.source_document_id:
+                document_stmt = select(KnowledgeDocument).where(
+                    KnowledgeDocument.id == case.source_document_id
+                )
+                document = (await self.session.execute(document_stmt)).scalar_one_or_none()
+                if document is not None:
+                    document.status = "archived"
+
+        await self.session.commit()
+        return await self.get_case_detail(case_id)
+
+    async def _publish_case_document(self, case: MaintenanceCase) -> KnowledgeDocument:
+        """Create or refresh a knowledge document from an approved case."""
+        document_content = await self._build_case_document_content(case)
+        chunks = split_text_into_chunks(document_content)
+
+        document: KnowledgeDocument | None = None
+        if case.source_document_id:
+            stmt = (
+                select(KnowledgeDocument)
+                .options(selectinload(KnowledgeDocument.chunks))
+                .where(KnowledgeDocument.id == case.source_document_id)
+            )
+            document = (await self.session.execute(stmt)).scalar_one_or_none()
+
+        if document is None:
+            document = KnowledgeDocument(
+                title=case.title,
+                source_name=f"case-{case.id}",
+                source_type="case",
+                equipment_type=case.equipment_type,
+                equipment_model=case.equipment_model,
+                fault_type=case.fault_type,
+                section_reference="案例审核入库",
+                page_reference=None,
+                content=document_content,
+                status="published",
+            )
+            self.session.add(document)
+            await self.session.flush()
+        else:
+            document.title = case.title
+            document.source_name = f"case-{case.id}"
+            document.source_type = "case"
+            document.equipment_type = case.equipment_type
+            document.equipment_model = case.equipment_model
+            document.fault_type = case.fault_type
+            document.section_reference = "案例审核入库"
+            document.page_reference = None
+            document.content = document_content
+            document.status = "published"
+            document.chunks.clear()
+            await self.session.flush()
+
+        for index, chunk_text in enumerate(chunks, start=1):
+            document.chunks.append(
+                KnowledgeChunk(
+                    document_id=document.id,
+                    chunk_index=index,
+                    heading=case.title,
+                    content=chunk_text,
+                    equipment_type=case.equipment_type,
+                    equipment_model=case.equipment_model,
+                    fault_type=case.fault_type,
+                    section_reference="案例审核入库",
+                    page_reference=None,
+                )
+            )
+
+        await self.session.flush()
+        return document
+
+    async def _build_case_document_content(self, case: MaintenanceCase) -> str:
+        """Build the searchable text that represents an approved case."""
+        corrections = await self._load_corrections(case.id)
+        lines = [
+            f"案例标题：{case.title}",
+            f"设备类型：{case.equipment_type}",
+            f"设备型号：{case.equipment_model or '未标注'}",
+            f"故障类型：{case.fault_type or '未标注'}",
+            "",
+            "故障现象：",
+            case.symptom_description,
+            "",
+            "处理步骤：",
+        ]
+
+        steps = case.processing_steps or []
+        if steps:
+            lines.extend([f"{index}. {step}" for index, step in enumerate(steps, start=1)])
+        else:
+            lines.append("暂无标准步骤记录。")
+
+        lines.extend(
+            [
+                "",
+                "处理结果：",
+                case.resolution_summary or "暂无处理结果总结。",
+            ]
+        )
+
+        refs = case.knowledge_refs or []
+        if refs:
+            lines.extend(["", "原始知识引用："])
+            for ref in refs:
+                title = ref.get("title", "未命名知识条目")
+                source_name = ref.get("source_name", "未知来源")
+                excerpt = ref.get("excerpt", "")
+                lines.append(f"- {title} / {source_name}：{excerpt}")
+
+        if corrections:
+            lines.extend(["", "人工修正记录："])
+            for item in corrections:
+                note = f"（说明：{item.note}）" if item.note else ""
+                lines.append(
+                    f"- 目标 {item.correction_target}：{item.corrected_content}{note}"
+                )
+
+        return "\n".join(lines).strip()
+
+    async def _load_case(self, case_id: int) -> MaintenanceCase:
+        stmt = select(MaintenanceCase).where(MaintenanceCase.id == case_id)
+        case = (await self.session.execute(stmt)).scalar_one_or_none()
+        if case is None:
+            raise ValueError("指定的检修案例不存在。")
+        return case
+
+    async def _load_task(self, task_id: int) -> MaintenanceTask:
+        stmt = select(MaintenanceTask).where(MaintenanceTask.id == task_id)
+        task = (await self.session.execute(stmt)).scalar_one_or_none()
+        if task is None:
+            raise ValueError("指定的检修任务不存在，无法生成案例。")
+        return task
+
+    async def _load_corrections(self, case_id: int) -> list[MaintenanceCaseCorrection]:
+        stmt = (
+            select(MaintenanceCaseCorrection)
+            .where(MaintenanceCaseCorrection.case_id == case_id)
+            .order_by(MaintenanceCaseCorrection.created_at.asc())
+        )
+        return list((await self.session.execute(stmt)).scalars().all())
+
+    def _normalize_knowledge_refs(
+        self,
+        raw_refs: list[Any],
+        task: MaintenanceTask | None,
+    ) -> list[dict[str, Any]]:
+        refs: list[dict[str, Any]] = []
+        for item in raw_refs:
+            if hasattr(item, "model_dump"):
+                refs.append(item.model_dump())
+            elif isinstance(item, dict):
+                refs.append(dict(item))
+
+        if refs:
+            return refs
+
+        if task is not None and task.source_snapshot:
+            return [dict(item) for item in task.source_snapshot]
+
+        return []
+
+    async def _ensure_relation(
+        self,
+        *,
+        source_kind: str,
+        source_id: int,
+        target_kind: str,
+        target_id: int,
+        relation_type: str,
+        notes: str | None = None,
+    ) -> None:
+        stmt = select(KnowledgeRelation).where(
+            KnowledgeRelation.source_kind == source_kind,
+            KnowledgeRelation.source_id == source_id,
+            KnowledgeRelation.target_kind == target_kind,
+            KnowledgeRelation.target_id == target_id,
+            KnowledgeRelation.relation_type == relation_type,
+        )
+        existing = (await self.session.execute(stmt)).scalar_one_or_none()
+        if existing is not None:
+            if notes:
+                existing.notes = notes
+            return
+
+        self.session.add(
+            KnowledgeRelation(
+                source_kind=source_kind,
+                source_id=source_id,
+                target_kind=target_kind,
+                target_id=target_id,
+                relation_type=relation_type,
+                notes=notes,
+            )
+        )
+        await self.session.flush()

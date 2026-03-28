@@ -334,3 +334,39 @@
   - `todo_softbei.md` (updated)
   - `findings.md` (updated)
   - `task_plan.md` (updated)
+
+## Session: 2026-03-28 (Phase 16 / 软件杯赛题适配 Stage 5)
+
+### 案例沉淀、审核与人工修正
+- **Status:** minimum case feedback loop complete
+- Actions taken:
+  - 扩展 `maintenance_cases`，新增关联任务、处理步骤、附件字段、知识引用快照和审核字段
+  - 新增 `maintenance_case_corrections`，保存对检索结果、模型输出、总结和步骤的人工修正记录
+  - 新增 `MaintenanceCaseService`，支持案例上传、列表、详情、人工修正和审核入库
+  - 新增 `POST /api/v1/cases`、`GET /api/v1/cases`、`GET /api/v1/cases/{id}`、`POST /api/v1/cases/{id}/corrections`、`POST /api/v1/cases/{id}/review`
+  - 审核通过后自动生成/刷新 `knowledge_documents` 与 `knowledge_chunks`，让新案例能回流参与后续知识检索
+  - 新增 `case_reviews.html` 静态案例页，并从 `maintenance_tasks.html` 传递最近任务上下文，形成“任务执行 -> 案例沉淀 -> 审核入库”最小链路
+  - 新增 `tests/test_phase16_cases.py`
+  - 使用 `node --check` 验证 `case_reviews.html` 与 `maintenance_tasks.html` 的内联脚本语法
+  - 验证新增测试 `5 passed`
+  - 验证全量 `pytest -q` 结果更新为 `34 passed, 4 skipped`
+- Files created/modified:
+  - `app/services/case_service.py` (created)
+  - `app/routers/cases.py` (created)
+  - `app/schemas/cases.py` (created)
+  - `alembic/versions/c1f4e2ab9d73_add_case_review_and_feedback_tables.py` (created)
+  - `case_reviews.html` (created)
+  - `tests/test_phase16_cases.py` (created)
+  - `app/models/knowledge.py` (updated)
+  - `app/models/__init__.py` (updated)
+  - `app/schemas/__init__.py` (updated)
+  - `app/services/__init__.py` (updated)
+  - `app/routers/__init__.py` (updated)
+  - `app/main.py` (updated)
+  - `alembic/env.py` (updated)
+  - `knowledge_search.html` (updated)
+  - `maintenance_tasks.html` (updated)
+  - `README.md` (updated)
+  - `todo_softbei.md` (updated)
+  - `findings.md` (updated)
+  - `task_plan.md` (updated)
