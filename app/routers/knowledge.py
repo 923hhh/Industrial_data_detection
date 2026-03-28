@@ -8,6 +8,7 @@ from app.core.database import get_session
 from app.schemas.knowledge import (
     KnowledgeDocumentCreate,
     KnowledgeDocumentResponse,
+    KnowledgeImageAnalysis,
     KnowledgeSearchHit,
     KnowledgeSearchRequest,
     KnowledgeSearchResponse,
@@ -58,7 +59,7 @@ async def create_knowledge_document(
     response_model=KnowledgeSearchResponse,
     status_code=status.HTTP_200_OK,
     summary="检索检修知识",
-    description="支持按关键词、设备类型、设备型号、故障类型检索知识文档分段，并返回出处引用。",
+    description="支持按文本、设备型号、故障图片等条件联合检索知识文档分段，并返回出处引用。",
 )
 async def search_knowledge(
     request: KnowledgeSearchRequest,
@@ -66,18 +67,25 @@ async def search_knowledge(
 ) -> KnowledgeSearchResponse:
     """Search the knowledge base with metadata-aware filtering."""
     logger.info(
-        "knowledge_search query_present=%s equipment_type=%s equipment_model=%s fault_type=%s limit=%s",
+        "knowledge_search query_present=%s image_present=%s equipment_type=%s equipment_model=%s fault_type=%s limit=%s",
         bool((request.query or "").strip()),
+        bool((request.image_base64 or "").strip()),
         request.equipment_type or "",
         request.equipment_model or "",
         request.fault_type or "",
         request.limit,
     )
     service = KnowledgeService(session)
-    results = await service.search(request)
+    response_payload = await service.search_multimodal(request)
 
     return KnowledgeSearchResponse(
-        query=request.query,
-        total=len(results),
-        results=[KnowledgeSearchHit(**item) for item in results],
+        query=response_payload["query"],
+        effective_query=response_payload["effective_query"],
+        image_analysis=(
+            KnowledgeImageAnalysis(**response_payload["image_analysis"])
+            if response_payload["image_analysis"] is not None
+            else None
+        ),
+        total=len(response_payload["results"]),
+        results=[KnowledgeSearchHit(**item) for item in response_payload["results"]],
     )

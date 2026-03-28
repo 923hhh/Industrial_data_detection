@@ -7,6 +7,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.core.database import get_session
 from app.main import app
+from app.schemas.knowledge import KnowledgeSearchRequest
 from app.services.knowledge_service import split_text_into_chunks
 
 
@@ -81,27 +82,37 @@ async def test_create_knowledge_document_endpoint():
 @pytest.mark.asyncio
 async def test_search_knowledge_endpoint():
     """检索端点返回带出处和推荐理由的结果。"""
-    mocked_results = [
-        {
-            "chunk_id": 11,
-            "document_id": 2,
-            "title": "发动机标准检修流程",
-            "source_name": "engine_manual.pdf",
-            "source_type": "manual",
-            "equipment_type": "摩托车发动机",
-            "equipment_model": "LX200",
-            "fault_type": "启动困难",
-            "excerpt": "发动机启动困难时，应重点检查火花塞、供油和压缩比。",
-            "section_reference": "第 2 章",
-            "page_reference": "P12",
-            "recommendation_reason": "命中了检索关键词“启动困难”，设备型号过滤匹配，来源于 engine_manual.pdf",
-            "score": 5.0,
-        }
-    ]
+    mocked_payload = {
+        "query": "启动困难",
+        "effective_query": "启动困难 LX200 火花塞 供油",
+        "image_analysis": {
+            "summary": "图中疑似火花塞积碳，建议检查点火系统。",
+            "keywords": ["火花塞", "积碳", "点火系统"],
+            "source": "vision_model",
+            "warning": None,
+        },
+        "results": [
+            {
+                "chunk_id": 11,
+                "document_id": 2,
+                "title": "发动机标准检修流程",
+                "source_name": "engine_manual.pdf",
+                "source_type": "manual",
+                "equipment_type": "摩托车发动机",
+                "equipment_model": "LX200",
+                "fault_type": "启动困难",
+                "excerpt": "发动机启动困难时，应重点检查火花塞、供油和压缩比。",
+                "section_reference": "第 2 章",
+                "page_reference": "P12",
+                "recommendation_reason": "命中了检索关键词“启动困难”，设备型号过滤匹配，来源于 engine_manual.pdf",
+                "score": 5.0,
+            }
+        ],
+    }
 
     with patch(
-        "app.routers.knowledge.KnowledgeService.search",
-        new=AsyncMock(return_value=mocked_results),
+        "app.routers.knowledge.KnowledgeService.search_multimodal",
+        new=AsyncMock(return_value=mocked_payload),
     ):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -117,6 +128,8 @@ async def test_search_knowledge_endpoint():
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 1
+    assert data["effective_query"] == "启动困难 LX200 火花塞 供油"
+    assert data["image_analysis"]["source"] == "vision_model"
     assert data["results"][0]["source_name"] == "engine_manual.pdf"
     assert data["results"][0]["recommendation_reason"]
 
@@ -129,3 +142,15 @@ async def test_search_knowledge_requires_input():
         response = await client.post("/api/v1/knowledge/search", json={"limit": 5})
 
     assert response.status_code == 422
+
+
+def test_search_request_accepts_image_only():
+    """图片可单独作为多模态检索入口。"""
+    request = KnowledgeSearchRequest(
+        image_base64="ZmFrZV9pbWFnZQ==",
+        image_mime_type="image/png",
+        image_filename="spark-plug-fault.png",
+    )
+
+    assert request.image_filename == "spark-plug-fault.png"
+    assert request.image_base64 == "ZmFrZV9pbWFnZQ=="

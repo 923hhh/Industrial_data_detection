@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>设备检修知识检索 - 多模态联调页</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --panel-soft: #111827;
+      --line: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --good: #3fb950;
+      --warn: #f0883e;
+      --bad: #ff7b72;
+    }
+
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(88, 166, 255, 0.12), transparent 28%),
+        radial-gradient(circle at top right, rgba(63, 185, 80, 0.10), transparent 24%),
+        var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      padding: 28px 16px 40px;
+    }
+
+    .shell {
+      width: 100%;
+      max-width: 1160px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .hero h1 {
+      font-size: 1.7rem;
+      letter-spacing: 0.04em;
+      margin-bottom: 10px;
+    }
+
+    .hero p {
+      color: var(--muted);
+      max-width: 760px;
+      line-height: 1.6;
+      font-size: 0.95rem;
+    }
+
+    .hero-nav {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .hero-nav a {
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid rgba(88, 166, 255, 0.3);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 0.84rem;
+      transition: 0.2s ease;
+    }
+
+    .hero-nav a:hover {
+      background: rgba(88, 166, 255, 0.12);
+      border-color: rgba(88, 166, 255, 0.55);
+    }
+
+    .panel {
+      background: rgba(22, 27, 34, 0.94);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-header h2 {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .panel-header span {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .config-body {
+      padding: 18px 22px 22px;
+      display: grid;
+      grid-template-columns: minmax(320px, 1fr) auto;
+      gap: 14px;
+      align-items: end;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(360px, 420px) minmax(0, 1fr);
+      gap: 0;
+    }
+
+    .form-side {
+      border-right: 1px solid var(--line);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      background: rgba(13, 17, 23, 0.35);
+    }
+
+    .result-side {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-size: 0.76rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    input[type="text"],
+    textarea,
+    input[type="file"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 11px 12px;
+      outline: none;
+      font-size: 0.92rem;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    textarea {
+      min-height: 124px;
+      resize: vertical;
+      line-height: 1.6;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus,
+    input[type="file"]:focus {
+      border-color: rgba(88, 166, 255, 0.85);
+      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.12);
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 1px solid transparent;
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: 0.2s ease;
+      color: #fff;
+      background: linear-gradient(135deg, #1f6feb, #238636);
+    }
+
+    button.secondary {
+      background: transparent;
+      border-color: var(--line);
+      color: var(--muted);
+    }
+
+    button:hover { filter: brightness(1.08); }
+    button.secondary:hover {
+      color: var(--accent);
+      border-color: rgba(88, 166, 255, 0.45);
+      background: rgba(88, 166, 255, 0.08);
+    }
+    button:disabled {
+      background: #21262d;
+      border-color: var(--line);
+      color: var(--muted);
+      cursor: not-allowed;
+      filter: none;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      width: fit-content;
+    }
+
+    .status-pill.good { color: #9be9a8; border-color: rgba(63, 185, 80, 0.45); }
+    .status-pill.bad { color: #ffb4ae; border-color: rgba(255, 123, 114, 0.45); }
+
+    .preview-card,
+    .analysis-card,
+    .result-card,
+    .empty-card {
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px 18px;
+    }
+
+    .preview-card {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .preview-placeholder {
+      min-height: 220px;
+      border: 1px dashed rgba(139, 148, 158, 0.38);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      background: rgba(13, 17, 23, 0.46);
+      overflow: hidden;
+      text-align: center;
+      padding: 16px;
+    }
+
+    .preview-placeholder img {
+      width: 100%;
+      height: 100%;
+      max-height: 280px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .section-title {
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+    }
+
+    .analysis-meta {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .meta-block {
+      padding: 12px;
+      background: rgba(13, 17, 23, 0.46);
+      border: 1px solid rgba(48, 54, 61, 0.9);
+      border-radius: 12px;
+    }
+
+    .meta-label {
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .meta-value {
+      line-height: 1.6;
+      word-break: break-word;
+      font-size: 0.9rem;
+    }
+
+    .tag-list {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .tag {
+      background: rgba(88, 166, 255, 0.12);
+      border: 1px solid rgba(88, 166, 255, 0.22);
+      color: #9ecbff;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.8rem;
+    }
+
+    .results-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .result-card h3 {
+      font-size: 1rem;
+      margin-bottom: 10px;
+    }
+
+    .result-card p {
+      line-height: 1.65;
+      color: #d0d7de;
+      font-size: 0.92rem;
+    }
+
+    .result-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .result-badge {
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 0.76rem;
+      border: 1px solid rgba(240, 136, 62, 0.34);
+      color: #ffb86b;
+      background: rgba(240, 136, 62, 0.08);
+    }
+
+    .result-source {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .warning {
+      margin-top: 10px;
+      color: #ffb86b;
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 920px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .form-side {
+        border-right: none;
+        border-bottom: 1px solid var(--line);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .field-grid,
+      .analysis-meta,
+      .config-body {
+        grid-template-columns: 1fr;
+      }
+
+      .panel-header,
+      .hero {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div>
+        <h1>设备检修知识检索 / 多模态联调页</h1>
+        <p>本页用于 TODO-SB-3 的最小演示：支持文本问题、设备型号和单张故障图片联合驱动知识检索，并展示系统识别出的检索线索、有效查询词和知识引用结果。</p>
+      </div>
+      <div class="hero-nav">
+        <a href="./index.html">返回诊断控制台</a>
+        <a href="./docs/SOFTBEI_DEMO_STORYLINE.md">查看演示主线</a>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>连接配置</h2>
+        <span>当前只接 `/api/v1/knowledge/search`</span>
+      </div>
+      <div class="config-body">
+        <div class="field">
+          <label for="baseUrl">后端地址</label>
+          <input type="text" id="baseUrl" placeholder="http://127.0.0.1:8000">
+          <div class="note">留空时优先使用当前站点地址，否则回退到 `http://127.0.0.1:8000`。该配置会保存在浏览器本地，供知识检索页和诊断页共用。</div>
+        </div>
+        <div class="status-pill" id="searchStatus">● 就绪</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>多模态知识检索</h2>
+        <span>文本 / 设备型号 / 单张故障图片</span>
+      </div>
+      <div class="layout">
+        <div class="form-side">
+          <div class="field">
+            <label for="query">检修问题或故障描述</label>
+            <textarea id="query" placeholder="例如：发动机启动困难，怀疑点火系统异常。">发动机启动困难，怀疑点火系统异常。</textarea>
+          </div>
+
+          <div class="field-grid">
+            <div class="field">
+              <label for="equipmentType">设备类型</label>
+              <input type="text" id="equipmentType" value="摩托车发动机" placeholder="例如：摩托车发动机">
+            </div>
+            <div class="field">
+              <label for="equipmentModel">设备型号</label>
+              <input type="text" id="equipmentModel" value="LX200" placeholder="例如：LX200">
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="imageFile">单张故障图片</label>
+            <input type="file" id="imageFile" accept="image/*">
+            <div class="note">可只传文本、只填设备型号，也可上传一张故障图片。图片会先被转成检索标签，再复用知识检索链路。</div>
+          </div>
+
+          <div class="actions">
+            <button id="searchBtn" onclick="startKnowledgeSearch()">检索知识</button>
+            <button class="secondary" onclick="resetKnowledgeSearch()">清空结果</button>
+          </div>
+        </div>
+
+        <div class="result-side">
+          <div class="preview-card">
+            <div class="section-title">图片预览</div>
+            <div class="preview-placeholder" id="previewPane">未选择图片，当前仅使用文本与设备型号检索。</div>
+            <div class="note" id="selectedFileNote">尚未选择故障图片。</div>
+          </div>
+
+          <div class="analysis-card" id="analysisCard">
+            <div class="section-title">检索线索</div>
+            <div class="analysis-meta">
+              <div class="meta-block">
+                <div class="meta-label">原始输入</div>
+                <div class="meta-value" id="originalQueryValue">等待检索请求...</div>
+              </div>
+              <div class="meta-block">
+                <div class="meta-label">有效检索词</div>
+                <div class="meta-value" id="effectiveQueryValue">等待系统生成...</div>
+              </div>
+            </div>
+            <div class="tag-list" id="analysisTags"></div>
+            <div class="warning" id="analysisWarning" hidden></div>
+          </div>
+
+          <div>
+            <div class="section-title">知识检索结果</div>
+            <div class="results-list" id="resultsContainer">
+              <div class="empty-card">还没有检索结果。发起一次查询后，这里会显示命中的知识条目、来源文件、章节和推荐理由。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const BASE_URL_STORAGE_KEY = 'fault-diagnosis-base-url';
+    const FALLBACK_BASE_URL = 'http://127.0.0.1:8000';
+    const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+
+    function initializePage() {
+      document.getElementById('baseUrl').value = getInitialBaseUrl();
+      document.getElementById('imageFile').addEventListener('change', handleImageSelection);
+    }
+
+    function getInitialBaseUrl() {
+      const saved = localStorage.getItem(BASE_URL_STORAGE_KEY);
+      if (saved) {
+        return saved;
+      }
+
+      if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+        return window.location.origin;
+      }
+
+      return FALLBACK_BASE_URL;
+    }
+
+    function normalizeBaseUrl(rawValue) {
+      const candidate = (rawValue || '').trim() || getInitialBaseUrl();
+
+      let parsed;
+      try {
+        parsed = new URL(candidate);
+      } catch {
+        throw new Error('后端地址格式无效，请输入 http:// 或 https:// 开头的地址。');
+      }
+
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        throw new Error('后端地址只支持 http:// 或 https://。');
+      }
+
+      return parsed.href.replace(/\/$/, '');
+    }
+
+    function validateForm() {
+      const query = document.getElementById('query').value.trim();
+      const equipmentType = document.getElementById('equipmentType').value.trim();
+      const equipmentModel = document.getElementById('equipmentModel').value.trim();
+      const imageFile = document.getElementById('imageFile').files[0] || null;
+      const rawBaseUrl = document.getElementById('baseUrl').value;
+
+      if (!query && !equipmentModel && !imageFile) {
+        throw new Error('至少需要提供检修问题、设备型号或一张故障图片。');
+      }
+
+      if (imageFile && imageFile.size > MAX_IMAGE_BYTES) {
+        throw new Error('单张故障图片不能超过 4 MB。');
+      }
+
+      return {
+        query,
+        equipmentType,
+        equipmentModel,
+        imageFile,
+        baseUrl: normalizeBaseUrl(rawBaseUrl),
+      };
+    }
+
+    function setStatus(text, mode = '') {
+      const el = document.getElementById('searchStatus');
+      el.textContent = text;
+      el.className = `status-pill ${mode}`.trim();
+    }
+
+    function setRunning(isRunning) {
+      document.getElementById('searchBtn').disabled = isRunning;
+    }
+
+    function readFileAsDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('读取故障图片失败。'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function fileToBase64Payload(file) {
+      const dataUrl = await readFileAsDataUrl(file);
+      const raw = String(dataUrl);
+      const commaIndex = raw.indexOf(',');
+      if (commaIndex < 0) {
+        throw new Error('故障图片编码失败，无法生成 Base64 内容。');
+      }
+
+      return {
+        image_base64: raw.slice(commaIndex + 1),
+        image_mime_type: file.type || 'image/jpeg',
+        image_filename: file.name,
+      };
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function renderAnalysis(responseData) {
+      document.getElementById('originalQueryValue').textContent = responseData.query || '未提供文本描述';
+      document.getElementById('effectiveQueryValue').textContent = responseData.effective_query || '当前未生成额外检索词';
+
+      const tags = document.getElementById('analysisTags');
+      tags.innerHTML = '';
+
+      const imageAnalysis = responseData.image_analysis;
+      if (imageAnalysis) {
+        if (imageAnalysis.summary) {
+          const summaryTag = document.createElement('span');
+          summaryTag.className = 'tag';
+          summaryTag.textContent = `摘要：${imageAnalysis.summary}`;
+          tags.appendChild(summaryTag);
+        }
+
+        (imageAnalysis.keywords || []).forEach((keyword) => {
+          const chip = document.createElement('span');
+          chip.className = 'tag';
+          chip.textContent = keyword;
+          tags.appendChild(chip);
+        });
+
+        const warningEl = document.getElementById('analysisWarning');
+        if (imageAnalysis.warning) {
+          warningEl.hidden = false;
+          warningEl.textContent = imageAnalysis.warning;
+        } else {
+          warningEl.hidden = true;
+          warningEl.textContent = '';
+        }
+      } else {
+        const note = document.createElement('span');
+        note.className = 'tag';
+        note.textContent = '本次仅使用文本与型号条件检索';
+        tags.appendChild(note);
+        document.getElementById('analysisWarning').hidden = true;
+        document.getElementById('analysisWarning').textContent = '';
+      }
+    }
+
+    function renderResults(results) {
+      const container = document.getElementById('resultsContainer');
+      if (!results || results.length === 0) {
+        container.innerHTML = '<div class="empty-card">当前条件下没有命中知识条目。建议补充更具体的故障描述、设备型号或上传更清晰的故障图片。</div>';
+        return;
+      }
+
+      container.innerHTML = results.map((item) => `
+        <article class="result-card">
+          <div class="result-meta">
+            <span class="result-badge">${escapeHtml(item.equipment_type || '未标注设备')}</span>
+            ${item.equipment_model ? `<span class="result-badge">${escapeHtml(item.equipment_model)}</span>` : ''}
+            ${item.fault_type ? `<span class="result-badge">${escapeHtml(item.fault_type)}</span>` : ''}
+          </div>
+          <h3>${escapeHtml(item.title)}</h3>
+          <p>${escapeHtml(item.excerpt)}</p>
+          <div class="result-source">
+            来源：${escapeHtml(item.source_name)}
+            ${item.section_reference ? ` | 章节：${escapeHtml(item.section_reference)}` : ''}
+            ${item.page_reference ? ` | 页码：${escapeHtml(item.page_reference)}` : ''}
+          </div>
+          <div class="warning">推荐理由：${escapeHtml(item.recommendation_reason)}</div>
+        </article>
+      `).join('');
+    }
+
+    async function startKnowledgeSearch() {
+      let formData;
+      try {
+        formData = validateForm();
+      } catch (error) {
+        setStatus(`● ${error.message}`, 'bad');
+        return;
+      }
+
+      setRunning(true);
+      setStatus('● 检索中...', '');
+      localStorage.setItem(BASE_URL_STORAGE_KEY, formData.baseUrl);
+
+      const payload = {
+        query: formData.query || null,
+        equipment_type: formData.equipmentType || null,
+        equipment_model: formData.equipmentModel || null,
+        limit: 6,
+      };
+
+      if (formData.imageFile) {
+        try {
+          Object.assign(payload, await fileToBase64Payload(formData.imageFile));
+        } catch (error) {
+          setRunning(false);
+          setStatus(`● ${error.message}`, 'bad');
+          return;
+        }
+      }
+
+      try {
+        const response = await fetch(new URL('/api/v1/knowledge/search', `${formData.baseUrl}/`).toString(), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          const detail = Array.isArray(data.detail)
+            ? data.detail.map((item) => item.msg).join('；')
+            : data.detail || '知识检索请求失败。';
+          throw new Error(detail);
+        }
+
+        renderAnalysis(data);
+        renderResults(data.results || []);
+        setStatus(`● 已返回 ${data.total} 条结果`, 'good');
+      } catch (error) {
+        setStatus(`● ${error.message}`, 'bad');
+        document.getElementById('resultsContainer').innerHTML = `<div class="empty-card">检索失败：${escapeHtml(error.message)}</div>`;
+      } finally {
+        setRunning(false);
+      }
+    }
+
+    function handleImageSelection(event) {
+      const file = event.target.files[0];
+      const previewPane = document.getElementById('previewPane');
+      const note = document.getElementById('selectedFileNote');
+
+      if (!file) {
+        previewPane.textContent = '未选择图片，当前仅使用文本与设备型号检索。';
+        note.textContent = '尚未选择故障图片。';
+        return;
+      }
+
+      note.textContent = `已选择：${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+      readFileAsDataUrl(file)
+        .then((dataUrl) => {
+          previewPane.innerHTML = `<img src="${dataUrl}" alt="故障图片预览">`;
+        })
+        .catch(() => {
+          previewPane.textContent = '图片预览失败，但仍可尝试发起检索。';
+        });
+    }
+
+    function resetKnowledgeSearch() {
+      document.getElementById('query').value = '';
+      document.getElementById('equipmentType').value = '摩托车发动机';
+      document.getElementById('equipmentModel').value = '';
+      document.getElementById('imageFile').value = '';
+      document.getElementById('previewPane').textContent = '未选择图片，当前仅使用文本与设备型号检索。';
+      document.getElementById('selectedFileNote').textContent = '尚未选择故障图片。';
+      document.getElementById('originalQueryValue').textContent = '等待检索请求...';
+      document.getElementById('effectiveQueryValue').textContent = '等待系统生成...';
+      document.getElementById('analysisTags').innerHTML = '';
+      document.getElementById('analysisWarning').hidden = true;
+      document.getElementById('analysisWarning').textContent = '';
+      document.getElementById('resultsContainer').innerHTML = '<div class="empty-card">还没有检索结果。发起一次查询后，这里会显示命中的知识条目、来源文件、章节和推荐理由。</div>';
+      setRunning(false);
+      setStatus('● 就绪');
+    }
+
+    initializePage();
+  </script>
+</body>
+</html>

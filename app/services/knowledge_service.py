@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.knowledge import DeviceModel, KnowledgeChunk, KnowledgeDocument
 from app.schemas.knowledge import KnowledgeDocumentCreate, KnowledgeSearchRequest
+from app.services.image_analysis_service import FaultImageAnalysisService
 
 
 def split_text_into_chunks(content: str, max_chars: int = 480) -> list[str]:
@@ -50,6 +51,7 @@ class KnowledgeService:
 
     def __init__(self, session: AsyncSession):
         self.session = session
+        self.image_analysis_service = FaultImageAnalysisService()
 
     async def create_document(
         self, data: KnowledgeDocumentCreate
@@ -178,6 +180,47 @@ class KnowledgeService:
             }
             for chunk, document, score in rows
         ]
+
+    async def search_multimodal(self, request: KnowledgeSearchRequest) -> dict[str, Any]:
+        """Search knowledge with optional image-derived retrieval hints."""
+        image_analysis = None
+        effective_query = request.query
+
+        if request.image_base64:
+            image_analysis = await self.image_analysis_service.analyze(
+                image_base64=request.image_base64,
+                image_mime_type=request.image_mime_type,
+                image_filename=request.image_filename,
+                query=request.query,
+                equipment_type=request.equipment_type,
+                equipment_model=request.equipment_model,
+                model_provider=request.model_provider,
+                model_name=request.model_name,
+            )
+            effective_query = self.image_analysis_service.merge_query(
+                query=request.query,
+                analysis=image_analysis,
+                equipment_model=request.equipment_model,
+            )
+
+        search_request = request.model_copy(update={"query": effective_query})
+        results = await self.search(search_request)
+
+        return {
+            "query": request.query,
+            "effective_query": effective_query,
+            "image_analysis": (
+                {
+                    "summary": image_analysis.summary,
+                    "keywords": image_analysis.keywords,
+                    "source": image_analysis.source,
+                    "warning": image_analysis.warning,
+                }
+                if image_analysis is not None
+                else None
+            ),
+            "results": results,
+        }
 
     async def _ensure_device_model(self, data: KnowledgeDocumentCreate) -> None:
         """Create a device model record when a new model code appears."""

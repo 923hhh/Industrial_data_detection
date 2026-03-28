@@ -9,6 +9,7 @@ from app.schemas.sensor_data import (
 from app.schemas.knowledge import (
     KnowledgeDocumentCreate,
     KnowledgeDocumentResponse,
+    KnowledgeImageAnalysis,
     KnowledgeSearchRequest,
     KnowledgeSearchHit,
     KnowledgeSearchResponse,
@@ -21,6 +22,7 @@ __all__ = [
     "SensorDataResponse",
     "KnowledgeDocumentCreate",
     "KnowledgeDocumentResponse",
+    "KnowledgeImageAnalysis",
     "KnowledgeSearchRequest",
     "KnowledgeSearchHit",
     "KnowledgeSearchResponse",

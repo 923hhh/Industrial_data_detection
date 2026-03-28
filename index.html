@@ -26,6 +26,30 @@
       letter-spacing: 2px;
     }
 
+    .page-links {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin: -10px 0 14px;
+    }
+
+    .page-links a {
+      color: #79c0ff;
+      text-decoration: none;
+      border: 1px solid #30363d;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.78rem;
+      transition: 0.2s ease;
+    }
+
+    .page-links a:hover {
+      border-color: #58a6ff;
+      background: rgba(88, 166, 255, 0.08);
+    }
+
     .panel {
       width: 100%;
       max-width: 900px;
@@ -249,6 +273,9 @@
 <body>
 
 <h1>// 工业故障诊断流式控制台</h1>
+<div class="page-links">
+  <a href="./knowledge_search.html">进入多模态知识检索页</a>
+</div>
 
 <div class="panel">
   <!-- 输入区 -->

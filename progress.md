@@ -274,3 +274,30 @@
   - `alembic/env.py` (updated)
   - `README.md` (updated)
   - `todo_softbei.md` (updated)
+
+## Session: 2026-03-28 (Phase 14 / 软件杯赛题适配 Stage 3)
+
+### 多模态输入补齐
+- **Status:** minimum multimodal entry complete
+- Actions taken:
+  - 扩展 `KnowledgeSearchRequest` / `KnowledgeSearchResponse`，支持故障图片 Base64、图片识别摘要和有效检索词
+  - 新增 `app/services/image_analysis_service.py`，实现单张故障图片的视觉分析与兜底关键词提取
+  - 将 `POST /api/v1/knowledge/search` 升级为统一多模态检索入口，支持文本、设备型号、单张图片联合输入
+  - 新增 `knowledge_search.html` 静态联调页，支持图片预览、识别线索展示和知识引用结果
+  - 在 `index.html` 中增加跳转入口，保留原有诊断控制台
+  - 更新 README、`todo_softbei.md`、`findings.md` 的当前状态说明
+  - 验证 `tests/test_phase14_knowledge.py` 通过
+  - 验证全量 `pytest -q` 结果更新为 24 通过 / 4 跳过
+- Files created/modified:
+  - `app/services/image_analysis_service.py` (created)
+  - `app/schemas/knowledge.py` (updated)
+  - `app/services/knowledge_service.py` (updated)
+  - `app/routers/knowledge.py` (updated)
+  - `app/schemas/__init__.py` (updated)
+  - `app/services/__init__.py` (updated)
+  - `tests/test_phase14_knowledge.py` (updated)
+  - `knowledge_search.html` (created)
+  - `index.html` (updated)
+  - `README.md` (updated)
+  - `todo_softbei.md` (updated)
+  - `findings.md` (updated)
