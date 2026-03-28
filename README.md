@@ -1,17 +1,35 @@
-# 工业故障检测系统
+# 工业故障检测系统 / 软件杯适配中
 
 基于 FastAPI、LangGraph 和工业传感器数据的故障诊断后端项目，支持同步诊断、SSE 流式诊断和简单的浏览器调试页联调。
 
 当前定位是比赛/MVP 级交付：重点保证主链路可演示、可部署、可复现、可验证，而不是追求商用生产级复杂能力。
 
+当前仓库已进入**软件杯赛题适配阶段**。面向第十五届中国软件杯赛题《基于多模态大模型技术的设备检修知识检索与作业系统》，当前作品定义已冻结为“设备检修知识与作业助手”，现有工业故障诊断链路保留为**智能分析子模块**，不再作为主产品入口。
+
 ## 当前能力
 
 - `POST /api/v1/diagnose`：返回完整诊断报告
 - `GET /api/v1/diagnose/stream`：通过 SSE 返回节点进度和最终报告
+- `POST /api/v1/knowledge/documents`：导入检修知识文本并自动拆分为可检索分段
+- `POST /api/v1/knowledge/search`：按关键词、设备类型、设备型号检索知识条目并返回出处
 - `GET /health`：检查服务和数据库连通性
 - `index.html`：静态调试页，支持自定义后端地址、基础输入校验和错误提示
 - Alembic 管理数据库 schema，不再依赖隐式建表
 - 当前测试结果：`19 passed, 4 skipped`
+
+## 软件杯赛题适配（当前冻结版）
+
+- 赛题：`A基于多模态大模型技术的设备检修知识检索与作业系统`
+- 当前作品定义：`设备检修知识与作业助手`
+- 当前演示对象：`摩托车发动机检修`
+- 当前主线：`输入检修问题 -> 检索知识 -> 生成作业指引 -> 沉淀案例`
+- 当前保留子模块：`工业故障诊断 / SSE 流式分析`
+
+详细映射见：
+
+- [docs/SOFTBEI_TOPIC_MAPPING.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_TOPIC_MAPPING.md)
+- [docs/SOFTBEI_DEMO_STORYLINE.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_DEMO_STORYLINE.md)
+- [todo_softbei.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/todo_softbei.md)
 
 ## 快速开始
 
@@ -126,3 +144,11 @@ deploy/systemd/         Linux 部署示例
 - CI 实际接入 GitHub 仓库并跑通
 - 更系统的日志、监控和告警
 - 如有需要，再补 Nginx、HTTPS、鉴权、权限控制
+
+如果目标转向软件杯正式参赛，当前优先级已切换为：
+
+- 检修知识库与知识检索主体
+- 多模态输入（文本、设备型号、图片）
+- 标准化作业指引闭环
+- 案例沉淀、审核与人工修正
+- 正式前端与竞赛材料收口

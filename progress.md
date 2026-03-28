@@ -227,3 +227,50 @@
   - `app/main.py` (updated)
   - `app/routers/health.py` (updated)
   - `app/routers/diagnosis.py` (updated)
+
+## Session: 2026-03-28 (Phase 14 / 软件杯赛题适配 Stage 1)
+
+### 赛题对齐与作品重定义
+- **Status:** first freeze complete
+- Actions taken:
+  - 锁定软件杯赛题为《基于多模态大模型技术的设备检修知识检索与作业系统》
+  - 新增 `todo_softbei.md`，固定软件杯整改主线与执行顺序
+  - 新增 `docs/SOFTBEI_TOPIC_MAPPING.md`，明确赛题要求、当前实现和缺口
+  - 新增 `docs/SOFTBEI_DEMO_STORYLINE.md`，冻结演示对象、用户角色和固定演示路径
+  - 更新 `README.md`，将当前作品定义调整为“设备检修知识与作业助手”
+  - 更新 `task_plan.md`、`findings.md`，记录赛题适配阶段已启动
+- Files created/modified:
+  - `todo_softbei.md` (created)
+  - `docs/SOFTBEI_TOPIC_MAPPING.md` (created)
+  - `docs/SOFTBEI_DEMO_STORYLINE.md` (created)
+  - `README.md` (updated)
+  - `task_plan.md` (updated)
+  - `findings.md` (updated)
+
+## Session: 2026-03-28 (Phase 14 / 软件杯赛题适配 Stage 2)
+
+### 知识库与知识检索主体
+- **Status:** minimum backend loop complete
+- Actions taken:
+  - 新增知识库相关模型：`DeviceModel`、`KnowledgeDocument`、`KnowledgeChunk`、`MaintenanceCase`、`KnowledgeRelation`
+  - 新增知识库 schema、service 和 router
+  - 实现 `POST /api/v1/knowledge/documents` 文档导入接口
+  - 实现 `POST /api/v1/knowledge/search` 检索接口
+  - 新增 Alembic revision，为知识库相关表创建 schema 与索引
+  - 更新应用路由注册和 README 能力描述
+  - 新增 `tests/test_phase14_knowledge.py`
+- Files created/modified:
+  - `app/models/knowledge.py` (created)
+  - `app/schemas/knowledge.py` (created)
+  - `app/services/knowledge_service.py` (created)
+  - `app/routers/knowledge.py` (created)
+  - `alembic/versions/0c7d2d6f4e8a_add_knowledge_base_tables.py` (created)
+  - `tests/test_phase14_knowledge.py` (created)
+  - `app/models/__init__.py` (updated)
+  - `app/schemas/__init__.py` (updated)
+  - `app/services/__init__.py` (updated)
+  - `app/routers/__init__.py` (updated)
+  - `app/main.py` (updated)
+  - `alembic/env.py` (updated)
+  - `README.md` (updated)
+  - `todo_softbei.md` (updated)

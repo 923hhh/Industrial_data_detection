@@ -6,10 +6,22 @@ from app.schemas.sensor_data import (
     SensorDataUpdate,
     SensorDataResponse,
 )
+from app.schemas.knowledge import (
+    KnowledgeDocumentCreate,
+    KnowledgeDocumentResponse,
+    KnowledgeSearchRequest,
+    KnowledgeSearchHit,
+    KnowledgeSearchResponse,
+)
 
 __all__ = [
     "SensorDataBase",
     "SensorDataCreate",
     "SensorDataUpdate",
     "SensorDataResponse",
+    "KnowledgeDocumentCreate",
+    "KnowledgeDocumentResponse",
+    "KnowledgeSearchRequest",
+    "KnowledgeSearchHit",
+    "KnowledgeSearchResponse",
 ]
