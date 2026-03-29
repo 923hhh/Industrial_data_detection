@@ -43,8 +43,15 @@
 - [docs/SOFTBEI_TOPIC_MAPPING.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_TOPIC_MAPPING.md)
 - [docs/SOFTBEI_DEMO_STORYLINE.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_DEMO_STORYLINE.md)
 - [docs/SOFTBEI_AWARD_PRIORITY.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_AWARD_PRIORITY.md)
+- [docs/SOFTBEI_REQUIREMENTS_ANALYSIS.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_REQUIREMENTS_ANALYSIS.md)
+- [docs/SOFTBEI_FUNCTIONAL_DESIGN.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_FUNCTIONAL_DESIGN.md)
+- [docs/SOFTBEI_PRODUCT_MANUAL.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_PRODUCT_MANUAL.md)
+- [docs/SOFTBEI_COMPETITION_DEPLOYMENT.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_COMPETITION_DEPLOYMENT.md)
 - [docs/SOFTBEI_TEST_REPORT.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_TEST_REPORT.md)
 - [docs/SOFTBEI_DEMO_RUNBOOK.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_DEMO_RUNBOOK.md)
+- [docs/SOFTBEI_PPT_OUTLINE.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_PPT_OUTLINE.md)
+- [docs/SOFTBEI_VIDEO_SCRIPT.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_VIDEO_SCRIPT.md)
+- [docs/SOFTBEI_SUBMISSION_CHECKLIST.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_SUBMISSION_CHECKLIST.md)
 - [todo_softbei.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/todo_softbei.md)
 
 ## 快速开始

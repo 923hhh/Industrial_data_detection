@@ -222,7 +222,7 @@
 - 验收标准：
   - 对照赛题提交清单可逐项勾选完成。
 - 依赖关系：最后收口任务，但素材应全程积累。
-- 状态：未开始
+- 状态：进行中（文字材料骨架已创建）
 
 ## 风险清单
 
@@ -348,3 +348,16 @@
 - 已新增 `docs/SOFTBEI_AWARD_PRIORITY.md`，将软件杯冲奖阶段的工作重心冻结为“材料完整度 > 演示稳定性 > 知识质量与检索效果 > 前端成品感 > 额外工程化加分”。
 - 已将固定演示检索词和三条完整任务链路写入演示 runbook，避免现场临时输入导致空结果。
 - 已开始落实高优先级检索优化：允许“通用手册”在指定具体设备型号时继续命中，并补充检修术语同义词扩展。
+
+### 2026-03-29（TODO-SB-8 第一轮）
+
+- 已创建软件杯正式提交材料骨架：
+  - `docs/SOFTBEI_REQUIREMENTS_ANALYSIS.md`
+  - `docs/SOFTBEI_FUNCTIONAL_DESIGN.md`
+  - `docs/SOFTBEI_PRODUCT_MANUAL.md`
+  - `docs/SOFTBEI_COMPETITION_DEPLOYMENT.md`
+  - `docs/SOFTBEI_PPT_OUTLINE.md`
+  - `docs/SOFTBEI_VIDEO_SCRIPT.md`
+  - `docs/SOFTBEI_SUBMISSION_CHECKLIST.md`
+- 已将 `README.md` 补充为正式材料导航入口。
+- 当前 `TODO-SB-8` 已从“未开始”切换为“进行中”，后续仍需补齐真实 PPT、视频、最终提交包和截图证据。

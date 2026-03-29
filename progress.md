@@ -453,3 +453,26 @@
   - `task_plan.md` (updated)
   - `app/services/knowledge_service.py` (updated)
   - `tests/test_phase14_knowledge.py` (updated)
+
+## Session: 2026-03-29 (Phase 20 / 软件杯赛题适配 Stage 8)
+
+### 竞赛材料与答辩收口
+- **Status:** in_progress
+- Actions taken:
+  - 新增 `docs/SOFTBEI_REQUIREMENTS_ANALYSIS.md`，固定需求背景、用户角色、场景与赛题覆盖关系
+  - 新增 `docs/SOFTBEI_FUNCTIONAL_DESIGN.md`，固定系统架构、模块设计、数据对象和业务流程
+  - 新增 `docs/SOFTBEI_PRODUCT_MANUAL.md`，作为评委/用户视角的产品说明书
+  - 新增 `docs/SOFTBEI_COMPETITION_DEPLOYMENT.md`，作为软件杯评审版部署说明
+  - 新增 `docs/SOFTBEI_PPT_OUTLINE.md` 和 `docs/SOFTBEI_VIDEO_SCRIPT.md`，冻结答辩和视频主叙事
+  - 新增 `docs/SOFTBEI_SUBMISSION_CHECKLIST.md`，作为正式提交收口清单
+  - 更新 `README.md`、`todo_softbei.md`，将 TODO-SB-8 状态切为进行中
+- Files created/modified:
+  - `docs/SOFTBEI_REQUIREMENTS_ANALYSIS.md` (created)
+  - `docs/SOFTBEI_FUNCTIONAL_DESIGN.md` (created)
+  - `docs/SOFTBEI_PRODUCT_MANUAL.md` (created)
+  - `docs/SOFTBEI_COMPETITION_DEPLOYMENT.md` (created)
+  - `docs/SOFTBEI_PPT_OUTLINE.md` (created)
+  - `docs/SOFTBEI_VIDEO_SCRIPT.md` (created)
+  - `docs/SOFTBEI_SUBMISSION_CHECKLIST.md` (created)
+  - `README.md` (updated)
+  - `todo_softbei.md` (updated)
