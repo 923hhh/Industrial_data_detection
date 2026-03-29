@@ -8,7 +8,7 @@ from httpx import ASGITransport, AsyncClient
 from app.core.database import get_session
 from app.main import app
 from app.schemas.knowledge import KnowledgeSearchRequest
-from app.services.knowledge_service import split_text_into_chunks
+from app.services.knowledge_service import KnowledgeService, split_text_into_chunks
 
 
 def test_split_text_into_chunks_splits_long_content():
@@ -24,6 +24,37 @@ def test_split_text_into_chunks_splits_long_content():
 
     assert len(chunks) >= 3
     assert all(len(chunk) <= 120 for chunk in chunks)
+
+
+def test_extract_search_tokens_prefers_domain_terms_from_long_query():
+    """长中文故障描述会被收敛为更可检索的设备检修术语。"""
+    service = KnowledgeService(session=SimpleNamespace())
+    query = (
+        "车辆在行驶过程中出现发动机动力下降现象，同时伴随发动机故障灯点亮。"
+        "初步判断可能为燃油供给异常或点火系统故障。经检测发现节气门积碳严重，清洗后故障消除"
+    )
+
+    tokens = service._extract_search_tokens(query)
+
+    assert "发动机" in tokens
+    assert "动力下降" in tokens
+    assert "故障灯" in tokens
+    assert "燃油供给" in tokens
+    assert "点火系统" in tokens
+    assert "节气门" in tokens
+    assert "积碳" in tokens
+    assert "车辆" not in tokens
+
+
+def test_build_excerpt_uses_token_when_full_query_not_found():
+    """全文未命中时，摘要会回退到首个命中的关键 token。"""
+    service = KnowledgeService(session=SimpleNamespace())
+    content = "排气冒黑烟时，应重点检查空气滤芯堵塞、混合比过浓、喷油量异常和节气门积碳。"
+    query = "车辆在行驶过程中出现发动机动力下降现象，同时伴随发动机故障灯点亮。经检测发现节气门积碳严重"
+
+    excerpt = service._build_excerpt(content, query)
+
+    assert "节气门积碳" in excerpt
 
 
 @pytest.fixture(autouse=True)

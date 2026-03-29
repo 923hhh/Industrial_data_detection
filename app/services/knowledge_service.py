@@ -12,6 +12,77 @@ from app.schemas.knowledge import KnowledgeDocumentCreate, KnowledgeSearchReques
 from app.services.image_analysis_service import FaultImageAnalysisService
 
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9\u4e00-\u9fff]{2,}")
+SEARCH_TOKEN_LIMIT = 24
+SEARCH_IGNORE_TOKENS = {
+    "当前",
+    "需要",
+    "建议",
+    "已经",
+    "进行",
+    "经过",
+    "同时",
+    "初步判断",
+    "可能",
+    "现象",
+    "问题",
+    "情况",
+    "车辆",
+    "过程",
+    "出现",
+    "发现",
+    "严重",
+    "当前仅",
+    "使用",
+    "文本",
+}
+DOMAIN_SEARCH_HINTS = [
+    "点火系统",
+    "点火线圈",
+    "点火线束",
+    "火花塞",
+    "启动困难",
+    "冷启动困难",
+    "起动电机",
+    "压缩压力",
+    "供油",
+    "燃油供给",
+    "燃油",
+    "喷油嘴",
+    "化油器",
+    "怠速不稳",
+    "怠速",
+    "回火",
+    "进气系统",
+    "空气滤芯",
+    "混合气",
+    "节气门",
+    "积碳",
+    "故障灯",
+    "功率下降",
+    "动力下降",
+    "异响",
+    "正时链条",
+    "正时",
+    "张紧器",
+    "气门间隙",
+    "气门",
+    "凸轮轴",
+    "润滑",
+    "机油液位",
+    "机油",
+    "温度偏高",
+    "高温",
+    "散热",
+    "尾气异常",
+    "黑烟",
+    "机油渗漏",
+    "渗漏",
+    "油封",
+    "缸盖垫片",
+    "曲轴油封",
+    "发动机",
+    "故障",
+]
 
 
 def split_text_into_chunks(content: str, max_chars: int = 480) -> list[str]:
@@ -106,6 +177,7 @@ class KnowledgeService:
         """Search knowledge chunks with metadata filters."""
         dialect_name = self.session.get_bind().dialect.name
         query = (request.query or "").strip()
+        tokens = self._extract_search_tokens(query) if query else []
 
         if query and dialect_name == "postgresql":
             search_text = func.concat_ws(
@@ -117,13 +189,16 @@ class KnowledgeService:
                 func.coalesce(KnowledgeDocument.source_name, ""),
             )
             ts_vector = func.to_tsvector("simple", search_text)
-            ts_query = func.plainto_tsquery("simple", query)
-            score_expr = func.ts_rank_cd(ts_vector, ts_query)
+            ts_query_text = " ".join(tokens) if tokens else query
+            ts_query = func.plainto_tsquery("simple", ts_query_text)
+            ts_match = ts_vector.bool_op("@@")(ts_query)
+            token_score_expr, token_match_expr = self._build_token_search_expressions(tokens)
+            score_expr = case((ts_match, func.ts_rank_cd(ts_vector, ts_query) * 10.0), else_=0.0) + token_score_expr
             stmt = (
                 select(KnowledgeChunk, KnowledgeDocument, score_expr.label("score"))
                 .join(KnowledgeDocument, KnowledgeChunk.document_id == KnowledgeDocument.id)
                 .where(KnowledgeDocument.status == "published")
-                .where(ts_vector.bool_op("@@")(ts_query))
+                .where(or_(ts_match, token_match_expr))
             )
         else:
             score_expr = literal(0.0)
@@ -133,53 +208,12 @@ class KnowledgeService:
                 .where(KnowledgeDocument.status == "published")
             )
             if query:
-                tokens = self._extract_search_tokens(query)
-                title_matches = [
-                    case((KnowledgeDocument.title.ilike(f"%{token}%"), 3.0), else_=0.0)
-                    for token in tokens
-                ]
-                content_matches = [
-                    case((KnowledgeChunk.content.ilike(f"%{token}%"), 2.0), else_=0.0)
-                    for token in tokens
-                ]
-                model_matches = [
-                    case((KnowledgeChunk.equipment_model.ilike(f"%{token}%"), 1.0), else_=0.0)
-                    for token in tokens
-                ]
-                fault_matches = [
-                    case((KnowledgeChunk.fault_type.ilike(f"%{token}%"), 1.0), else_=0.0)
-                    for token in tokens
-                ]
-                score_expr = (
-                    sum(title_matches, literal(0.0))
-                    + sum(content_matches, literal(0.0))
-                    + sum(model_matches, literal(0.0))
-                    + sum(fault_matches, literal(0.0))
-                )
+                score_expr, token_match_expr = self._build_token_search_expressions(tokens)
                 stmt = (
                     select(KnowledgeChunk, KnowledgeDocument, score_expr.label("score"))
                     .join(KnowledgeDocument, KnowledgeChunk.document_id == KnowledgeDocument.id)
                     .where(KnowledgeDocument.status == "published")
-                    .where(
-                        or_(
-                            *[
-                                KnowledgeDocument.title.ilike(f"%{token}%")
-                                for token in tokens
-                            ],
-                            *[
-                                KnowledgeChunk.content.ilike(f"%{token}%")
-                                for token in tokens
-                            ],
-                            *[
-                                KnowledgeChunk.equipment_model.ilike(f"%{token}%")
-                                for token in tokens
-                            ],
-                            *[
-                                KnowledgeChunk.fault_type.ilike(f"%{token}%")
-                                for token in tokens
-                            ],
-                        )
-                    )
+                    .where(token_match_expr)
                 )
 
         if request.equipment_type:
@@ -198,7 +232,6 @@ class KnowledgeService:
         if (
             not rows
             and query
-            and dialect_name != "postgresql"
             and any([request.equipment_type, request.equipment_model, request.fault_type])
         ):
             fallback_stmt = (
@@ -311,7 +344,12 @@ class KnowledgeService:
         lower_query = query.lower()
         index = lower_content.find(lower_query)
         if index < 0:
-            return condensed[:180] + ("..." if len(condensed) > 180 else "")
+            for token in self._extract_search_tokens(query):
+                index = lower_content.find(token.lower())
+                if index >= 0:
+                    break
+            else:
+                return condensed[:180] + ("..." if len(condensed) > 180 else "")
 
         start = max(0, index - 60)
         end = min(len(condensed), index + len(query) + 80)
@@ -342,11 +380,25 @@ class KnowledgeService:
         return "，".join(reasons)
 
     def _extract_search_tokens(self, query: str) -> list[str]:
-        """Extract deterministic search tokens for non-PostgreSQL fallback search."""
+        """Extract deterministic retrieval tokens for Chinese/English maintenance queries."""
         normalized = query.strip()
-        tokens = [token for token in TOKEN_PATTERN.findall(normalized) if token]
-        if normalized and normalized not in tokens:
-            tokens.append(normalized)
+        if not normalized:
+            return []
+
+        tokens: list[str] = []
+
+        for hint in DOMAIN_SEARCH_HINTS:
+            if hint in normalized:
+                tokens.append(hint)
+
+        for token in TOKEN_PATTERN.findall(normalized):
+            stripped = token.strip()
+            if not stripped:
+                continue
+            if stripped in SEARCH_IGNORE_TOKENS:
+                continue
+            if len(stripped) <= 12:
+                tokens.append(stripped)
 
         deduped: list[str] = []
         seen: set[str] = set()
@@ -356,7 +408,48 @@ class KnowledgeService:
                 continue
             seen.add(lowered)
             deduped.append(token)
-        return deduped or [normalized]
+            if len(deduped) >= SEARCH_TOKEN_LIMIT:
+                break
+
+        if deduped:
+            return deduped
+
+        return [normalized[:24]]
+
+    def _build_token_search_expressions(self, tokens: list[str]) -> tuple[Any, Any]:
+        """Build score and match expressions for token-based retrieval."""
+        if not tokens:
+            return literal(0.0), literal(False)
+
+        title_matches = [
+            case((KnowledgeDocument.title.ilike(f"%{token}%"), 3.0), else_=0.0)
+            for token in tokens
+        ]
+        content_matches = [
+            case((KnowledgeChunk.content.ilike(f"%{token}%"), 2.0), else_=0.0)
+            for token in tokens
+        ]
+        model_matches = [
+            case((KnowledgeChunk.equipment_model.ilike(f"%{token}%"), 1.0), else_=0.0)
+            for token in tokens
+        ]
+        fault_matches = [
+            case((KnowledgeChunk.fault_type.ilike(f"%{token}%"), 1.0), else_=0.0)
+            for token in tokens
+        ]
+        score_expr = (
+            sum(title_matches, literal(0.0))
+            + sum(content_matches, literal(0.0))
+            + sum(model_matches, literal(0.0))
+            + sum(fault_matches, literal(0.0))
+        )
+        match_expr = or_(
+            *[KnowledgeDocument.title.ilike(f"%{token}%") for token in tokens],
+            *[KnowledgeChunk.content.ilike(f"%{token}%") for token in tokens],
+            *[KnowledgeChunk.equipment_model.ilike(f"%{token}%") for token in tokens],
+            *[KnowledgeChunk.fault_type.ilike(f"%{token}%") for token in tokens],
+        )
+        return score_expr, match_expr
 
     def _prepare_chunk_payloads(
         self,
