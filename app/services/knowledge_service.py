@@ -57,7 +57,9 @@ class KnowledgeService:
         self.image_analysis_service = FaultImageAnalysisService()
 
     async def create_document(
-        self, data: KnowledgeDocumentCreate
+        self,
+        data: KnowledgeDocumentCreate,
+        chunk_payloads: list[dict[str, str | None]] | None = None,
     ) -> tuple[KnowledgeDocument, int]:
         """Persist a source document and its searchable chunks."""
         document = KnowledgeDocument(
@@ -78,27 +80,27 @@ class KnowledgeService:
         if data.equipment_model:
             await self._ensure_device_model(data)
 
-        chunks = split_text_into_chunks(data.content)
+        chunk_payloads = self._prepare_chunk_payloads(data, chunk_payloads)
         self.session.add_all(
             [
                 KnowledgeChunk(
                     document_id=document.id,
                     chunk_index=index,
-                    heading=data.title,
-                    content=chunk_text,
-                    equipment_type=data.equipment_type,
-                    equipment_model=data.equipment_model,
-                    fault_type=data.fault_type,
-                    section_reference=data.section_reference,
-                    page_reference=data.page_reference,
+                    heading=chunk_payload["heading"],
+                    content=chunk_payload["content"] or "",
+                    equipment_type=chunk_payload["equipment_type"] or data.equipment_type,
+                    equipment_model=chunk_payload["equipment_model"] or data.equipment_model,
+                    fault_type=chunk_payload["fault_type"] or data.fault_type,
+                    section_reference=chunk_payload["section_reference"] or data.section_reference,
+                    page_reference=chunk_payload["page_reference"] or data.page_reference,
                 )
-                for index, chunk_text in enumerate(chunks, start=1)
+                for index, chunk_payload in enumerate(chunk_payloads, start=1)
             ]
         )
 
         await self.session.commit()
         await self.session.refresh(document)
-        return document, len(chunks)
+        return document, len(chunk_payloads)
 
     async def search(self, request: KnowledgeSearchRequest) -> list[dict[str, Any]]:
         """Search knowledge chunks with metadata filters."""
@@ -355,3 +357,43 @@ class KnowledgeService:
             seen.add(lowered)
             deduped.append(token)
         return deduped or [normalized]
+
+    def _prepare_chunk_payloads(
+        self,
+        data: KnowledgeDocumentCreate,
+        chunk_payloads: list[dict[str, str | None]] | None = None,
+    ) -> list[dict[str, str | None]]:
+        """Normalize explicit chunk payloads or derive chunks from document content."""
+        prepared_payloads: list[dict[str, str | None]] = []
+        if chunk_payloads:
+            for payload in chunk_payloads:
+                content = (payload.get("content") or "").strip()
+                if not content:
+                    continue
+                prepared_payloads.append(
+                    {
+                        "heading": (payload.get("heading") or data.title).strip(),
+                        "content": content,
+                        "equipment_type": payload.get("equipment_type") or data.equipment_type,
+                        "equipment_model": payload.get("equipment_model") or data.equipment_model,
+                        "fault_type": payload.get("fault_type") or data.fault_type,
+                        "section_reference": payload.get("section_reference") or data.section_reference,
+                        "page_reference": payload.get("page_reference") or data.page_reference,
+                    }
+                )
+
+        if prepared_payloads:
+            return prepared_payloads
+
+        return [
+            {
+                "heading": data.title,
+                "content": chunk_text,
+                "equipment_type": data.equipment_type,
+                "equipment_model": data.equipment_model,
+                "fault_type": data.fault_type,
+                "section_reference": data.section_reference,
+                "page_reference": data.page_reference,
+            }
+            for chunk_text in split_text_into_chunks(data.content)
+        ]

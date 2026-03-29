@@ -87,6 +87,12 @@ python scripts/init_db.py --init-only
 python scripts/init_db.py --csv-path datasets/haiend-23.05/end-test1.csv
 ```
 
+如需将 PDF 维修手册直接导入知识库：
+
+```bash
+python scripts/import_knowledge_pdf.py "摩托车发动机维修手册.pdf" --equipment-type "摩托车发动机"
+```
+
 ### 4. 启动后端
 
 ```bash
