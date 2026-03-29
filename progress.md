@@ -397,3 +397,36 @@
   - `progress.md` (updated)
   - `findings.md` (updated)
   - `task_plan.md` (updated)
+
+## Session: 2026-03-28 (Phase 18 / 软件杯赛题适配 Stage 7)
+
+### 效果证据与测试报告
+- **Status:** evaluation assets and report complete
+- Actions taken:
+  - 新增 `evaluation/softbei_knowledge_seed.json`，固定 6 份知识种子文档
+  - 新增 `evaluation/softbei_eval_cases.json`，固定 12 个标准案例，覆盖成功、模糊和失败场景
+  - 新增 `scripts/run_softbei_eval.py`，通过真实 API 闭环执行自动评测，并输出 `evaluation/softbei_eval_results.json`
+  - 新增 `docs/SOFTBEI_TEST_REPORT.md` 和 `docs/SOFTBEI_DEMO_RUNBOOK.md`
+  - 新增 `tests/test_phase17_evaluation.py`，覆盖评测资产计数、指标汇总与端到端评测 smoke
+  - 修复 `KnowledgeService` 的 SQLite fallback 检索逻辑，补充分词匹配和元数据兜底
+  - 修复 `MaintenanceCaseService` 审核入库时的异步惰性加载问题
+  - 运行 `.\venv\Scripts\python.exe scripts\run_softbei_eval.py` 生成本轮自动评测结果
+  - 验证 `pytest -q tests/test_phase17_evaluation.py` 通过
+  - 验证全量 `pytest -q` 结果更新为 `37 passed, 4 skipped`
+- Files created/modified:
+  - `app/evaluation/__init__.py` (created)
+  - `app/evaluation/softbei_metrics.py` (created)
+  - `evaluation/softbei_knowledge_seed.json` (created)
+  - `evaluation/softbei_eval_cases.json` (created)
+  - `evaluation/softbei_eval_results.json` (created)
+  - `scripts/run_softbei_eval.py` (created)
+  - `docs/SOFTBEI_TEST_REPORT.md` (created)
+  - `docs/SOFTBEI_DEMO_RUNBOOK.md` (created)
+  - `tests/test_phase17_evaluation.py` (created)
+  - `app/services/knowledge_service.py` (updated)
+  - `app/services/case_service.py` (updated)
+  - `README.md` (updated)
+  - `todo_softbei.md` (updated)
+  - `progress.md` (updated)
+  - `findings.md` (updated)
+  - `task_plan.md` (updated)

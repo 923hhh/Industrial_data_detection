@@ -13,7 +13,7 @@
 - LangGraph 官方 Multi-Agent 模式使用 `StateGraph` + `add_node` + `add_edge`
 - FastAPI `StreamingResponse` 需要 `generate()` 生成器配合
 - `pytest-asyncio` 支持异步测试函数，`httpx.AsyncClient` 用于异步 HTTP 测试
-- 当前全量测试结果为 `34 passed, 4 skipped`
+- 当前全量测试结果为 `37 passed, 4 skipped`
 - 仓库此前缺少面向评审和部署的正式 README、部署文档、CI workflow 和 Dockerfile
 
 ## Technical Decisions
@@ -58,6 +58,10 @@
 | TODO-SB-6 使用 `softbei_workbench.html` 作为正式统一入口，`index.html` 只保留为跳转壳页 | 保持浏览器默认入口稳定，同时把正式演示界面和旧调试控制台彻底分离 |
 | TODO-SB-6 将原 SSE 诊断页拆分为 `diagnosis_console.html` 智能分析子模块 | 让时间窗诊断只作为辅助分析能力存在，不再破坏软件杯主产品叙事 |
 | TODO-SB-6 正式前端采用“统一工作台 + 保留独立业务子页”而不是一次性重写单页应用 | 赛前优先确保主路径可演示、上下文可串联，避免为前端工程化过度消耗时间 |
+| TODO-SB-7 评测脚本固定走现有 API 闭环，而不是单独 mock 一套离线指标 | 保证测试报告中的数字可以直接追溯到真实接口行为 |
+| TODO-SB-7 自动评测在本地使用共享内存 SQLite | 避免当前 Windows 环境下文件型 SQLite DDL 的 `disk I/O error` 噪声 |
+| TODO-SB-7 在 SQLite fallback 中增加分词匹配和元数据兜底 | 保证本地/测试环境的检索行为不至于因整句 `ILIKE` 失真，且更接近 PostgreSQL 生产路径 |
+| TODO-SB-7 审核入库时改为显式删除旧分段并 `add_all` 新分段 | 避免异步会话中访问 `document.chunks` 触发 `MissingGreenlet` |
 
 ## Issues Encountered
 | Issue | Resolution |

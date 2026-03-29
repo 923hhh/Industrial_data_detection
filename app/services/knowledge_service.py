@@ -1,6 +1,7 @@
 """Knowledge ingestion and retrieval service."""
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from sqlalchemy import case, func, literal, or_, select
@@ -9,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.knowledge import DeviceModel, KnowledgeChunk, KnowledgeDocument
 from app.schemas.knowledge import KnowledgeDocumentCreate, KnowledgeSearchRequest
 from app.services.image_analysis_service import FaultImageAnalysisService
+
+TOKEN_PATTERN = re.compile(r"[A-Za-z0-9\u4e00-\u9fff]{2,}")
 
 
 def split_text_into_chunks(content: str, max_chars: int = 480) -> list[str]:
@@ -121,7 +124,6 @@ class KnowledgeService:
                 .where(ts_vector.bool_op("@@")(ts_query))
             )
         else:
-            like_query = f"%{query}%"
             score_expr = literal(0.0)
             stmt = (
                 select(KnowledgeChunk, KnowledgeDocument, score_expr.label("score"))
@@ -129,11 +131,28 @@ class KnowledgeService:
                 .where(KnowledgeDocument.status == "published")
             )
             if query:
+                tokens = self._extract_search_tokens(query)
+                title_matches = [
+                    case((KnowledgeDocument.title.ilike(f"%{token}%"), 3.0), else_=0.0)
+                    for token in tokens
+                ]
+                content_matches = [
+                    case((KnowledgeChunk.content.ilike(f"%{token}%"), 2.0), else_=0.0)
+                    for token in tokens
+                ]
+                model_matches = [
+                    case((KnowledgeChunk.equipment_model.ilike(f"%{token}%"), 1.0), else_=0.0)
+                    for token in tokens
+                ]
+                fault_matches = [
+                    case((KnowledgeChunk.fault_type.ilike(f"%{token}%"), 1.0), else_=0.0)
+                    for token in tokens
+                ]
                 score_expr = (
-                    case((KnowledgeDocument.title.ilike(like_query), 3.0), else_=0.0)
-                    + case((KnowledgeChunk.content.ilike(like_query), 2.0), else_=0.0)
-                    + case((KnowledgeChunk.equipment_model.ilike(like_query), 1.0), else_=0.0)
-                    + case((KnowledgeChunk.fault_type.ilike(like_query), 1.0), else_=0.0)
+                    sum(title_matches, literal(0.0))
+                    + sum(content_matches, literal(0.0))
+                    + sum(model_matches, literal(0.0))
+                    + sum(fault_matches, literal(0.0))
                 )
                 stmt = (
                     select(KnowledgeChunk, KnowledgeDocument, score_expr.label("score"))
@@ -141,10 +160,22 @@ class KnowledgeService:
                     .where(KnowledgeDocument.status == "published")
                     .where(
                         or_(
-                            KnowledgeDocument.title.ilike(like_query),
-                            KnowledgeChunk.content.ilike(like_query),
-                            KnowledgeChunk.equipment_model.ilike(like_query),
-                            KnowledgeChunk.fault_type.ilike(like_query),
+                            *[
+                                KnowledgeDocument.title.ilike(f"%{token}%")
+                                for token in tokens
+                            ],
+                            *[
+                                KnowledgeChunk.content.ilike(f"%{token}%")
+                                for token in tokens
+                            ],
+                            *[
+                                KnowledgeChunk.equipment_model.ilike(f"%{token}%")
+                                for token in tokens
+                            ],
+                            *[
+                                KnowledgeChunk.fault_type.ilike(f"%{token}%")
+                                for token in tokens
+                            ],
                         )
                     )
                 )
@@ -162,6 +193,30 @@ class KnowledgeService:
             stmt = stmt.order_by(KnowledgeDocument.updated_at.desc(), KnowledgeChunk.chunk_index.asc())
 
         rows = (await self.session.execute(stmt.limit(request.limit))).all()
+        if (
+            not rows
+            and query
+            and dialect_name != "postgresql"
+            and any([request.equipment_type, request.equipment_model, request.fault_type])
+        ):
+            fallback_stmt = (
+                select(KnowledgeChunk, KnowledgeDocument, literal(0.0).label("score"))
+                .join(KnowledgeDocument, KnowledgeChunk.document_id == KnowledgeDocument.id)
+                .where(KnowledgeDocument.status == "published")
+            )
+            if request.equipment_type:
+                fallback_stmt = fallback_stmt.where(KnowledgeChunk.equipment_type == request.equipment_type)
+            if request.equipment_model:
+                fallback_stmt = fallback_stmt.where(KnowledgeChunk.equipment_model == request.equipment_model)
+            if request.fault_type:
+                fallback_stmt = fallback_stmt.where(KnowledgeChunk.fault_type == request.fault_type)
+
+            fallback_stmt = fallback_stmt.order_by(
+                KnowledgeDocument.updated_at.desc(),
+                KnowledgeChunk.chunk_index.asc(),
+            )
+            rows = (await self.session.execute(fallback_stmt.limit(request.limit))).all()
+
         return [
             {
                 "chunk_id": chunk.id,
@@ -283,3 +338,20 @@ class KnowledgeService:
             reasons.append("满足当前元数据过滤条件")
         reasons.append(f"来源于 {document.source_name}")
         return "，".join(reasons)
+
+    def _extract_search_tokens(self, query: str) -> list[str]:
+        """Extract deterministic search tokens for non-PostgreSQL fallback search."""
+        normalized = query.strip()
+        tokens = [token for token in TOKEN_PATTERN.findall(normalized) if token]
+        if normalized and normalized not in tokens:
+            tokens.append(normalized)
+
+        deduped: list[str] = []
+        seen: set[str] = set()
+        for token in tokens:
+            lowered = token.lower()
+            if lowered in seen:
+                continue
+            seen.add(lowered)
+            deduped.append(token)
+        return deduped or [normalized]

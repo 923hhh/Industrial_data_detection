@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -243,11 +243,13 @@ class MaintenanceCaseService:
             document.page_reference = None
             document.content = document_content
             document.status = "published"
-            document.chunks.clear()
+            await self.session.execute(
+                delete(KnowledgeChunk).where(KnowledgeChunk.document_id == document.id)
+            )
             await self.session.flush()
 
-        for index, chunk_text in enumerate(chunks, start=1):
-            document.chunks.append(
+        self.session.add_all(
+            [
                 KnowledgeChunk(
                     document_id=document.id,
                     chunk_index=index,
@@ -259,8 +261,9 @@ class MaintenanceCaseService:
                     section_reference="案例审核入库",
                     page_reference=None,
                 )
-            )
-
+                for index, chunk_text in enumerate(chunks, start=1)
+            ]
+        )
         await self.session.flush()
         return document
 

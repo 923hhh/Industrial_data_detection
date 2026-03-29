@@ -181,7 +181,7 @@
 - 验收标准：
   - 能用数据说明系统有效性，而不是只做主观展示。
 - 依赖关系：依赖主要功能定型。
-- 状态：未开始
+- 状态：已完成（评测脚本 + 标准案例 + 测试报告）
 
 ### TODO-SB-8 竞赛材料、PPT、视频与提交物收口
 
@@ -307,3 +307,21 @@
 - 遗留问题：
   - 当前正式工作台仍基于静态页面聚合，尚未进入更复杂的角色权限、上传存储和竞赛包装阶段。
   - 测试报告、PPT、视频和正式提交物仍待 TODO-SB-7 ~ TODO-SB-8 继续收口。
+
+### 2026-03-28（TODO-SB-7）
+
+- 已完成 `TODO-SB-7 效果证据与测试报告` 的最小交付版本。
+- 当前处理：
+  - 已新增 `evaluation/softbei_knowledge_seed.json` 和 `evaluation/softbei_eval_cases.json`，固定 6 份知识种子和 12 个标准案例。
+  - 已新增 `scripts/run_softbei_eval.py`，通过现有 API 自动执行“导文档 -> 检索 -> 建任务 -> 完成步骤 -> 案例审核 -> 回流检索”评测闭环。
+  - 已新增 `evaluation/softbei_eval_results.json`，保存本轮自动评测结果。
+  - 已新增 `docs/SOFTBEI_TEST_REPORT.md` 和 `docs/SOFTBEI_DEMO_RUNBOOK.md`，固定测试口径、演示案例、模型配置和兜底话术。
+  - 已补充 `tests/test_phase17_evaluation.py`，将评测资产与关键闭环固化成回归测试。
+  - 已修复两处评测中暴露的真实问题：SQLite fallback 检索过于依赖整句匹配；案例审核入库时的异步惰性加载异常。
+- 验证结果：
+  - 自动评测结果：当前系统在 12 个标准案例上达到 `8/12` 检索命中，`8/8` 引用覆盖，`8/8` 作业闭环完成，`4/4` 案例回流命中。
+  - `pytest -q tests/test_phase17_evaluation.py` 已通过。
+  - 已执行全量 `pytest -q` 回归，当前结果更新为 `37 passed, 4 skipped`。
+- 遗留问题：
+  - 当前评测仍固定在“文本 + 设备型号”主路径，尚未把图片识别纳入自动化评测。
+  - PPT、视频和正式提交材料仍待 TODO-SB-8 收口。

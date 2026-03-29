@@ -1,0 +1,68 @@
+[
+  {
+    "title": "点火系统与启动困难检修标准",
+    "source_name": "engine_ignition_manual.pdf",
+    "source_type": "manual",
+    "equipment_type": "摩托车发动机",
+    "equipment_model": "LX200",
+    "fault_type": "启动困难",
+    "section_reference": "第2章",
+    "page_reference": "P12",
+    "content": "发动机启动困难时，应优先检查火花塞、电极积碳、点火线圈连接状态和电瓶电压。若出现间歇失火，应检查点火线束和插头是否松动，并记录点火系统检测结论。"
+  },
+  {
+    "title": "供油与怠速异常排查手册",
+    "source_name": "fuel_idle_manual.pdf",
+    "source_type": "manual",
+    "equipment_type": "摩托车发动机",
+    "equipment_model": "LX200",
+    "fault_type": "怠速不稳",
+    "section_reference": "第3章",
+    "page_reference": "P18",
+    "content": "冷启动困难、怠速不稳或加速无力时，应检查喷油嘴、化油器供油、怠速调节和空气滤芯。若出现回火，需同步检查进气系统、混合气浓度和节气门积碳。"
+  },
+  {
+    "title": "异常异响与正时链条检查规范",
+    "source_name": "timing_chain_manual.pdf",
+    "source_type": "manual",
+    "equipment_type": "摩托车发动机",
+    "equipment_model": "LX200",
+    "fault_type": "异常异响",
+    "section_reference": "第4章",
+    "page_reference": "P26",
+    "content": "发动机出现明显金属敲击声或正时异响时，应优先排查正时链条、张紧器、气门间隙和凸轮轴磨损。拆检过程中要同步记录异响位置、持续时间和高温状态。"
+  },
+  {
+    "title": "润滑不足与温度偏高处理步骤",
+    "source_name": "lubrication_temp_manual.pdf",
+    "source_type": "manual",
+    "equipment_type": "摩托车发动机",
+    "equipment_model": "LX200",
+    "fault_type": "温度偏高",
+    "section_reference": "第5章",
+    "page_reference": "P33",
+    "content": "若发动机运行温度偏高，应检查机油液位、润滑油路、散热片积尘、机油品质和缸体通风状态。若伴随功率下降，应进一步检查活塞摩擦和冷却风道堵塞。"
+  },
+  {
+    "title": "尾气异常与进气系统检查标准",
+    "source_name": "exhaust_intake_manual.pdf",
+    "source_type": "manual",
+    "equipment_type": "摩托车发动机",
+    "equipment_model": "LX200",
+    "fault_type": "尾气异常",
+    "section_reference": "第6章",
+    "page_reference": "P40",
+    "content": "排气冒黑烟时，应重点检查空气滤芯堵塞、混合比过浓、喷油量异常和节气门积碳。若伴随加速迟滞，应记录空气滤芯状态和尾气颜色变化。"
+  },
+  {
+    "title": "密封渗漏与机油处理标准",
+    "source_name": "seal_oil_manual.pdf",
+    "source_type": "manual",
+    "equipment_type": "摩托车发动机",
+    "equipment_model": "LX200",
+    "fault_type": "机油渗漏",
+    "section_reference": "第7章",
+    "page_reference": "P48",
+    "content": "发现机油渗漏时，应依次检查缸盖垫片、曲轴油封、放油螺栓和连接面密封状态。处理后需清洁表面并试车确认是否再次渗漏。"
+  }
+]
