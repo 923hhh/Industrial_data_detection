@@ -57,6 +57,63 @@ def test_build_excerpt_uses_token_when_full_query_not_found():
     assert "节气门积碳" in excerpt
 
 
+def test_extract_search_tokens_expands_synonyms():
+    """检修术语会扩展为稳定的同义词集合。"""
+    service = KnowledgeService(session=SimpleNamespace())
+
+    tokens = service._extract_search_tokens("发动机功率下降并伴随点火异常")
+
+    assert "功率下降" in tokens
+    assert "动力下降" in tokens
+    assert "点火异常" in tokens
+    assert "点火系统" in tokens
+    assert "火花塞" in tokens
+
+
+@pytest.mark.asyncio
+async def test_search_allows_generic_manual_for_specific_equipment_model():
+    """指定具体型号时，通用手册条目仍应对该型号可见。"""
+    fake_bind = SimpleNamespace(dialect=SimpleNamespace(name="sqlite"))
+    fake_chunk = SimpleNamespace(
+        id=101,
+        equipment_type="摩托车发动机",
+        equipment_model=None,
+        fault_type=None,
+        content="拆卸火花塞前应先检查火花塞帽和积碳情况。",
+        section_reference=None,
+        page_reference="P1",
+    )
+    fake_document = SimpleNamespace(
+        id=2,
+        title="摩托车发动机维修手册",
+        source_name="manual.pdf",
+        source_type="manual",
+        section_reference=None,
+    )
+    fake_result = SimpleNamespace(all=lambda: [(fake_chunk, fake_document, 2.0)])
+    mock_session = SimpleNamespace(
+        get_bind=lambda: fake_bind,
+        execute=AsyncMock(return_value=fake_result),
+    )
+
+    service = KnowledgeService(session=mock_session)
+    results = await service.search(
+        KnowledgeSearchRequest(
+            query="火花塞",
+            equipment_type="摩托车发动机",
+            equipment_model="LX200",
+        )
+    )
+
+    executed_stmt = mock_session.execute.await_args.args[0]
+    executed_sql = str(executed_stmt)
+
+    assert "knowledge_chunks.equipment_model IS NULL" in executed_sql
+    assert len(results) == 1
+    assert results[0]["equipment_model"] is None
+    assert "通用手册" in results[0]["recommendation_reason"]
+
+
 @pytest.fixture(autouse=True)
 def override_db_session():
     """为知识接口测试覆盖数据库依赖，避免本机驱动差异影响接口验证。"""

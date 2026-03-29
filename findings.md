@@ -13,7 +13,7 @@
 - LangGraph 官方 Multi-Agent 模式使用 `StateGraph` + `add_node` + `add_edge`
 - FastAPI `StreamingResponse` 需要 `generate()` 生成器配合
 - `pytest-asyncio` 支持异步测试函数，`httpx.AsyncClient` 用于异步 HTTP 测试
-- 当前全量测试结果为 `37 passed, 4 skipped`
+- 当前全量测试结果为 `43 passed, 4 skipped`
 - 仓库此前缺少面向评审和部署的正式 README、部署文档、CI workflow 和 Dockerfile
 
 ## Technical Decisions
@@ -62,6 +62,9 @@
 | TODO-SB-7 自动评测在本地使用共享内存 SQLite | 避免当前 Windows 环境下文件型 SQLite DDL 的 `disk I/O error` 噪声 |
 | TODO-SB-7 在 SQLite fallback 中增加分词匹配和元数据兜底 | 保证本地/测试环境的检索行为不至于因整句 `ILIKE` 失真，且更接近 PostgreSQL 生产路径 |
 | TODO-SB-7 审核入库时改为显式删除旧分段并 `add_all` 新分段 | 避免异步会话中访问 `document.chunks` 触发 `MissingGreenlet` |
+| 软件杯冲奖阶段按“材料完整度 > 演示稳定性 > 知识质量与检索效果 > 前端成品感 > 工程化加分”排序投入资源 | 避免继续平均发力，把时间优先用在评委最直接感知的得分项上 |
+| 指定设备型号时允许命中 `equipment_model` 为空的通用手册条目 | 通用维修手册本就应可服务具体型号检修，严格等值过滤会造成网页空结果 |
+| 为知识检索增加检修术语同义词扩展 | 降低“动力下降/功率下降”“点火异常/点火系统”等表述差异带来的漏检 |
 
 ## Issues Encountered
 | Issue | Resolution |

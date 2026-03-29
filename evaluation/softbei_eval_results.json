@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-29T12:30:45.401040+00:00",
+  "generated_at": "2026-03-29T13:18:53.191755+00:00",
   "environment": {
     "database": "sqlite+aiosqlite temporary database",
     "image_path": "本轮自动评测固定使用文本 + 设备型号，不调用外部视觉模型。",

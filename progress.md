@@ -430,3 +430,26 @@
   - `progress.md` (updated)
   - `findings.md` (updated)
   - `task_plan.md` (updated)
+
+## Session: 2026-03-29 (Phase 19 / 软件杯冲奖优先级收口)
+
+### 冲奖优先级清单与检索策略收口
+- **Status:** complete
+- Actions taken:
+  - 新增 `docs/SOFTBEI_AWARD_PRIORITY.md`，冻结软件杯冲奖阶段的工作顺序与验收口径
+  - 更新 `README.md`、`todo_softbei.md`、`docs/SOFTBEI_DEMO_RUNBOOK.md`、`findings.md`、`task_plan.md`，统一“材料 > 稳定性 > 知识质量 > 前端 > 工程加分”的优先级表达
+  - 为正式演示固定 5 组检索词和 3 条完整任务链路，降低现场自由输入带来的空结果风险
+  - 优化 `KnowledgeService`：填写具体设备型号时，允许命中 `equipment_model` 为空的通用手册条目
+  - 为长中文故障描述补充检修术语同义词扩展，减少“功率下降/动力下降”“点火异常/点火系统”等表述差异带来的漏检
+  - 为上述检索优化补充单测，并执行相关回归
+  - 验证 `pytest -q tests/test_phase14_knowledge.py` 结果为 `9 passed`
+  - 验证全量 `pytest -q` 结果更新为 `43 passed, 4 skipped`
+- Files created/modified:
+  - `docs/SOFTBEI_AWARD_PRIORITY.md` (created)
+  - `docs/SOFTBEI_DEMO_RUNBOOK.md` (updated)
+  - `README.md` (updated)
+  - `todo_softbei.md` (updated)
+  - `findings.md` (updated)
+  - `task_plan.md` (updated)
+  - `app/services/knowledge_service.py` (updated)
+  - `tests/test_phase14_knowledge.py` (updated)

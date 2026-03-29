@@ -28,7 +28,7 @@
 - `maintenance_tasks.html`：标准化检修任务联调页，支持任务生成、步骤执行、历史查看和导出摘要
 - `case_reviews.html`：案例沉淀与审核联调页，支持案例上传、人工修正、审核入库和后续回流展示
 - Alembic 管理数据库 schema，不再依赖隐式建表
-- 当前测试结果：`37 passed, 4 skipped`
+- 当前测试结果：`43 passed, 4 skipped`
 
 ## 软件杯赛题适配（当前冻结版）
 
@@ -42,6 +42,7 @@
 
 - [docs/SOFTBEI_TOPIC_MAPPING.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_TOPIC_MAPPING.md)
 - [docs/SOFTBEI_DEMO_STORYLINE.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_DEMO_STORYLINE.md)
+- [docs/SOFTBEI_AWARD_PRIORITY.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_AWARD_PRIORITY.md)
 - [docs/SOFTBEI_TEST_REPORT.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_TEST_REPORT.md)
 - [docs/SOFTBEI_DEMO_RUNBOOK.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_DEMO_RUNBOOK.md)
 - [todo_softbei.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/todo_softbei.md)
@@ -179,6 +180,7 @@ deploy/systemd/         Linux 部署示例
 
 如果目标转向软件杯正式参赛，当前优先级已切换为：
 
+- 先按 [docs/SOFTBEI_AWARD_PRIORITY.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_AWARD_PRIORITY.md) 收口材料、演示稳定性和知识质量
 - 检修知识库与知识检索主体
 - 多模态输入（文本、设备型号、图片）最小入口已打通，并已接入正式工作台
 - 标准化作业指引闭环最小后端与正式工作台已打通，后续重点转向测试报告与竞赛材料

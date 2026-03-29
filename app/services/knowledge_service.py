@@ -83,6 +83,20 @@ DOMAIN_SEARCH_HINTS = [
     "发动机",
     "故障",
 ]
+SEARCH_SYNONYM_MAP = {
+    "动力下降": ["功率下降", "加速无力"],
+    "功率下降": ["动力下降", "加速无力"],
+    "加速无力": ["动力下降", "功率下降"],
+    "点火异常": ["点火系统", "火花塞", "点火线圈"],
+    "点火系统": ["点火异常", "火花塞", "点火线圈"],
+    "启动困难": ["冷启动困难", "起动困难"],
+    "冷启动困难": ["启动困难", "起动困难"],
+    "起动困难": ["启动困难", "冷启动困难"],
+    "节气门积碳": ["节气门", "积碳"],
+    "异响": ["正时链条", "张紧器"],
+    "机油渗漏": ["渗漏", "油封", "缸盖垫片"],
+    "温度偏高": ["高温", "润滑", "机油液位"],
+}
 
 
 def split_text_into_chunks(content: str, max_chars: int = 480) -> list[str]:
@@ -219,7 +233,7 @@ class KnowledgeService:
         if request.equipment_type:
             stmt = stmt.where(KnowledgeChunk.equipment_type == request.equipment_type)
         if request.equipment_model:
-            stmt = stmt.where(KnowledgeChunk.equipment_model == request.equipment_model)
+            stmt = stmt.where(self._build_equipment_model_filter(request.equipment_model))
         if request.fault_type:
             stmt = stmt.where(KnowledgeChunk.fault_type == request.fault_type)
 
@@ -242,7 +256,9 @@ class KnowledgeService:
             if request.equipment_type:
                 fallback_stmt = fallback_stmt.where(KnowledgeChunk.equipment_type == request.equipment_type)
             if request.equipment_model:
-                fallback_stmt = fallback_stmt.where(KnowledgeChunk.equipment_model == request.equipment_model)
+                fallback_stmt = fallback_stmt.where(
+                    self._build_equipment_model_filter(request.equipment_model)
+                )
             if request.fault_type:
                 fallback_stmt = fallback_stmt.where(KnowledgeChunk.fault_type == request.fault_type)
 
@@ -372,6 +388,8 @@ class KnowledgeService:
             reasons.append(f"命中了检索关键词“{request.query}”")
         if request.equipment_model and chunk.equipment_model == request.equipment_model:
             reasons.append("设备型号过滤匹配")
+        elif request.equipment_model and not chunk.equipment_model:
+            reasons.append("命中了当前型号可复用的通用手册")
         if request.fault_type and chunk.fault_type == request.fault_type:
             reasons.append("故障类型过滤匹配")
         if not reasons:
@@ -411,10 +429,47 @@ class KnowledgeService:
             if len(deduped) >= SEARCH_TOKEN_LIMIT:
                 break
 
+        expanded = self._expand_tokens_with_synonyms(normalized, deduped)
+        if expanded:
+            return expanded
+
         if deduped:
             return deduped
 
         return [normalized[:24]]
+
+    def _expand_tokens_with_synonyms(self, query: str, tokens: list[str]) -> list[str]:
+        """Expand extracted tokens with deterministic maintenance-domain synonyms."""
+        expanded = list(tokens)
+        seen = {token.lower() for token in expanded}
+
+        for key, aliases in SEARCH_SYNONYM_MAP.items():
+            if key not in query and all(token.lower() != key.lower() for token in tokens):
+                continue
+            lowered_key = key.lower()
+            if lowered_key not in seen:
+                seen.add(lowered_key)
+                expanded.append(key)
+                if len(expanded) >= SEARCH_TOKEN_LIMIT:
+                    return expanded
+            for alias in aliases:
+                lowered = alias.lower()
+                if lowered in seen:
+                    continue
+                seen.add(lowered)
+                expanded.append(alias)
+                if len(expanded) >= SEARCH_TOKEN_LIMIT:
+                    return expanded
+
+        return expanded
+
+    def _build_equipment_model_filter(self, equipment_model: str) -> Any:
+        """Allow generic manual chunks to remain visible when a specific model is selected."""
+        return or_(
+            KnowledgeChunk.equipment_model == equipment_model,
+            KnowledgeChunk.equipment_model.is_(None),
+            KnowledgeChunk.equipment_model == "",
+        )
 
     def _build_token_search_expressions(self, tokens: list[str]) -> tuple[Any, Any]:
         """Build score and match expressions for token-based retrieval."""
