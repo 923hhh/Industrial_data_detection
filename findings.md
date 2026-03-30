@@ -15,6 +15,7 @@
 - `pytest-asyncio` 支持异步测试函数，`httpx.AsyncClient` 用于异步 HTTP 测试
 - 当前全量测试结果为 `46 passed, 4 skipped`
 - 当前全量测试结果已更新为 `49 passed, 4 skipped`
+- 当前全量测试结果已更新为 `54 passed, 4 skipped`
 - 仓库此前缺少面向评审和部署的正式 README、部署文档、CI workflow 和 Dockerfile
 
 ## Technical Decisions
@@ -76,6 +77,8 @@
 | 新增 `/api/v1/workbench/overview` 作为正式前端首页聚合接口 | 减少前端自行拼装统计、最近任务、最近案例和固定检索词 |
 | 新增 `/api/v1/agents/assist` 与 `/api/v1/agents/runs/{id}` 作为正式 Agent 协作入口 | 将多智能体从诊断专用能力提升为赛题主产品的统一协作入口 |
 | Agent 协作结果先以轻量内存 Run Store 保存 | 本轮优先交付前端可接的协作面板，不引入额外迁移脚本，后续可再升级为持久化运行记录 |
+| 知识导入管理先采用“同步导入 + 持久化任务记录” | 当前比赛阶段优先交付稳定可演示的 PDF 导入能力，不提前引入消息队列或后台异步 worker |
+| 知识中心补 `documents` 列表和 `chunks` 预览接口 | 正式前端需要导入验收、来源回溯和命中调试入口，不能只保留检索接口 |
 
 ## Issues Encountered
 | Issue | Resolution |

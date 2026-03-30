@@ -4,6 +4,7 @@ from app.models.sensor_data import SensorData, Base
 from app.models.knowledge import (
     DeviceModel,
     KnowledgeDocument,
+    KnowledgeImportJob,
     KnowledgeChunk,
     MaintenanceCase,
     MaintenanceCaseCorrection,
@@ -21,6 +22,7 @@ __all__ = [
     "SensorData",
     "DeviceModel",
     "KnowledgeDocument",
+    "KnowledgeImportJob",
     "KnowledgeChunk",
     "MaintenanceCase",
     "MaintenanceCaseCorrection",

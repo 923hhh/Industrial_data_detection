@@ -14,6 +14,13 @@ from app.schemas.knowledge import (
     KnowledgeSearchHit,
     KnowledgeSearchResponse,
 )
+from app.schemas.knowledge_imports import (
+    KnowledgeChunkPreview,
+    KnowledgeChunkPreviewResponse,
+    KnowledgeDocumentListItem,
+    KnowledgeDocumentListResponse,
+    KnowledgeImportJobResponse,
+)
 from app.schemas.tasks import (
     KnowledgeReference,
     MaintenanceTaskCreate,
@@ -57,6 +64,11 @@ __all__ = [
     "KnowledgeSearchRequest",
     "KnowledgeSearchHit",
     "KnowledgeSearchResponse",
+    "KnowledgeImportJobResponse",
+    "KnowledgeDocumentListItem",
+    "KnowledgeDocumentListResponse",
+    "KnowledgeChunkPreview",
+    "KnowledgeChunkPreviewResponse",
     "KnowledgeReference",
     "MaintenanceTaskCreate",
     "MaintenanceTaskStepUpdate",

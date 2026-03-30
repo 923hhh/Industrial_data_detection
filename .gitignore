@@ -45,6 +45,14 @@ logs/
 Thumbs.db
 
 # ========================
+# 4.1 Node / Next.js 产物
+# ========================
+node_modules/
+.next/
+front-end/node_modules/
+front-end/.next/
+
+# ========================
 # 5. 测试与覆盖率
 # ========================
 .pytest_cache/

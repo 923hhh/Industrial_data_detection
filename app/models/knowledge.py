@@ -1,7 +1,16 @@
 """Knowledge base models for the 软件杯检修知识系统."""
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.sensor_data import Base
@@ -52,6 +61,37 @@ class KnowledgeDocument(Base):
         back_populates="document",
         cascade="all, delete-orphan",
         order_by="KnowledgeChunk.chunk_index",
+    )
+
+
+class KnowledgeImportJob(Base):
+    """Track formal knowledge import runs for the management console."""
+
+    __tablename__ = "knowledge_import_jobs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    import_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    source_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    source_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    equipment_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    equipment_model: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    fault_type: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    section_reference: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    replace_existing: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    status: Mapped[str] = mapped_column(String(30), default="processing", nullable=False, index=True)
+    page_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    chunk_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    document_id: Mapped[int | None] = mapped_column(
+        ForeignKey("knowledge_documents.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    preview_excerpt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
     )
 
 

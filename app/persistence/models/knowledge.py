@@ -3,6 +3,7 @@ from app.models.knowledge import (
     DeviceModel,
     KnowledgeChunk,
     KnowledgeDocument,
+    KnowledgeImportJob,
     KnowledgeRelation,
     MaintenanceCase,
     MaintenanceCaseCorrection,
@@ -11,6 +12,7 @@ from app.models.knowledge import (
 __all__ = [
     "DeviceModel",
     "KnowledgeDocument",
+    "KnowledgeImportJob",
     "KnowledgeChunk",
     "MaintenanceCase",
     "MaintenanceCaseCorrection",

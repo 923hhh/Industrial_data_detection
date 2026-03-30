@@ -40,6 +40,10 @@ textarea {
   font: inherit;
 }
 
+input[type="checkbox"] {
+  width: auto;
+}
+
 button {
   border: 0;
   border-radius: 999px;
@@ -63,6 +67,10 @@ textarea {
   background: rgba(7, 17, 31, 0.55);
   color: var(--text);
   padding: 0.9rem 1rem;
+}
+
+.fileInput {
+  padding: 0.75rem 0.9rem;
 }
 
 .shell {
@@ -265,6 +273,13 @@ textarea {
   gap: 0.45rem;
 }
 
+.toggleRow {
+  display: inline-flex;
+  gap: 0.6rem;
+  align-items: center;
+  color: var(--muted);
+}
+
 .buttonRow {
   display: flex;
   gap: 0.8rem;
@@ -299,6 +314,33 @@ textarea {
   border-bottom: 1px solid var(--border);
 }
 
+.tableCard tbody tr {
+  cursor: pointer;
+}
+
+.tableCard tbody tr:hover {
+  background: rgba(79, 124, 255, 0.08);
+}
+
+.selectedRow {
+  background: rgba(67, 212, 255, 0.08);
+}
+
+.libraryLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.chunkPreviewCard {
+  padding: 1.1rem;
+}
+
+.chunkList {
+  display: grid;
+  gap: 0.85rem;
+}
+
 @media (max-width: 1100px) {
   .shell {
     grid-template-columns: 1fr;
@@ -312,8 +354,8 @@ textarea {
   .statsGrid,
   .threeGrid,
   .twoGrid,
-  .agentGrid {
+  .agentGrid,
+  .libraryLayout {
     grid-template-columns: 1fr;
   }
 }
-

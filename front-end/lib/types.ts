@@ -68,6 +68,61 @@ export type KnowledgeSearchResponse = {
   results: KnowledgeSearchHit[];
 };
 
+export type KnowledgeImportJobResponse = {
+  id: number;
+  import_type: string;
+  title?: string | null;
+  source_name: string;
+  source_type: string;
+  equipment_type: string;
+  equipment_model?: string | null;
+  fault_type?: string | null;
+  section_reference?: string | null;
+  replace_existing: boolean;
+  status: string;
+  page_count?: number | null;
+  chunk_count?: number | null;
+  document_id?: number | null;
+  preview_excerpt?: string | null;
+  error_message?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type KnowledgeDocumentListItem = {
+  id: number;
+  title: string;
+  source_name: string;
+  source_type: string;
+  equipment_type: string;
+  equipment_model?: string | null;
+  fault_type?: string | null;
+  status: string;
+  chunk_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type KnowledgeDocumentListResponse = {
+  total: number;
+  documents: KnowledgeDocumentListItem[];
+};
+
+export type KnowledgeChunkPreview = {
+  chunk_id: number;
+  chunk_index: number;
+  heading?: string | null;
+  content: string;
+  page_reference?: string | null;
+  section_reference?: string | null;
+};
+
+export type KnowledgeChunkPreviewResponse = {
+  document_id: number;
+  total: number;
+  chunks: KnowledgeChunkPreview[];
+};
+
 export type AgentTaskPreviewStep = {
   step_order: number;
   title: string;
@@ -121,4 +176,3 @@ export type MaintenanceTaskHistoryResponse = {
   total: number;
   tasks: WorkbenchTaskSummary[];
 };
-

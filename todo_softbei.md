@@ -89,7 +89,7 @@
 - 验收标准：
   - 输入文本或设备型号后，能返回带出处的检修知识结果。
 - 依赖关系：依赖 `TODO-SB-1`。
-- 状态：已完成（最小后端闭环）
+- 状态：已完成（检索主体 + 导入管理接口）
 
 ### TODO-SB-3 多模态输入补齐
 
@@ -275,6 +275,20 @@
 - 遗留问题：
   - 本轮尚未接入正式前端页面，当前知识检索主要通过接口与 `/docs` 验证。
   - 文档上传仍以“原始文本内容导入”为主，文件级上传和 PDF 提取后续在多模态/前端阶段继续补齐。
+
+### 2026-03-30（三个月大改第二阶段第一批）
+
+- 已新增正式知识导入管理能力：
+  - `POST /api/v1/knowledge/imports`
+  - `GET /api/v1/knowledge/imports/{id}`
+  - `GET /api/v1/knowledge/documents`
+  - `GET /api/v1/knowledge/documents/{id}/chunks`
+- 已新增 `knowledge_import_jobs` 持久化表，导入任务不再只是脚本输出，而是正式业务记录。
+- 已将 `front-end/app/knowledge/page.tsx` 升级为知识管理中心，补齐 PDF 导入、文档列表、分段预览和正式检索入口。
+- 已执行 `tests/test_phase19_knowledge_imports.py` 和全量 `pytest -q`，当前结果更新为 `54 passed, 4 skipped`。
+- 当前遗留问题：
+  - 仍未实现真正的异步后台导入 worker，当前导入流程为同步请求内完成。
+  - 知识管理后台尚未补齐“导入记录列表”和“导入前预览确认”独立页面，后续继续收口。
 
 ### 2026-03-28（TODO-SB-3）
 

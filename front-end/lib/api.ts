@@ -1,5 +1,8 @@
 import type {
   AgentAssistResponse,
+  KnowledgeChunkPreviewResponse,
+  KnowledgeDocumentListResponse,
+  KnowledgeImportJobResponse,
   KnowledgeSearchResponse,
   MaintenanceCaseListResponse,
   MaintenanceTaskHistoryResponse,
@@ -59,6 +62,41 @@ export async function searchKnowledge(payload: Record<string, unknown>): Promise
     body: JSON.stringify(payload),
   });
   return parseJson<KnowledgeSearchResponse>(response);
+}
+
+export async function importKnowledgePdf(formData: FormData): Promise<KnowledgeImportJobResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/knowledge/imports`, {
+    method: "POST",
+    body: formData,
+  });
+  return parseJson<KnowledgeImportJobResponse>(response);
+}
+
+export async function getKnowledgeImportJob(jobId: number): Promise<KnowledgeImportJobResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/knowledge/imports/${jobId}`, {
+    cache: "no-store",
+  });
+  return parseJson<KnowledgeImportJobResponse>(response);
+}
+
+export async function getKnowledgeDocuments(limit = 12): Promise<KnowledgeDocumentListResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/knowledge/documents?limit=${limit}`, {
+    cache: "no-store",
+  });
+  return parseJson<KnowledgeDocumentListResponse>(response);
+}
+
+export async function getKnowledgeDocumentChunks(
+  documentId: number,
+  limit = 6,
+): Promise<KnowledgeChunkPreviewResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/knowledge/documents/${documentId}/chunks?limit=${limit}`,
+    {
+      cache: "no-store",
+    },
+  );
+  return parseJson<KnowledgeChunkPreviewResponse>(response);
 }
 
 export async function assistWithAgents(payload: Record<string, unknown>): Promise<AgentAssistResponse> {

@@ -1,10 +1,17 @@
 """Knowledge base APIs for 软件杯检修知识系统."""
 import logging
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_session
+from app.schemas.knowledge_imports import (
+    KnowledgeChunkPreview,
+    KnowledgeChunkPreviewResponse,
+    KnowledgeDocumentListItem,
+    KnowledgeDocumentListResponse,
+    KnowledgeImportJobResponse,
+)
+from app.shared.database import get_session
 from app.schemas.knowledge import (
     KnowledgeDocumentCreate,
     KnowledgeDocumentResponse,
@@ -13,10 +20,15 @@ from app.schemas.knowledge import (
     KnowledgeSearchRequest,
     KnowledgeSearchResponse,
 )
+from app.services.knowledge_import_service import KnowledgeImportService
 from app.services.knowledge_service import KnowledgeService
 
 router = APIRouter(prefix="/api/v1/knowledge", tags=["知识库"])
 logger = logging.getLogger(__name__)
+
+
+def _build_import_job_response(payload: dict) -> KnowledgeImportJobResponse:
+    return KnowledgeImportJobResponse(**payload)
 
 
 @router.post(
@@ -51,6 +63,129 @@ async def create_knowledge_document(
         fault_type=document.fault_type,
         status=document.status,
         chunk_count=chunk_count,
+    )
+
+
+@router.post(
+    "/imports",
+    response_model=KnowledgeImportJobResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="上传并导入 PDF 知识文档",
+    description="通过正式知识中心上传 PDF 手册，自动提取文本、切分分段并写入知识库。",
+)
+async def import_knowledge_document(
+    file: UploadFile = File(..., description="待导入的 PDF 文档"),
+    equipment_type: str = Form(..., description="设备类型，例如摩托车发动机"),
+    title: str | None = Form(default=None, description="知识文档标题，默认使用文件名"),
+    equipment_model: str | None = Form(default=None, description="设备型号"),
+    fault_type: str | None = Form(default=None, description="故障类型"),
+    section_reference: str | None = Form(default=None, description="章节说明"),
+    source_type: str = Form(default="manual", description="知识来源类型，默认 manual"),
+    replace_existing: bool = Form(default=False, description="存在同名文档时是否覆盖导入"),
+    session: AsyncSession = Depends(get_session),
+) -> KnowledgeImportJobResponse:
+    filename = (file.filename or "").strip()
+    if not filename:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="上传文件必须包含文件名。")
+    if not filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="当前仅支持 PDF 文档导入。")
+
+    logger.info(
+        "knowledge_import_upload filename=%s equipment_type=%s equipment_model=%s replace_existing=%s",
+        filename,
+        equipment_type,
+        equipment_model or "",
+        replace_existing,
+    )
+    service = KnowledgeImportService(session)
+    payload = await service.import_pdf_upload(
+        filename=filename,
+        file_bytes=await file.read(),
+        title=title,
+        equipment_type=equipment_type.strip(),
+        equipment_model=(equipment_model or "").strip() or None,
+        fault_type=(fault_type or "").strip() or None,
+        section_reference=(section_reference or "").strip() or None,
+        source_type=(source_type or "manual").strip() or "manual",
+        replace_existing=replace_existing,
+    )
+    return _build_import_job_response(payload)
+
+
+@router.get(
+    "/imports/{job_id}",
+    response_model=KnowledgeImportJobResponse,
+    status_code=status.HTTP_200_OK,
+    summary="获取知识导入任务详情",
+)
+async def get_knowledge_import_job(
+    job_id: int,
+    session: AsyncSession = Depends(get_session),
+) -> KnowledgeImportJobResponse:
+    service = KnowledgeImportService(session)
+    try:
+        payload = await service.get_import_job(job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return _build_import_job_response(payload)
+
+
+@router.get(
+    "/documents",
+    response_model=KnowledgeDocumentListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="知识文档列表",
+    description="返回正式知识中心的文档列表和分段数，供导入验收和来源回溯。",
+)
+async def list_knowledge_documents(
+    limit: int = Query(default=12, ge=1, le=50, description="返回文档数量上限"),
+    equipment_type: str | None = Query(default=None, description="按设备类型过滤"),
+    source_type: str | None = Query(default=None, description="按来源类型过滤"),
+    session: AsyncSession = Depends(get_session),
+) -> KnowledgeDocumentListResponse:
+    service = KnowledgeImportService(session)
+    documents = await service.list_documents(
+        limit=limit,
+        equipment_type=equipment_type,
+        source_type=source_type,
+    )
+    return KnowledgeDocumentListResponse(
+        total=len(documents),
+        documents=[KnowledgeDocumentListItem(**item) for item in documents],
+    )
+
+
+@router.get(
+    "/documents/{document_id}/chunks",
+    response_model=KnowledgeChunkPreviewResponse,
+    status_code=status.HTTP_200_OK,
+    summary="知识文档分段预览",
+    description="返回指定知识文档的前若干个分段，供正式知识管理页做导入验收和命中调试。",
+)
+async def get_knowledge_document_chunks(
+    document_id: int,
+    limit: int = Query(default=6, ge=1, le=20, description="返回分段数量上限"),
+    session: AsyncSession = Depends(get_session),
+) -> KnowledgeChunkPreviewResponse:
+    service = KnowledgeImportService(session)
+    try:
+        chunks = await service.list_document_chunks(document_id, limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return KnowledgeChunkPreviewResponse(
+        document_id=document_id,
+        total=len(chunks),
+        chunks=[
+            KnowledgeChunkPreview(
+                chunk_id=item["id"],
+                chunk_index=item["chunk_index"],
+                heading=item.get("heading"),
+                content=item["content"],
+                page_reference=item.get("page_reference"),
+                section_reference=item.get("section_reference"),
+            )
+            for item in chunks
+        ],
     )
 
 

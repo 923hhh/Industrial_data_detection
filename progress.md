@@ -259,6 +259,34 @@
   - `app/routers/health.py` (updated)
   - `app/routers/diagnosis.py` (updated)
 
+### 三个月大改计划：知识导入管理与知识中心升级
+- **Status:** phase 2 foundation complete
+- **Started:** 2026-03-30
+- Actions taken:
+  - 新增 `knowledge_import_jobs` 持久化模型与 Alembic 迁移，正式记录 PDF 导入任务状态
+  - 新增 `POST /api/v1/knowledge/imports` 与 `GET /api/v1/knowledge/imports/{id}`，支持 PDF 上传导入与任务详情查询
+  - 新增 `GET /api/v1/knowledge/documents` 与 `GET /api/v1/knowledge/documents/{id}/chunks`，供正式知识中心做文档列表和分段预览
+  - 新增 `KnowledgeImportService`，复用 PDF 解析与现有知识入库逻辑，统一处理覆盖导入、失败记录和导入摘要
+  - 将 `front-end/app/knowledge/page.tsx` 升级为知识管理中心，补齐 PDF 导入、文档列表、分段预览和检索主入口
+  - 新增 `tests/test_phase19_knowledge_imports.py` 覆盖导入任务、文档列表和分段预览接口
+  - 验证 `pytest -q tests/test_phase19_knowledge_imports.py` 通过
+  - 验证全量 `pytest -q` 结果更新为 `54 passed, 4 skipped`
+- Files created/modified:
+  - `app/services/knowledge_import_service.py` (created)
+  - `app/schemas/knowledge_imports.py` (created)
+  - `alembic/versions/e4b7c6d4a9f1_add_knowledge_import_jobs_table.py` (created)
+  - `tests/test_phase19_knowledge_imports.py` (created)
+  - `app/models/knowledge.py` (updated)
+  - `app/routers/knowledge.py` (updated)
+  - `app/services/pdf_import_service.py` (updated)
+  - `front-end/app/knowledge/page.tsx` (updated)
+  - `front-end/components/knowledge-import-panel.tsx` (created)
+  - `front-end/components/knowledge-document-library.tsx` (created)
+  - `front-end/components/knowledge-management-center.tsx` (created)
+  - `front-end/lib/api.ts` (updated)
+  - `front-end/lib/types.ts` (updated)
+  - `README.md` (updated)
+
 ## Session: 2026-03-28 (Phase 14 / 软件杯赛题适配 Stage 1)
 
 ### 赛题对齐与作品重定义

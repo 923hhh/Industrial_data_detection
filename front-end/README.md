@@ -12,6 +12,7 @@
 
 - `/`：正式工作台首页
 - `/knowledge`：知识检索中心
+  - 当前已补齐 PDF 导入、文档列表和分段预览骨架
 - `/tasks`：检修任务中心
 - `/cases`：案例沉淀与审核中心
 - `/history`：历史记录与导出入口
@@ -39,6 +40,10 @@ npm run dev
   - `/api/v1/workbench/overview`
   - `/api/v1/agents/assist`
   - `/api/v1/agents/runs/{id}`
+  - `/api/v1/knowledge/imports`
+  - `/api/v1/knowledge/imports/{id}`
+  - `/api/v1/knowledge/documents`
+  - `/api/v1/knowledge/documents/{id}/chunks`
   - `/api/v1/knowledge/search`
   - `/api/v1/tasks`
   - `/api/v1/cases`
