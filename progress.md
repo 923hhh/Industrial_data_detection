@@ -312,6 +312,42 @@
   - `tests/test_phase19_knowledge_imports.py` (updated)
   - `README.md` (updated)
 
+### 三个月大改计划：知识文档筛选与来源回溯
+- **Status:** phase 2 document management complete
+- **Started:** 2026-03-30
+- Actions taken:
+  - 扩展 `GET /api/v1/knowledge/documents`，支持 `query`、`equipment_type`、`equipment_model`、`source_type` 多条件筛选
+  - 新增 `GET /api/v1/knowledge/documents/{id}`，返回知识文档的来源文件、设备元数据、章节/页码和摘要，用于正式来源回溯
+  - 将 `front-end/components/knowledge-document-library.tsx` 升级为正式知识文档管理区，补齐筛选栏、文档详情卡和来源回溯面板
+  - 保留并联动现有分段预览能力，使“文档级回溯 + 分段级预览”在知识中心内闭环
+  - 为上述能力补充 `tests/test_phase19_knowledge_imports.py` 的路由和服务转发测试
+  - 验证 `pytest -q tests/test_phase19_knowledge_imports.py` 通过
+  - 验证 `npm run typecheck` 通过
+  - 验证全量 `pytest -q` 结果更新为 `58 passed, 4 skipped`
+- Files created/modified:
+  - `app/services/knowledge_import_service.py` (updated)
+  - `app/schemas/knowledge_imports.py` (updated)
+  - `app/routers/knowledge.py` (updated)
+  - `front-end/components/knowledge-document-library.tsx` (updated)
+  - `front-end/lib/api.ts` (updated)
+  - `front-end/lib/types.ts` (updated)
+  - `front-end/app/globals.css` (updated)
+  - `tests/test_phase19_knowledge_imports.py` (updated)
+  - `README.md` (updated)
+
+### 三个月大改计划：阶段增补项冻结
+- **Status:** planning updated
+- **Started:** 2026-03-30
+- Actions taken:
+  - 将第二阶段增强项冻结到计划中：`OCR`、`图片上传`、`多模态问答`、`工单/设备信息`、`检修步骤输出`
+  - 将第三阶段亮点项冻结到计划中：`混合检索`、`rerank`、`相似案例推荐`、`安全提醒`、`检修流程推荐`
+  - 同步更新 `todo_softbei.md`、`docs/SOFTBEI_AWARD_PRIORITY.md`、`docs/SOFTBEI_FUNCTIONAL_DESIGN.md`
+  - 统一这些新增能力在后续阶段中的归属：第二阶段偏知识中心与业务输入升级，第三阶段偏 Agent 与检索亮点升级
+- Files created/modified:
+  - `todo_softbei.md` (updated)
+  - `docs/SOFTBEI_AWARD_PRIORITY.md` (updated)
+  - `docs/SOFTBEI_FUNCTIONAL_DESIGN.md` (updated)
+
 ## Session: 2026-03-28 (Phase 14 / 软件杯赛题适配 Stage 1)
 
 ### 赛题对齐与作品重定义

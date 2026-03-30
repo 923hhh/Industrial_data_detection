@@ -240,6 +240,63 @@ async def test_list_knowledge_documents_endpoint():
 
 
 @pytest.mark.asyncio
+async def test_list_knowledge_documents_forwards_filters():
+    """文档列表接口应透传筛选条件到服务层。"""
+    with patch(
+        "app.routers.knowledge.KnowledgeImportService.list_documents",
+        new=AsyncMock(return_value=[]),
+    ) as mocked_list_documents:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get(
+                "/api/v1/knowledge/documents?limit=5&query=火花塞&equipment_type=摩托车发动机&equipment_model=LX200&source_type=manual"
+            )
+
+    assert response.status_code == 200
+    mocked_list_documents.assert_awaited_once_with(
+        limit=5,
+        query="火花塞",
+        equipment_type="摩托车发动机",
+        equipment_model="LX200",
+        source_type="manual",
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_knowledge_document_detail_endpoint():
+    """知识文档详情接口应返回来源回溯字段。"""
+    mocked_detail = {
+        "id": 1,
+        "title": "摩托车发动机维修手册",
+        "source_name": "manual.pdf",
+        "source_type": "manual",
+        "equipment_type": "摩托车发动机",
+        "equipment_model": "LX200",
+        "fault_type": "启动困难",
+        "status": "published",
+        "chunk_count": 41,
+        "section_reference": "第2章 点火系统",
+        "page_reference": "P12",
+        "content_excerpt": "火花塞检查与拆装步骤。",
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+    }
+
+    with patch(
+        "app.routers.knowledge.KnowledgeImportService.get_document_detail",
+        new=AsyncMock(return_value=mocked_detail),
+    ):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/api/v1/knowledge/documents/1")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["page_reference"] == "P12"
+    assert payload["section_reference"] == "第2章 点火系统"
+
+
+@pytest.mark.asyncio
 async def test_get_knowledge_document_chunks_endpoint():
     """文档分段预览接口应返回前若干个知识分段。"""
     mocked_chunks = [

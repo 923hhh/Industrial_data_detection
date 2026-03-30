@@ -179,7 +179,9 @@ class KnowledgeImportService:
         *,
         limit: int = 20,
         equipment_type: str | None = None,
+        equipment_model: str | None = None,
         source_type: str | None = None,
+        query: str | None = None,
     ) -> list[dict[str, Any]]:
         """List imported knowledge documents with chunk counts."""
         stmt = (
@@ -194,8 +196,20 @@ class KnowledgeImportService:
         )
         if equipment_type:
             stmt = stmt.where(KnowledgeDocument.equipment_type == equipment_type)
+        if equipment_model:
+            stmt = stmt.where(
+                (KnowledgeDocument.equipment_model == equipment_model)
+                | (KnowledgeDocument.equipment_model.is_(None))
+            )
         if source_type:
             stmt = stmt.where(KnowledgeDocument.source_type == source_type)
+        if query:
+            normalized_query = f"%{query.strip()}%"
+            stmt = stmt.where(
+                KnowledgeDocument.title.ilike(normalized_query)
+                | KnowledgeDocument.source_name.ilike(normalized_query)
+                | KnowledgeDocument.content.ilike(normalized_query)
+            )
 
         rows = (await self.session.execute(stmt)).all()
         return [
@@ -214,6 +228,30 @@ class KnowledgeImportService:
             }
             for document, chunk_count in rows
         ]
+
+    async def get_document_detail(self, document_id: int) -> dict[str, Any]:
+        """Return detailed metadata for a single knowledge document."""
+        document = await self._ensure_document(document_id)
+        chunk_count_stmt = select(func.count(KnowledgeChunk.id)).where(
+            KnowledgeChunk.document_id == document_id
+        )
+        chunk_count = (await self.session.execute(chunk_count_stmt)).scalar_one()
+        return {
+            "id": document.id,
+            "title": document.title,
+            "source_name": document.source_name,
+            "source_type": document.source_type,
+            "equipment_type": document.equipment_type,
+            "equipment_model": document.equipment_model,
+            "fault_type": document.fault_type,
+            "status": document.status,
+            "chunk_count": int(chunk_count or 0),
+            "section_reference": document.section_reference,
+            "page_reference": document.page_reference,
+            "content_excerpt": document.content[:280] if document.content else None,
+            "created_at": document.created_at,
+            "updated_at": document.updated_at,
+        }
 
     async def list_document_chunks(
         self,

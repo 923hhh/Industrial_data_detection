@@ -1,6 +1,7 @@
 import type {
   AgentAssistResponse,
   KnowledgeChunkPreviewResponse,
+  KnowledgeDocumentDetailResponse,
   KnowledgeDocumentListResponse,
   KnowledgeImportJobListResponse,
   KnowledgeImportPreviewResponse,
@@ -98,11 +99,33 @@ export async function getKnowledgeImportJobs(limit = 8): Promise<KnowledgeImport
   return parseJson<KnowledgeImportJobListResponse>(response);
 }
 
-export async function getKnowledgeDocuments(limit = 12): Promise<KnowledgeDocumentListResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/knowledge/documents?limit=${limit}`, {
+export async function getKnowledgeDocuments(params?: {
+  limit?: number;
+  query?: string;
+  equipment_type?: string;
+  equipment_model?: string;
+  source_type?: string;
+}): Promise<KnowledgeDocumentListResponse> {
+  const search = new URLSearchParams();
+  search.set("limit", String(params?.limit ?? 12));
+  if (params?.query?.trim()) search.set("query", params.query.trim());
+  if (params?.equipment_type?.trim()) search.set("equipment_type", params.equipment_type.trim());
+  if (params?.equipment_model?.trim()) search.set("equipment_model", params.equipment_model.trim());
+  if (params?.source_type?.trim()) search.set("source_type", params.source_type.trim());
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/knowledge/documents?${search.toString()}`, {
     cache: "no-store",
   });
   return parseJson<KnowledgeDocumentListResponse>(response);
+}
+
+export async function getKnowledgeDocumentDetail(
+  documentId: number,
+): Promise<KnowledgeDocumentDetailResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/knowledge/documents/${documentId}`, {
+    cache: "no-store",
+  });
+  return parseJson<KnowledgeDocumentDetailResponse>(response);
 }
 
 export async function getKnowledgeDocumentChunks(

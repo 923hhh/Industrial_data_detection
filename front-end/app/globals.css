@@ -268,6 +268,10 @@ textarea {
   gap: 1rem;
 }
 
+.compactFormGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .formGrid label {
   display: grid;
   gap: 0.45rem;
@@ -305,6 +309,14 @@ textarea {
 .tableCard table {
   width: 100%;
   border-collapse: collapse;
+}
+
+.tableSummary {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+  color: var(--muted);
 }
 
 .tableCard th,
@@ -360,7 +372,8 @@ textarea {
   .threeGrid,
   .twoGrid,
   .agentGrid,
-  .libraryLayout {
+  .libraryLayout,
+  .compactFormGrid {
     grid-template-columns: 1fr;
   }
 }

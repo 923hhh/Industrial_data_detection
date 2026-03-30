@@ -124,6 +124,12 @@ export type KnowledgeDocumentListItem = {
   updated_at: string;
 };
 
+export type KnowledgeDocumentDetailResponse = KnowledgeDocumentListItem & {
+  section_reference?: string | null;
+  page_reference?: string | null;
+  content_excerpt?: string | null;
+};
+
 export type KnowledgeDocumentListResponse = {
   total: number;
   documents: KnowledgeDocumentListItem[];

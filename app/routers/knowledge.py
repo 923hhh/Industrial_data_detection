@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.knowledge_imports import (
     KnowledgeChunkPreview,
     KnowledgeChunkPreviewResponse,
+    KnowledgeDocumentDetailResponse,
     KnowledgeDocumentListItem,
     KnowledgeDocumentListResponse,
     KnowledgeImportJobListResponse,
@@ -207,20 +208,43 @@ async def get_knowledge_import_job(
 )
 async def list_knowledge_documents(
     limit: int = Query(default=12, ge=1, le=50, description="返回文档数量上限"),
+    query: str | None = Query(default=None, description="按标题、来源或内容模糊搜索"),
     equipment_type: str | None = Query(default=None, description="按设备类型过滤"),
+    equipment_model: str | None = Query(default=None, description="按设备型号过滤"),
     source_type: str | None = Query(default=None, description="按来源类型过滤"),
     session: AsyncSession = Depends(get_session),
 ) -> KnowledgeDocumentListResponse:
     service = KnowledgeImportService(session)
     documents = await service.list_documents(
         limit=limit,
+        query=query,
         equipment_type=equipment_type,
+        equipment_model=equipment_model,
         source_type=source_type,
     )
     return KnowledgeDocumentListResponse(
         total=len(documents),
         documents=[KnowledgeDocumentListItem(**item) for item in documents],
     )
+
+
+@router.get(
+    "/documents/{document_id}",
+    response_model=KnowledgeDocumentDetailResponse,
+    status_code=status.HTTP_200_OK,
+    summary="知识文档详情",
+    description="返回指定知识文档的详细元数据，供知识中心做来源回溯与命中调试。",
+)
+async def get_knowledge_document_detail(
+    document_id: int,
+    session: AsyncSession = Depends(get_session),
+) -> KnowledgeDocumentDetailResponse:
+    service = KnowledgeImportService(session)
+    try:
+        payload = await service.get_document_detail(document_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return KnowledgeDocumentDetailResponse(**payload)
 
 
 @router.get(

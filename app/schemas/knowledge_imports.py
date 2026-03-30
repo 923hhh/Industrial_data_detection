@@ -68,6 +68,14 @@ class KnowledgeDocumentListItem(BaseModel):
     updated_at: datetime
 
 
+class KnowledgeDocumentDetailResponse(KnowledgeDocumentListItem):
+    """Detailed knowledge document payload used for source trace-back."""
+
+    section_reference: str | None = None
+    page_reference: str | None = None
+    content_excerpt: str | None = None
+
+
 class KnowledgeDocumentListResponse(BaseModel):
     """Knowledge document list response."""
 
