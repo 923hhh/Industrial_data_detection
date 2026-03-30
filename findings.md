@@ -14,6 +14,7 @@
 - FastAPI `StreamingResponse` 需要 `generate()` 生成器配合
 - `pytest-asyncio` 支持异步测试函数，`httpx.AsyncClient` 用于异步 HTTP 测试
 - 当前全量测试结果为 `46 passed, 4 skipped`
+- 当前全量测试结果已更新为 `49 passed, 4 skipped`
 - 仓库此前缺少面向评审和部署的正式 README、部署文档、CI workflow 和 Dockerfile
 
 ## Technical Decisions
@@ -71,6 +72,10 @@
 | 后端中层重组采用 `bootstrap / shared / modules / integrations / persistence` 五层结构 | 借鉴参考项目的分层思想，但保持当前 FastAPI 技术栈和 API 稳定，不做前端迁移 |
 | `app/main.py` 退化为唯一 ASGI 壳入口 | 保持部署命令不变，同时把应用装配逻辑集中到 `app.bootstrap` |
 | 本轮仅预留 `front-end/` 目录，不迁移现有静态页面 | 当前比赛阶段优先稳住后端边界和演示路径，后续再切 React + Next.js |
+| `front-end/` 正式升级为 `Next.js + React + TypeScript` 前端工程骨架 | 三个月大改已进入实施阶段，需要正式页面路由、布局和 API client，而不再只是静态页占位 |
+| 新增 `/api/v1/workbench/overview` 作为正式前端首页聚合接口 | 减少前端自行拼装统计、最近任务、最近案例和固定检索词 |
+| 新增 `/api/v1/agents/assist` 与 `/api/v1/agents/runs/{id}` 作为正式 Agent 协作入口 | 将多智能体从诊断专用能力提升为赛题主产品的统一协作入口 |
+| Agent 协作结果先以轻量内存 Run Store 保存 | 本轮优先交付前端可接的协作面板，不引入额外迁移脚本，后续可再升级为持久化运行记录 |
 
 ## Issues Encountered
 | Issue | Resolution |

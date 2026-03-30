@@ -8,10 +8,15 @@
 
 当前后端已完成一轮**中等架构重组**：在不改变 FastAPI、PostgreSQL、Alembic 和现有静态前端页面的前提下，引入了 `bootstrap / shared / modules / integrations / persistence` 五层结构，为后续 `React + Next.js` 前端工程化预留稳定 API 边界。
 
+当前仓库已启动**正式前端工程化阶段**：`front-end/` 目录下已新增 `Next.js + React + TypeScript` 正式工作台骨架，并新增面向正式前端的工作台概览与 Agent 协作统一接口。
+
 ## 当前能力
 
 - `POST /api/v1/diagnose`：返回完整诊断报告
 - `GET /api/v1/diagnose/stream`：通过 SSE 返回节点进度和最终报告
+- `GET /api/v1/workbench/overview`：返回正式工作台首页所需的统计卡片、固定检索词、Agent 能力摘要和最近业务项
+- `POST /api/v1/agents/assist`：统一触发知识召回、作业规划、风险校验与案例沉淀建议
+- `GET /api/v1/agents/runs/{id}`：回放最近一次 Agent 协作结果
 - `POST /api/v1/knowledge/documents`：导入检修知识文本并自动拆分为可检索分段
 - `POST /api/v1/knowledge/search`：按文本、设备型号、单张故障图片联合检索知识条目，返回出处、有效检索词和图片识别线索
 - `POST /api/v1/tasks`：根据知识引用生成标准化检修任务和作业步骤
@@ -29,8 +34,9 @@
 - `knowledge_search.html`：多模态知识检索联调页，支持图片预览、识别线索展示和知识引用结果
 - `maintenance_tasks.html`：标准化检修任务联调页，支持任务生成、步骤执行、历史查看和导出摘要
 - `case_reviews.html`：案例沉淀与审核联调页，支持案例上传、人工修正、审核入库和后续回流展示
+- `front-end/`：正式前端工程骨架，已提供工作台、知识检索、任务、案例、历史与 Agent 页面入口
 - Alembic 管理数据库 schema，不再依赖隐式建表
-- 当前测试结果：`46 passed, 4 skipped`
+- 当前测试结果：`49 passed, 4 skipped`
 
 ## 软件杯赛题适配（当前冻结版）
 
@@ -116,7 +122,10 @@ python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ### 5. 打开前端入口
 
-直接用浏览器打开 [index.html](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/index.html) 或 [softbei_workbench.html](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/softbei_workbench.html)。
+当前有两种入口：
+
+- 兼容演示入口：直接用浏览器打开 [index.html](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/index.html) 或 [softbei_workbench.html](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/softbei_workbench.html)
+- 正式前端工程入口：进入 [front-end/README.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/front-end/README.md) 按 `npm install` / `npm run dev` 启动 Next.js 工作台
 
 `index.html` 会自动跳转到正式工作台；建议先确认页面中的“后端地址”与实际启动地址一致，再开始演示。
 
@@ -180,7 +189,7 @@ softbei_workbench.html  正式工作台
 diagnosis_console.html  智能分析子模块控制台
 docs/                   MVP 级部署和演示文档
 deploy/systemd/         Linux 部署示例
-front-end/              未来 React + Next.js 前端工程目录预留
+front-end/              Next.js 正式前端工程骨架（工作台 / 知识 / 任务 / 案例 / 历史 / Agent）
 ```
 
 ## 当前还没做的事

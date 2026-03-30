@@ -33,6 +33,18 @@ from app.schemas.cases import (
     MaintenanceCaseResponse,
     MaintenanceCaseReviewRequest,
 )
+from app.schemas.agents import (
+    AgentAssistRequest,
+    AgentAssistResponse,
+    AgentRunStep,
+    AgentTaskPreviewStep,
+)
+from app.schemas.workbench import (
+    WorkbenchCaseSummary,
+    WorkbenchOverviewResponse,
+    WorkbenchStatCard,
+    WorkbenchTaskSummary,
+)
 
 __all__ = [
     "SensorDataBase",
@@ -60,4 +72,12 @@ __all__ = [
     "MaintenanceCaseResponse",
     "MaintenanceCaseListItem",
     "MaintenanceCaseListResponse",
+    "AgentAssistRequest",
+    "AgentAssistResponse",
+    "AgentRunStep",
+    "AgentTaskPreviewStep",
+    "WorkbenchOverviewResponse",
+    "WorkbenchStatCard",
+    "WorkbenchTaskSummary",
+    "WorkbenchCaseSummary",
 ]

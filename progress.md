@@ -218,6 +218,37 @@
 - Files created/modified:
   - `README.md` (created)
   - `docs/DEPLOYMENT.md` (created)
+
+## Session: 2026-03-30
+
+### 三个月大改计划：正式前端骨架 + Agent 平台化第一阶段
+- **Status:** foundation complete
+- **Started:** 2026-03-30
+- Actions taken:
+  - 在 `front-end/` 下初始化 `Next.js + React + TypeScript` 正式前端工程骨架
+  - 新增正式工作台首页、知识检索、检修任务、案例沉淀、历史记录、Agent 协作 6 个页面入口
+  - 新增统一布局、基础样式、API client 和业务类型定义
+  - 新增 `GET /api/v1/workbench/overview`，聚合统计卡片、固定检索词、Agent 能力摘要和最近业务项
+  - 新增 `POST /api/v1/agents/assist` 与 `GET /api/v1/agents/runs/{id}`，提供统一的多智能体协作入口
+  - 新增 Phase 18 测试，覆盖正式工作台概览和 Agent 协作骨架
+  - 回归验证 `pytest -q` 当前结果更新为 `49 passed, 4 skipped`
+- Files created/modified:
+  - `front-end/README.md` (updated)
+  - `front-end/package.json` (created)
+  - `front-end/tsconfig.json` (created)
+  - `front-end/next.config.ts` (created)
+  - `front-end/app/*` (created)
+  - `front-end/components/*` (created)
+  - `front-end/lib/*` (created)
+  - `app/routers/workbench.py` (created)
+  - `app/routers/agents.py` (created)
+  - `app/services/workbench_service.py` (created)
+  - `app/services/agent_orchestration_service.py` (created)
+  - `app/schemas/agents.py` (created)
+  - `app/schemas/workbench.py` (created)
+  - `app/modules/agents/__init__.py` (created)
+  - `app/modules/workbench/__init__.py` (created)
+  - `tests/test_phase18_workbench_agents.py` (created)
   - `docs/DEMO_CHECKLIST.md` (created)
   - `deploy/systemd/fault-detection.service.example` (created)
   - `Dockerfile` (created)
