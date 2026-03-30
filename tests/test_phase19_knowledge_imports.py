@@ -28,6 +28,8 @@ def override_db_session():
 async def test_preview_knowledge_import_endpoint():
     """导入前预览接口应返回页数、分段数和预览摘录。"""
     mocked_preview = {
+        "import_type": "pdf",
+        "processing_note": None,
         "normalized_title": "摩托车发动机维修手册",
         "source_name": "manual.pdf",
         "source_type": "manual",
@@ -72,6 +74,7 @@ async def test_knowledge_import_upload_endpoint():
     mocked_payload = {
         "id": 7,
         "import_type": "pdf",
+        "processing_note": None,
         "title": "摩托车发动机维修手册",
         "source_name": "manual.pdf",
         "source_type": "manual",
@@ -115,7 +118,7 @@ async def test_knowledge_import_upload_endpoint():
 
 @pytest.mark.asyncio
 async def test_knowledge_import_upload_rejects_non_pdf():
-    """导入接口当前只接受 PDF。"""
+    """导入接口应拒绝不受支持的文件类型。"""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
@@ -125,7 +128,97 @@ async def test_knowledge_import_upload_rejects_non_pdf():
         )
 
     assert response.status_code == 400
-    assert "PDF" in response.json()["detail"]
+    assert "PDF" in response.json()["detail"] or "PNG" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_preview_knowledge_import_accepts_image_upload():
+    """导入预览接口应接受图片型知识文档。"""
+    mocked_preview = {
+        "import_type": "image_ocr",
+        "processing_note": "图片已通过视觉 OCR 提取为知识文本。",
+        "normalized_title": "点火系统图示",
+        "source_name": "spark-plug.png",
+        "source_type": "manual",
+        "equipment_type": "摩托车发动机",
+        "equipment_model": "LX200",
+        "fault_type": None,
+        "section_reference": "点火系统",
+        "replace_existing": False,
+        "page_count": 1,
+        "chunk_count": 3,
+        "preview_excerpt": "图像 OCR 已识别火花塞拆装与检查步骤。",
+        "existing_document_detected": False,
+        "warning_message": None,
+    }
+
+    with patch(
+        "app.routers.knowledge.KnowledgeImportService.preview_pdf_upload",
+        new=AsyncMock(return_value=mocked_preview),
+    ):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/v1/knowledge/imports/preview",
+                files={"file": ("spark-plug.png", b"fakepng", "image/png")},
+                data={
+                    "equipment_type": "摩托车发动机",
+                    "equipment_model": "LX200",
+                    "section_reference": "点火系统",
+                },
+            )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["import_type"] == "image_ocr"
+    assert payload["page_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_knowledge_import_upload_accepts_image_upload():
+    """正式导入接口应接受图片型知识文档。"""
+    mocked_payload = {
+        "id": 12,
+        "import_type": "image_ocr",
+        "processing_note": "图片已通过视觉 OCR 导入知识库，建议结合来源回溯进行人工校对。",
+        "title": "点火系统图示",
+        "source_name": "spark-plug.png",
+        "source_type": "manual",
+        "equipment_type": "摩托车发动机",
+        "equipment_model": "LX200",
+        "fault_type": None,
+        "section_reference": "点火系统",
+        "replace_existing": True,
+        "status": "completed",
+        "page_count": 1,
+        "chunk_count": 3,
+        "document_id": 25,
+        "preview_excerpt": "图像 OCR 已识别火花塞拆装与检查步骤。",
+        "error_message": None,
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+    }
+
+    with patch(
+        "app.routers.knowledge.KnowledgeImportService.import_pdf_upload",
+        new=AsyncMock(return_value=mocked_payload),
+    ):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/v1/knowledge/imports",
+                files={"file": ("spark-plug.png", b"fakepng", "image/png")},
+                data={
+                    "equipment_type": "摩托车发动机",
+                    "equipment_model": "LX200",
+                    "replace_existing": "true",
+                },
+            )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["import_type"] == "image_ocr"
+    assert payload["document_id"] == 25
 
 
 @pytest.mark.asyncio
@@ -135,6 +228,7 @@ async def test_list_knowledge_import_jobs_endpoint():
         {
             "id": 11,
             "import_type": "pdf",
+            "processing_note": None,
             "title": "摩托车发动机维修手册",
             "source_name": "manual.pdf",
             "source_type": "manual",
@@ -174,6 +268,7 @@ async def test_get_knowledge_import_job_endpoint():
     mocked_payload = {
         "id": 9,
         "import_type": "pdf",
+        "processing_note": None,
         "title": "正时链条维修手册",
         "source_name": "timing.pdf",
         "source_type": "manual",

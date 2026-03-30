@@ -73,11 +73,11 @@ async def create_knowledge_document(
     "/imports/preview",
     response_model=KnowledgeImportPreviewResponse,
     status_code=status.HTTP_200_OK,
-    summary="预览 PDF 知识导入任务",
-    description="在正式导入前解析 PDF 的页数、分段数和预览摘录，供知识中心确认导入内容。",
+    summary="预览知识导入任务",
+    description="在正式导入前解析 PDF 或图片文件的页数、分段数和预览摘录，供知识中心确认导入内容。",
 )
 async def preview_knowledge_import(
-    file: UploadFile = File(..., description="待导入的 PDF 文档"),
+    file: UploadFile = File(..., description="待导入的 PDF 手册或图片文件"),
     equipment_type: str = Form(..., description="设备类型，例如摩托车发动机"),
     title: str | None = Form(default=None, description="知识文档标题，默认使用文件名"),
     equipment_model: str | None = Form(default=None, description="设备型号"),
@@ -90,28 +90,31 @@ async def preview_knowledge_import(
     filename = (file.filename or "").strip()
     if not filename:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="上传文件必须包含文件名。")
-    if not filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="当前仅支持 PDF 文档导入。")
 
     logger.info(
-        "knowledge_import_preview filename=%s equipment_type=%s equipment_model=%s replace_existing=%s",
+        "knowledge_import_preview filename=%s content_type=%s equipment_type=%s equipment_model=%s replace_existing=%s",
         filename,
+        file.content_type or "",
         equipment_type,
         equipment_model or "",
         replace_existing,
     )
     service = KnowledgeImportService(session)
-    payload = await service.preview_pdf_upload(
-        filename=filename,
-        file_bytes=await file.read(),
-        title=title,
-        equipment_type=equipment_type.strip(),
-        equipment_model=(equipment_model or "").strip() or None,
-        fault_type=(fault_type or "").strip() or None,
-        section_reference=(section_reference or "").strip() or None,
-        source_type=(source_type or "manual").strip() or "manual",
-        replace_existing=replace_existing,
-    )
+    try:
+        payload = await service.preview_pdf_upload(
+            filename=filename,
+            file_bytes=await file.read(),
+            content_type=file.content_type,
+            title=title,
+            equipment_type=equipment_type.strip(),
+            equipment_model=(equipment_model or "").strip() or None,
+            fault_type=(fault_type or "").strip() or None,
+            section_reference=(section_reference or "").strip() or None,
+            source_type=(source_type or "manual").strip() or "manual",
+            replace_existing=replace_existing,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return KnowledgeImportPreviewResponse(**payload)
 
 
@@ -139,11 +142,11 @@ async def list_knowledge_import_jobs(
     "/imports",
     response_model=KnowledgeImportJobResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="上传并导入 PDF 知识文档",
-    description="通过正式知识中心上传 PDF 手册，自动提取文本、切分分段并写入知识库。",
+    summary="上传并导入知识文档",
+    description="通过正式知识中心上传 PDF 手册或图片型知识文档，自动提取文本、切分分段并写入知识库。",
 )
 async def import_knowledge_document(
-    file: UploadFile = File(..., description="待导入的 PDF 文档"),
+    file: UploadFile = File(..., description="待导入的 PDF 手册或图片文件"),
     equipment_type: str = Form(..., description="设备类型，例如摩托车发动机"),
     title: str | None = Form(default=None, description="知识文档标题，默认使用文件名"),
     equipment_model: str | None = Form(default=None, description="设备型号"),
@@ -156,28 +159,31 @@ async def import_knowledge_document(
     filename = (file.filename or "").strip()
     if not filename:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="上传文件必须包含文件名。")
-    if not filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="当前仅支持 PDF 文档导入。")
 
     logger.info(
-        "knowledge_import_upload filename=%s equipment_type=%s equipment_model=%s replace_existing=%s",
+        "knowledge_import_upload filename=%s content_type=%s equipment_type=%s equipment_model=%s replace_existing=%s",
         filename,
+        file.content_type or "",
         equipment_type,
         equipment_model or "",
         replace_existing,
     )
     service = KnowledgeImportService(session)
-    payload = await service.import_pdf_upload(
-        filename=filename,
-        file_bytes=await file.read(),
-        title=title,
-        equipment_type=equipment_type.strip(),
-        equipment_model=(equipment_model or "").strip() or None,
-        fault_type=(fault_type or "").strip() or None,
-        section_reference=(section_reference or "").strip() or None,
-        source_type=(source_type or "manual").strip() or "manual",
-        replace_existing=replace_existing,
-    )
+    try:
+        payload = await service.import_pdf_upload(
+            filename=filename,
+            file_bytes=await file.read(),
+            content_type=file.content_type,
+            title=title,
+            equipment_type=equipment_type.strip(),
+            equipment_model=(equipment_model or "").strip() or None,
+            fault_type=(fault_type or "").strip() or None,
+            section_reference=(section_reference or "").strip() or None,
+            source_type=(source_type or "manual").strip() or "manual",
+            replace_existing=replace_existing,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return _build_import_job_response(payload)
 
 

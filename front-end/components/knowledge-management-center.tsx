@@ -23,7 +23,7 @@ export function KnowledgeManagementCenter() {
     <div className="panelStack">
       <SectionCard
         title="文档导入管理"
-        description="上传 PDF 手册并直接生成正式知识导入任务，完成页数、分段数和导入结果验收。"
+        description="上传 PDF 手册或图片型知识文档并生成正式导入任务，支持 OCR 预览、页数/分段数验收与来源回溯。"
       >
         <KnowledgeImportPanel onImported={handleImported} />
       </SectionCard>
@@ -55,7 +55,7 @@ export function KnowledgeManagementCenter() {
 
       <SectionCard
         title="正式检索入口"
-        description="当前已接入 query rewrite、同义词扩展与通用手册命中逻辑，可直接验证知识检索主路径。"
+        description="当前已接入 query rewrite、同义词扩展、通用手册命中和图片上传入口，可直接验证知识检索主路径。"
       >
         <KnowledgeSearchPanel />
       </SectionCard>

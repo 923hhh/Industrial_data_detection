@@ -7,6 +7,7 @@ from app.integrations.pdf_import import (
     PdfKnowledgeImportService,
     normalize_pdf_text,
 )
+from app.services.ocr_service import ImageOcrResult, KnowledgeOcrService
 
 __all__ = [
     "DiagnosisAgent",
@@ -18,4 +19,6 @@ __all__ = [
     "PdfKnowledgeImportService",
     "ExtractedPdfPage",
     "normalize_pdf_text",
+    "KnowledgeOcrService",
+    "ImageOcrResult",
 ]

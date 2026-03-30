@@ -59,7 +59,7 @@ export function KnowledgeImportHistory({ refreshToken = 0 }: KnowledgeImportHist
             <div className="resultMeta">
               <h3>{job.title || job.source_name}</h3>
               <p>
-                任务 #{job.id} · {renderStatus(job.status)} · {job.page_count ?? 0} 页 /{" "}
+                任务 #{job.id} · {job.import_type} · {renderStatus(job.status)} · {job.page_count ?? 0} 页 /{" "}
                 {job.chunk_count ?? 0} 段
               </p>
             </div>
@@ -67,6 +67,7 @@ export function KnowledgeImportHistory({ refreshToken = 0 }: KnowledgeImportHist
               {job.source_name} · {job.equipment_type}
               {job.equipment_model ? ` / ${job.equipment_model}` : ""}
             </p>
+            {job.processing_note ? <p className="muted">{job.processing_note}</p> : null}
             {job.preview_excerpt ? <p className="excerpt">{job.preview_excerpt}</p> : null}
             {job.error_message ? <p className="errorText">{job.error_message}</p> : null}
           </article>

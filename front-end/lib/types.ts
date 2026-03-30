@@ -71,6 +71,7 @@ export type KnowledgeSearchResponse = {
 export type KnowledgeImportJobResponse = {
   id: number;
   import_type: string;
+  processing_note?: string | null;
   title?: string | null;
   source_name: string;
   source_type: string;
@@ -95,6 +96,8 @@ export type KnowledgeImportJobListResponse = {
 };
 
 export type KnowledgeImportPreviewResponse = {
+  import_type: string;
+  processing_note?: string | null;
   normalized_title: string;
   source_name: string;
   source_type: string;

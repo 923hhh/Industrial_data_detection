@@ -22,6 +22,7 @@ export function KnowledgeImportPanel({ onImported }: KnowledgeImportPanelProps) 
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<KnowledgeImportPreviewResponse | null>(null);
   const [job, setJob] = useState<KnowledgeImportJobResponse | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
   function resetDerivedState() {
     setPreview(null);
@@ -82,9 +83,13 @@ export function KnowledgeImportPanel({ onImported }: KnowledgeImportPanelProps) 
           <input
             className="fileInput"
             type="file"
-            accept="application/pdf"
+            accept="application/pdf,image/png,image/jpeg,image/webp"
             onChange={(event) => {
-              setFile(event.target.files?.[0] ?? null);
+              const nextFile = event.target.files?.[0] ?? null;
+              setFile(nextFile);
+              setImagePreviewUrl(
+                nextFile && nextFile.type.startsWith("image/") ? URL.createObjectURL(nextFile) : null,
+              );
               resetDerivedState();
             }}
           />
@@ -140,6 +145,12 @@ export function KnowledgeImportPanel({ onImported }: KnowledgeImportPanelProps) 
           />
         </label>
       </div>
+      {imagePreviewUrl ? (
+        <div className="imagePreviewCard">
+          <img src={imagePreviewUrl} alt="知识导入图片预览" className="thumbnailPreview" />
+          <p className="muted">当前图片将按 OCR 导入流程处理：{file?.name}</p>
+        </div>
+      ) : null}
       <label className="toggleRow">
         <input
           type="checkbox"
@@ -165,10 +176,11 @@ export function KnowledgeImportPanel({ onImported }: KnowledgeImportPanelProps) 
           <div className="resultMeta">
             <h3>{preview.normalized_title}</h3>
             <p>
-              预览 · {preview.page_count} 页 / {preview.chunk_count} 段 ·{" "}
+              {preview.import_type === "pdf" ? "PDF 预览" : "图片导入预览"} · {preview.page_count} 页 / {preview.chunk_count} 段 ·{" "}
               {preview.equipment_model || "通用手册"}
             </p>
           </div>
+          {preview.processing_note ? <p className="muted">{preview.processing_note}</p> : null}
           {preview.preview_excerpt ? <p className="excerpt">{preview.preview_excerpt}</p> : null}
           {preview.warning_message ? <p className="errorText">{preview.warning_message}</p> : null}
         </div>
@@ -178,9 +190,10 @@ export function KnowledgeImportPanel({ onImported }: KnowledgeImportPanelProps) 
           <div className="resultMeta">
             <h3>{job.title || job.source_name}</h3>
             <p>
-              任务 #{job.id} · {job.status} · {job.page_count ?? 0} 页 / {job.chunk_count ?? 0} 段
+              任务 #{job.id} · {job.import_type} · {job.status} · {job.page_count ?? 0} 页 / {job.chunk_count ?? 0} 段
             </p>
           </div>
+          {job.processing_note ? <p className="muted">{job.processing_note}</p> : null}
           {job.preview_excerpt ? <p className="excerpt">{job.preview_excerpt}</p> : null}
           {job.error_message ? <p className="errorText">{job.error_message}</p> : null}
         </div>

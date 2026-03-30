@@ -18,14 +18,14 @@
 - `POST /api/v1/agents/assist`：统一触发知识召回、作业规划、风险校验与案例沉淀建议
 - `GET /api/v1/agents/runs/{id}`：回放最近一次 Agent 协作结果
 - `POST /api/v1/knowledge/documents`：导入检修知识文本并自动拆分为可检索分段
-- `POST /api/v1/knowledge/imports/preview`：在正式导入前预览 PDF 的页数、分段数和预览摘录
+- `POST /api/v1/knowledge/imports/preview`：在正式导入前预览 PDF 或图片 OCR 的页数/分段数、预览摘录和处理提示
 - `GET /api/v1/knowledge/imports`：查看最近的知识导入任务列表与状态
-- `POST /api/v1/knowledge/imports`：上传 PDF 手册并创建正式知识导入任务，自动提取文本、切分分段并写入知识库
+- `POST /api/v1/knowledge/imports`：上传 PDF 手册或故障图片并创建正式知识导入任务，自动提取文本、切分分段并写入知识库
 - `GET /api/v1/knowledge/imports/{id}`：查看单个知识导入任务的状态、页数、分段数和失败原因
 - `GET /api/v1/knowledge/documents`：查看正式知识中心的文档列表与分段数
 - `GET /api/v1/knowledge/documents/{id}`：查看指定知识文档的详细元数据，用于来源回溯和命中调试
 - `GET /api/v1/knowledge/documents/{id}/chunks`：预览指定知识文档的前若干个分段内容
-- `POST /api/v1/knowledge/search`：按文本、设备型号、单张故障图片联合检索知识条目，返回出处、有效检索词和图片识别线索
+- `POST /api/v1/knowledge/search`：按文本、设备型号、单张故障图片联合检索知识条目，返回出处、有效检索词、图片识别线索和处理提示
 - `POST /api/v1/tasks`：根据知识引用生成标准化检修任务和作业步骤
 - `PATCH /api/v1/tasks/{id}/steps/{step_id}`：更新检修步骤执行状态与备注
 - `POST /api/v1/cases`：上传待审核检修案例，沉淀任务执行结果和知识引用
@@ -41,9 +41,9 @@
 - `knowledge_search.html`：多模态知识检索联调页，支持图片预览、识别线索展示和知识引用结果
 - `maintenance_tasks.html`：标准化检修任务联调页，支持任务生成、步骤执行、历史查看和导出摘要
 - `case_reviews.html`：案例沉淀与审核联调页，支持案例上传、人工修正、审核入库和后续回流展示
-- `front-end/`：正式前端工程骨架，已提供工作台、知识检索、文档导入管理、任务、案例、历史与 Agent 页面入口
+- `front-end/`：正式前端工程骨架，已提供工作台、知识检索、PDF/图片导入管理、任务、案例、历史与 Agent 页面入口
 - Alembic 管理数据库 schema，不再依赖隐式建表
-- 当前测试结果：`58 passed, 4 skipped`
+- 当前测试结果：`60 passed, 4 skipped`
 
 ## 软件杯赛题适配（当前冻结版）
 
@@ -196,7 +196,7 @@ softbei_workbench.html  正式工作台
 diagnosis_console.html  智能分析子模块控制台
 docs/                   MVP 级部署和演示文档
 deploy/systemd/         Linux 部署示例
-front-end/              Next.js 正式前端工程骨架（工作台 / 知识 / 任务 / 案例 / 历史 / Agent）
+front-end/              Next.js 正式前端工程骨架（工作台 / 知识 / OCR 导入 / 任务 / 案例 / 历史 / Agent）
 ```
 
 ## 当前还没做的事

@@ -9,6 +9,7 @@ class KnowledgeImportJobResponse(BaseModel):
 
     id: int
     import_type: str
+    processing_note: str | None = None
     title: str | None = None
     source_name: str
     source_type: str
@@ -37,6 +38,8 @@ class KnowledgeImportJobListResponse(BaseModel):
 class KnowledgeImportPreviewResponse(BaseModel):
     """Preview payload returned before a PDF import is confirmed."""
 
+    import_type: str
+    processing_note: str | None = None
     normalized_title: str
     source_name: str
     source_type: str

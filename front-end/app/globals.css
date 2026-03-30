@@ -242,7 +242,8 @@ textarea {
 
 .resultCard,
 .tableCard,
-.infoStrip {
+.infoStrip,
+.imagePreviewCard {
   border-radius: 22px;
   padding: 1rem;
 }
@@ -356,6 +357,22 @@ textarea {
 .historyList {
   display: grid;
   gap: 0.85rem;
+}
+
+.imagePreviewCard {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px dashed var(--border);
+  background: rgba(8, 18, 32, 0.6);
+}
+
+.thumbnailPreview {
+  width: min(100%, 360px);
+  max-height: 220px;
+  object-fit: contain;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: rgba(3, 10, 18, 0.75);
 }
 
 @media (max-width: 1100px) {

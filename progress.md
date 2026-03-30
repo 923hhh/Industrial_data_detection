@@ -335,6 +335,35 @@
   - `tests/test_phase19_knowledge_imports.py` (updated)
   - `README.md` (updated)
 
+### 三个月大改计划：OCR 与正式图片上传入口
+- **Status:** phase 2 multimodal import complete
+- **Started:** 2026-03-30
+- Actions taken:
+  - 新增 `KnowledgeOcrService`，为图片型知识导入和正式图片上传入口提供统一 OCR/视觉文本抽取抽象
+  - 将 `POST /api/v1/knowledge/imports/preview` 与 `POST /api/v1/knowledge/imports` 从“仅支持 PDF”扩展为“支持 PDF + 图片 OCR 导入”
+  - 为图片导入增加 `image_ocr / image_fallback` 区分，并在预览和任务详情中返回 `processing_note`
+  - 将 Next.js 知识中心升级为支持图片上传预览、OCR 导入预览、导入记录处理提示和正式图片检索入口
+  - 在正式知识检索面板中展示 `image_analysis`、有效检索词、处理来源和 OCR/视觉告警
+  - 扩展 `tests/test_phase19_knowledge_imports.py` 覆盖 PNG 预览与图片导入上传
+  - 验证 `pytest -q tests/test_phase19_knowledge_imports.py` 通过
+  - 验证全量 `pytest -q` 结果更新为 `60 passed, 4 skipped`
+  - 验证 `front-end` 的 `npm run typecheck` 通过
+- Files created/modified:
+  - `app/services/ocr_service.py` (created)
+  - `app/services/knowledge_import_service.py` (updated)
+  - `app/routers/knowledge.py` (updated)
+  - `app/schemas/knowledge_imports.py` (updated)
+  - `app/services/__init__.py` (updated)
+  - `app/integrations/__init__.py` (updated)
+  - `front-end/components/knowledge-import-panel.tsx` (updated)
+  - `front-end/components/knowledge-import-history.tsx` (updated)
+  - `front-end/components/knowledge-management-center.tsx` (updated)
+  - `front-end/components/knowledge-search-panel.tsx` (updated)
+  - `front-end/lib/types.ts` (updated)
+  - `front-end/app/globals.css` (updated)
+  - `tests/test_phase19_knowledge_imports.py` (updated)
+  - `README.md` (updated)
+
 ### 三个月大改计划：阶段增补项冻结
 - **Status:** planning updated
 - **Started:** 2026-03-30

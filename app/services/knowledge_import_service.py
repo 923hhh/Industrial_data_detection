@@ -1,6 +1,7 @@
 """Formal knowledge import management service for the Next.js knowledge center."""
 from __future__ import annotations
 
+import mimetypes
 from datetime import datetime
 from typing import Any
 
@@ -10,7 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.integrations.pdf_import import PdfKnowledgeImportService
 from app.models.knowledge import KnowledgeChunk, KnowledgeDocument, KnowledgeImportJob
 from app.schemas.knowledge import KnowledgeDocumentCreate
-from app.services.knowledge_service import KnowledgeService
+from app.services.knowledge_service import KnowledgeService, split_text_into_chunks
+from app.services.ocr_service import KnowledgeOcrService
+
+IMAGE_MIME_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 
 
 class KnowledgeImportService:
@@ -20,12 +25,14 @@ class KnowledgeImportService:
         self.session = session
         self.importer = PdfKnowledgeImportService()
         self.knowledge_service = KnowledgeService(session)
+        self.ocr_service = KnowledgeOcrService()
 
     async def import_pdf_upload(
         self,
         *,
         filename: str,
         file_bytes: bytes,
+        content_type: str | None,
         title: str | None,
         equipment_type: str,
         equipment_model: str | None,
@@ -34,12 +41,16 @@ class KnowledgeImportService:
         source_type: str = "manual",
         replace_existing: bool = False,
     ) -> dict[str, Any]:
-        """Import an uploaded PDF into the knowledge base and persist a job record."""
+        """Import an uploaded PDF or image into the knowledge base and persist a job record."""
         normalized_title = (title or "").strip() or self._derive_title(filename)
         source_name = filename.strip()
+        import_type, processing_note = self._classify_import_file(
+            filename=filename,
+            content_type=content_type,
+        )
 
         job = KnowledgeImportJob(
-            import_type="pdf",
+            import_type=import_type,
             title=normalized_title,
             source_name=source_name,
             source_type=source_type,
@@ -60,12 +71,20 @@ class KnowledgeImportService:
                 if existing is not None:
                     raise ValueError("已存在同名知识文档，请勾选覆盖导入后重试。")
 
-            pages = self.importer.extract_pages_from_bytes(file_bytes)
-            content = self.importer.build_document_content(pages)
-            chunk_payloads = self.importer.build_chunk_payloads(
+            prepared = await self._prepare_upload_content(
+                import_type=import_type,
+                filename=filename,
+                file_bytes=file_bytes,
+                content_type=content_type,
                 title=normalized_title,
-                pages=pages,
+                equipment_type=equipment_type,
+                equipment_model=equipment_model,
+                fault_type=fault_type,
+                section_reference=section_reference,
             )
+            job.import_type = prepared.get("final_import_type", import_type)
+            content = prepared["content"]
+            chunk_payloads = prepared["chunk_payloads"]
             document_request = KnowledgeDocumentCreate(
                 title=normalized_title,
                 source_name=source_name,
@@ -74,7 +93,7 @@ class KnowledgeImportService:
                 equipment_model=equipment_model,
                 fault_type=fault_type,
                 section_reference=section_reference,
-                page_reference=f"P1-P{pages[-1].page_number}",
+                page_reference=prepared["page_reference"],
                 content=content,
             )
 
@@ -88,7 +107,7 @@ class KnowledgeImportService:
 
             job = await self._load_job(job.id)
             job.status = "completed"
-            job.page_count = len(pages)
+            job.page_count = prepared["page_count"]
             job.chunk_count = chunk_count
             job.document_id = document.id
             job.preview_excerpt = chunk_payloads[0]["content"][:220] if chunk_payloads else None
@@ -96,7 +115,10 @@ class KnowledgeImportService:
             job.updated_at = datetime.utcnow()
             await self.session.commit()
             await self.session.refresh(job)
-            return self._serialize_job(job)
+            return self._serialize_job(
+                job,
+                processing_note=prepared.get("processing_note") or processing_note,
+            )
         except Exception as exc:
             await self.session.rollback()
             job = await self._load_job(job.id)
@@ -105,13 +127,14 @@ class KnowledgeImportService:
             job.updated_at = datetime.utcnow()
             await self.session.commit()
             await self.session.refresh(job)
-            return self._serialize_job(job)
+            return self._serialize_job(job, processing_note=processing_note)
 
     async def preview_pdf_upload(
         self,
         *,
         filename: str,
         file_bytes: bytes,
+        content_type: str | None,
         title: str | None,
         equipment_type: str,
         equipment_model: str | None,
@@ -120,22 +143,37 @@ class KnowledgeImportService:
         source_type: str = "manual",
         replace_existing: bool = False,
     ) -> dict[str, Any]:
-        """Preview a PDF import without persisting it into the knowledge base."""
+        """Preview a PDF or image import without persisting it into the knowledge base."""
         normalized_title = (title or "").strip() or self._derive_title(filename)
         source_name = filename.strip()
-        pages = self.importer.extract_pages_from_bytes(file_bytes)
-        chunk_payloads = self.importer.build_chunk_payloads(
-            title=normalized_title,
-            pages=pages,
+        import_type, processing_note = self._classify_import_file(
+            filename=filename,
+            content_type=content_type,
         )
+        prepared = await self._prepare_upload_content(
+            import_type=import_type,
+            filename=filename,
+            file_bytes=file_bytes,
+            content_type=content_type,
+            title=normalized_title,
+            equipment_type=equipment_type,
+            equipment_model=equipment_model,
+            fault_type=fault_type,
+            section_reference=section_reference,
+        )
+        chunk_payloads = prepared["chunk_payloads"]
         existing = await self._find_existing_document(source_name)
         existing_document_detected = existing is not None
         warning_message = None
 
         if existing_document_detected and not replace_existing:
             warning_message = "已存在同名知识文档，确认导入前请勾选覆盖导入或调整文件名。"
+        elif prepared.get("processing_warning"):
+            warning_message = prepared["processing_warning"]
 
         return {
+            "import_type": prepared.get("final_import_type", import_type),
+            "processing_note": prepared.get("processing_note") or processing_note,
             "normalized_title": normalized_title,
             "source_name": source_name,
             "source_type": source_type,
@@ -144,7 +182,7 @@ class KnowledgeImportService:
             "fault_type": fault_type,
             "section_reference": section_reference,
             "replace_existing": replace_existing,
-            "page_count": len(pages),
+            "page_count": prepared["page_count"],
             "chunk_count": len(chunk_payloads),
             "preview_excerpt": chunk_payloads[0]["content"][:220] if chunk_payloads else None,
             "existing_document_detected": existing_document_detected,
@@ -306,10 +344,16 @@ class KnowledgeImportService:
             raise ValueError("指定的知识文档不存在。")
         return document
 
-    def _serialize_job(self, job: KnowledgeImportJob) -> dict[str, Any]:
+    def _serialize_job(
+        self,
+        job: KnowledgeImportJob,
+        *,
+        processing_note: str | None = None,
+    ) -> dict[str, Any]:
         return {
             "id": job.id,
             "import_type": job.import_type,
+            "processing_note": processing_note or self._build_processing_note(job.import_type),
             "title": job.title,
             "source_name": job.source_name,
             "source_type": job.source_type,
@@ -331,3 +375,102 @@ class KnowledgeImportService:
     def _derive_title(self, filename: str) -> str:
         stem = filename.rsplit(".", maxsplit=1)[0]
         return stem.strip() or "未命名知识文档"
+
+    def _classify_import_file(self, *, filename: str, content_type: str | None) -> tuple[str, str | None]:
+        extension = ""
+        if "." in filename:
+            extension = f".{filename.rsplit('.', maxsplit=1)[-1].lower()}"
+        normalized_content_type = (content_type or "").lower().strip()
+
+        if extension == ".pdf" or normalized_content_type == "application/pdf":
+            return "pdf", None
+
+        guessed_content_type, _ = mimetypes.guess_type(filename)
+        effective_content_type = normalized_content_type or (guessed_content_type or "").lower()
+        if extension in IMAGE_EXTENSIONS or effective_content_type in IMAGE_MIME_TYPES:
+            return (
+                "image_ocr",
+                "当前文件将按图片 OCR 流程导入知识库，建议导入后抽查来源回溯和分段预览。",
+            )
+
+        raise ValueError("当前仅支持 PDF、PNG、JPG/JPEG 或 WEBP 文件导入。")
+
+    async def _prepare_upload_content(
+        self,
+        *,
+        import_type: str,
+        filename: str,
+        file_bytes: bytes,
+        content_type: str | None,
+        title: str,
+        equipment_type: str,
+        equipment_model: str | None,
+        fault_type: str | None,
+        section_reference: str | None,
+    ) -> dict[str, Any]:
+        if import_type == "pdf":
+            pages = self.importer.extract_pages_from_bytes(file_bytes)
+            return {
+                "content": self.importer.build_document_content(pages),
+                "chunk_payloads": self.importer.build_chunk_payloads(title=title, pages=pages),
+                "page_reference": f"P1-P{pages[-1].page_number}",
+                "page_count": len(pages),
+                "final_import_type": "pdf",
+                "processing_note": None,
+                "processing_warning": None,
+            }
+
+        ocr_result = await self.ocr_service.extract_text(
+            image_bytes=file_bytes,
+            image_mime_type=(content_type or "").strip() or "image/jpeg",
+            image_filename=filename,
+            equipment_type=equipment_type,
+            equipment_model=equipment_model,
+            title=title,
+            section_reference=section_reference,
+        )
+        chunk_payloads = self._build_image_chunk_payloads(
+            title=title,
+            recognized_text=ocr_result.recognized_text,
+            section_reference=section_reference,
+        )
+        return {
+            "content": ocr_result.recognized_text,
+            "chunk_payloads": chunk_payloads,
+            "page_reference": "IMG1",
+            "page_count": 1,
+            "final_import_type": "image_ocr" if ocr_result.source == "vision_model" else "image_fallback",
+            "processing_note": (
+                "图片已通过视觉 OCR 提取为知识文本。"
+                if ocr_result.source == "vision_model"
+                else "图片已按回退模式生成可导入文本，请在导入后人工校对。"
+            ),
+            "processing_warning": ocr_result.warning,
+        }
+
+    def _build_image_chunk_payloads(
+        self,
+        *,
+        title: str,
+        recognized_text: str,
+        section_reference: str | None,
+    ) -> list[dict[str, str | None]]:
+        chunks = split_text_into_chunks(recognized_text, max_chars=420)
+        payloads: list[dict[str, str | None]] = []
+        for index, chunk_text in enumerate(chunks, start=1):
+            payloads.append(
+                {
+                    "heading": f"{title} - OCR 导入 - 第 {index} 段",
+                    "content": chunk_text,
+                    "page_reference": "IMG1",
+                    "section_reference": section_reference,
+                }
+            )
+        return payloads
+
+    def _build_processing_note(self, import_type: str) -> str | None:
+        if import_type == "image_ocr":
+            return "图片已通过视觉 OCR 导入知识库，建议结合来源回溯进行人工校对。"
+        if import_type == "image_fallback":
+            return "图片按回退模式生成导入文本，建议后续补充人工转写或重新 OCR。"
+        return None

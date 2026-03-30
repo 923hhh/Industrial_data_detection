@@ -7,6 +7,7 @@ from app.services.image_analysis_service import FaultImageAnalysisService
 from app.services.knowledge_import_service import KnowledgeImportService
 from app.services.knowledge_service import KnowledgeService, split_text_into_chunks
 from app.services.maintenance_task_service import MaintenanceTaskService
+from app.services.ocr_service import ImageOcrResult, KnowledgeOcrService
 from app.services.workbench_service import WorkbenchOverviewService
 
 __all__ = [
@@ -16,6 +17,8 @@ __all__ = [
     "KnowledgeService",
     "KnowledgeImportService",
     "FaultImageAnalysisService",
+    "KnowledgeOcrService",
+    "ImageOcrResult",
     "MaintenanceTaskService",
     "WorkbenchOverviewService",
     "split_text_into_chunks",

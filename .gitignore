@@ -51,6 +51,8 @@ node_modules/
 .next/
 front-end/node_modules/
 front-end/.next/
+*.tsbuildinfo
+front-end/tsconfig.tsbuildinfo
 
 # ========================
 # 5. 测试与覆盖率
