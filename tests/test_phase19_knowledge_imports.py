@@ -1,5 +1,5 @@
 """Phase 19: 正式知识导入管理接口测试."""
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
@@ -44,8 +44,8 @@ async def test_knowledge_import_upload_endpoint():
         "document_id": 18,
         "preview_excerpt": "火花塞检查与拆装步骤。",
         "error_message": None,
-        "created_at": datetime.now(UTC),
-        "updated_at": datetime.now(UTC),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
     }
 
     with patch(
@@ -106,8 +106,8 @@ async def test_get_knowledge_import_job_endpoint():
         "document_id": None,
         "preview_excerpt": None,
         "error_message": "已存在同名知识文档，请勾选覆盖导入后重试。",
-        "created_at": datetime.now(UTC),
-        "updated_at": datetime.now(UTC),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
     }
 
     with patch(
@@ -138,8 +138,8 @@ async def test_list_knowledge_documents_endpoint():
             "fault_type": None,
             "status": "published",
             "chunk_count": 41,
-            "created_at": datetime.now(UTC),
-            "updated_at": datetime.now(UTC),
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
         }
     ]
 

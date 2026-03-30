@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from collections import OrderedDict
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -125,7 +125,7 @@ class AgentOrchestrationService:
             "risk_findings": risk_findings,
             "case_suggestions": case_suggestions,
             "agents": agents,
-            "created_at": datetime.now(UTC),
+            "created_at": datetime.now(timezone.utc),
         }
         _InMemoryAgentRunStore.put(run_payload)
         return run_payload

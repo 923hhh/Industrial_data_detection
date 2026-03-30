@@ -1,7 +1,7 @@
 """Aggregated workbench overview service."""
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -57,7 +57,7 @@ class WorkbenchOverviewService:
         recent_cases = await self.case_service.list_cases(limit=5)
 
         return {
-            "generated_at": datetime.now(UTC),
+            "generated_at": datetime.now(timezone.utc),
             "stats": [
                 {"key": "knowledge_documents", "label": "知识文档", "value": published_documents, "accent": "cyan"},
                 {"key": "knowledge_chunks", "label": "知识分段", "value": knowledge_chunks, "accent": "blue"},

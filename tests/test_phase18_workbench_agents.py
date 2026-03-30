@@ -1,5 +1,5 @@
 """Phase 18: 正式工作台与 Agent 协作骨架测试."""
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
@@ -30,7 +30,7 @@ def override_db_session():
 async def test_workbench_overview_endpoint():
     """工作台概览端点返回聚合统计和最近业务项。"""
     mocked_payload = {
-        "generated_at": datetime.now(UTC),
+        "generated_at": datetime.now(timezone.utc),
         "stats": [
             {"key": "knowledge_documents", "label": "知识文档", "value": 12, "accent": "cyan"},
             {"key": "knowledge_chunks", "label": "知识分段", "value": 88, "accent": "blue"},
@@ -47,7 +47,7 @@ async def test_workbench_overview_endpoint():
                 "status": "in_progress",
                 "total_steps": 5,
                 "completed_steps": 2,
-                "updated_at": datetime.now(UTC),
+                "updated_at": datetime.now(timezone.utc),
             }
         ],
         "recent_cases": [
@@ -58,7 +58,7 @@ async def test_workbench_overview_endpoint():
                 "equipment_model": "LX200",
                 "status": "pending_review",
                 "task_id": 1,
-                "updated_at": datetime.now(UTC),
+                "updated_at": datetime.now(timezone.utc),
             }
         ],
     }
@@ -110,7 +110,7 @@ async def test_agent_assist_endpoint():
                 "citations": ["发动机维修手册#P1"],
             }
         ],
-        "created_at": datetime.now(UTC),
+        "created_at": datetime.now(timezone.utc),
     }
 
     with patch(
