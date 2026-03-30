@@ -361,3 +361,10 @@
   - `docs/SOFTBEI_SUBMISSION_CHECKLIST.md`
 - 已将 `README.md` 补充为正式材料导航入口。
 - 当前 `TODO-SB-8` 已从“未开始”切换为“进行中”，后续仍需补齐真实 PPT、视频、最终提交包和截图证据。
+
+### 2026-03-30（路线 B：知识检索稳定性优化）
+
+- 已为知识检索增加长中文故障描述的 query rewrite，将自然语言故障描述收敛成更稳定的检修术语集合。
+- 已为多模态检索响应新增 `effective_keywords`，便于正式工作台、测试报告和答辩材料直接展示“有效检索词”。
+- 已为图片 fallback 增加英文文件名到中文检修术语的映射，降低现场上传 `spark-plug`、`timing-chain`、`oil-leak` 类图片时的空结果风险。
+- 已补充知识检索单测与评测回归，当前全量 `pytest -q` 结果更新为 `46 passed, 4 skipped`。

@@ -114,6 +114,7 @@ class KnowledgeSearchResponse(BaseModel):
 
     query: str | None = None
     effective_query: str | None = None
+    effective_keywords: list[str] = Field(default_factory=list)
     image_analysis: KnowledgeImageAnalysis | None = None
     total: int
     results: list[KnowledgeSearchHit]

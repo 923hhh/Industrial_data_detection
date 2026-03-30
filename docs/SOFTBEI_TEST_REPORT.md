@@ -11,7 +11,7 @@
 
 ## 2. 测试环境
 
-- 代码版本：当前仓库 `TODO-SB-7` 阶段实现
+- 代码版本：当前仓库 `TODO-SB-7 + 路线 B 检索稳定性优化` 阶段实现
 - 运行命令：`venv\Scripts\python.exe scripts\run_softbei_eval.py`
 - 评测脚本：[run_softbei_eval.py](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/scripts/run_softbei_eval.py)
 - 结果文件：[softbei_eval_results.json](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/evaluation/softbei_eval_results.json)
@@ -102,6 +102,14 @@
 2. `案例审核入库触发 async lazy-load`
    - 现象：审核通过时访问 `document.chunks` 触发 `MissingGreenlet`
    - 修复：在 [case_service.py](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/app/services/case_service.py) 中改为显式删除旧分段并 `add_all` 新分段，避免异步惰性加载
+
+3. `长中文故障描述在正式检索环境下命中不稳定`
+   - 现象：直接使用长段自然语言查询时，即使知识库中存在相关手册，也可能因中文全文检索粒度问题返回空结果
+   - 修复：在 [knowledge_service.py](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/app/services/knowledge_service.py) 中增加 query rewrite 与 `effective_keywords`，先将故障描述收敛为稳定检修术语，再进入检索主链
+
+4. `图片 fallback 依赖中文文件名，英文文件名场景不稳定`
+   - 现象：现场上传 `spark-plug`、`timing-chain`、`oil-leak` 这类英文命名图片时，兜底检索线索不足
+   - 修复：在 [image_analysis_service.py](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/app/services/image_analysis_service.py) 中增加英文文件名到中文检修术语的映射
 
 ## 8. 当前结论
 

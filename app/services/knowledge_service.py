@@ -97,6 +97,38 @@ SEARCH_SYNONYM_MAP = {
     "机油渗漏": ["渗漏", "油封", "缸盖垫片"],
     "温度偏高": ["高温", "润滑", "机油液位"],
 }
+QUERY_REWRITE_RULES = [
+    {
+        "name": "启动困难-点火积碳",
+        "requires": ["启动困难"],
+        "any_of": ["火花塞", "积碳", "点火异常", "点火系统", "失火"],
+        "add": ["火花塞", "积碳", "点火系统", "点火线圈"],
+    },
+    {
+        "name": "怠速与供油",
+        "requires": ["怠速不稳"],
+        "any_of": ["冷启动困难", "喷油嘴", "回火", "加速无力"],
+        "add": ["喷油嘴", "空气滤芯", "供油", "节气门"],
+    },
+    {
+        "name": "正时异响",
+        "requires": ["异响"],
+        "any_of": ["正时", "正时链条", "张紧器", "金属异响"],
+        "add": ["正时链条", "张紧器", "气门间隙"],
+    },
+    {
+        "name": "机油渗漏",
+        "requires": ["渗漏"],
+        "any_of": ["机油", "缸盖", "油封", "垫片"],
+        "add": ["机油渗漏", "缸盖垫片", "油封"],
+    },
+    {
+        "name": "高温润滑",
+        "requires": ["温度偏高"],
+        "any_of": ["高温", "动力下降", "功率下降", "润滑"],
+        "add": ["润滑", "机油液位", "散热"],
+    },
+]
 
 
 def split_text_into_chunks(content: str, max_chars: int = 480) -> list[str]:
@@ -290,7 +322,6 @@ class KnowledgeService:
     async def search_multimodal(self, request: KnowledgeSearchRequest) -> dict[str, Any]:
         """Search knowledge with optional image-derived retrieval hints."""
         image_analysis = None
-        effective_query = request.query
 
         if request.image_base64:
             image_analysis = await self.image_analysis_service.analyze(
@@ -303,6 +334,14 @@ class KnowledgeService:
                 model_provider=request.model_provider,
                 model_name=request.model_name,
             )
+        effective_keywords = self._build_effective_keywords(
+            query=request.query,
+            equipment_model=request.equipment_model,
+            fault_type=request.fault_type,
+            image_keywords=image_analysis.keywords if image_analysis is not None else None,
+        )
+        effective_query = " ".join(effective_keywords) if effective_keywords else request.query
+        if request.image_base64 and image_analysis is not None and not effective_query:
             effective_query = self.image_analysis_service.merge_query(
                 query=request.query,
                 analysis=image_analysis,
@@ -315,6 +354,7 @@ class KnowledgeService:
         return {
             "query": request.query,
             "effective_query": effective_query,
+            "effective_keywords": effective_keywords,
             "image_analysis": (
                 {
                     "summary": image_analysis.summary,
@@ -397,6 +437,42 @@ class KnowledgeService:
         reasons.append(f"来源于 {document.source_name}")
         return "，".join(reasons)
 
+    def _build_effective_keywords(
+        self,
+        query: str | None,
+        equipment_model: str | None,
+        fault_type: str | None,
+        image_keywords: list[str] | None = None,
+    ) -> list[str]:
+        """Build a deterministic rewritten keyword set for retrieval and UI display."""
+        base_tokens = self._extract_search_tokens(query or "") if query else []
+        combined = list(base_tokens)
+
+        if fault_type:
+            combined.extend(self._extract_search_tokens(fault_type))
+        if image_keywords:
+            for keyword in image_keywords:
+                combined.extend(self._extract_search_tokens(keyword))
+        if equipment_model:
+            combined.append(equipment_model)
+
+        combined = self._apply_query_rewrite_rules(query or "", combined)
+
+        deduped: list[str] = []
+        seen: set[str] = set()
+        for token in combined:
+            normalized = token.strip()
+            if not normalized:
+                continue
+            lowered = normalized.lower()
+            if lowered in seen:
+                continue
+            seen.add(lowered)
+            deduped.append(normalized)
+            if len(deduped) >= SEARCH_TOKEN_LIMIT:
+                break
+        return deduped
+
     def _extract_search_tokens(self, query: str) -> list[str]:
         """Extract deterministic retrieval tokens for Chinese/English maintenance queries."""
         normalized = query.strip()
@@ -458,6 +534,30 @@ class KnowledgeService:
                     continue
                 seen.add(lowered)
                 expanded.append(alias)
+                if len(expanded) >= SEARCH_TOKEN_LIMIT:
+                    return expanded
+
+        return expanded
+
+    def _apply_query_rewrite_rules(self, query: str, tokens: list[str]) -> list[str]:
+        """Inject canonical maintenance terms when a known symptom pattern appears."""
+        expanded = list(tokens)
+        joined_text = " ".join([query, *tokens]).lower()
+        seen = {token.lower() for token in expanded}
+
+        for rule in QUERY_REWRITE_RULES:
+            required = [part.lower() for part in rule["requires"]]
+            any_of = [part.lower() for part in rule["any_of"]]
+            if not all(part in joined_text for part in required):
+                continue
+            if any_of and not any(part in joined_text for part in any_of):
+                continue
+            for addition in rule["add"]:
+                lowered = addition.lower()
+                if lowered in seen:
+                    continue
+                seen.add(lowered)
+                expanded.append(addition)
                 if len(expanded) >= SEARCH_TOKEN_LIMIT:
                     return expanded
 

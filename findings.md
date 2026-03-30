@@ -13,7 +13,7 @@
 - LangGraph 官方 Multi-Agent 模式使用 `StateGraph` + `add_node` + `add_edge`
 - FastAPI `StreamingResponse` 需要 `generate()` 生成器配合
 - `pytest-asyncio` 支持异步测试函数，`httpx.AsyncClient` 用于异步 HTTP 测试
-- 当前全量测试结果为 `43 passed, 4 skipped`
+- 当前全量测试结果为 `46 passed, 4 skipped`
 - 仓库此前缺少面向评审和部署的正式 README、部署文档、CI workflow 和 Dockerfile
 
 ## Technical Decisions
@@ -65,7 +65,12 @@
 | 软件杯冲奖阶段按“材料完整度 > 演示稳定性 > 知识质量与检索效果 > 前端成品感 > 工程化加分”排序投入资源 | 避免继续平均发力，把时间优先用在评委最直接感知的得分项上 |
 | 指定设备型号时允许命中 `equipment_model` 为空的通用手册条目 | 通用维修手册本就应可服务具体型号检修，严格等值过滤会造成网页空结果 |
 | 为知识检索增加检修术语同义词扩展 | 降低“动力下降/功率下降”“点火异常/点火系统”等表述差异带来的漏检 |
+| 长中文故障描述先重写为稳定检修关键词集合再检索 | 直接拿整段自然语言做中文全文检索不稳定，需要先收敛成可命中的检修术语 |
+| 图片兜底链路对英文文件名做检修术语映射 | 现场上传图片时常见英文文件名，需先映射到中文部件/故障词，再复用知识检索主链 |
 | TODO-SB-8 的正式提交材料先统一写成 Markdown 源文件 | 便于后续从同一份内容衍生 PPT、视频脚本、部署说明和提交包，避免口径漂移 |
+| 后端中层重组采用 `bootstrap / shared / modules / integrations / persistence` 五层结构 | 借鉴参考项目的分层思想，但保持当前 FastAPI 技术栈和 API 稳定，不做前端迁移 |
+| `app/main.py` 退化为唯一 ASGI 壳入口 | 保持部署命令不变，同时把应用装配逻辑集中到 `app.bootstrap` |
+| 本轮仅预留 `front-end/` 目录，不迁移现有静态页面 | 当前比赛阶段优先稳住后端边界和演示路径，后续再切 React + Next.js |
 
 ## Issues Encountered
 | Issue | Resolution |

@@ -44,6 +44,37 @@ _IGNORE_TOKENS = {
     "故障",
     "上传",
 }
+_ALIAS_KEYWORDS = {
+    "spark": "火花塞",
+    "plug": "火花塞",
+    "ignition": "点火系统",
+    "coil": "点火线圈",
+    "wire": "点火线束",
+    "wiring": "点火线束",
+    "idle": "怠速不稳",
+    "starter": "起动电机",
+    "motor": "起动电机",
+    "timing": "正时链条",
+    "chain": "正时链条",
+    "tensioner": "张紧器",
+    "oil": "机油",
+    "leak": "机油渗漏",
+    "seal": "油封",
+    "gasket": "缸盖垫片",
+    "temperature": "温度偏高",
+    "overheat": "温度偏高",
+    "smoke": "排气冒黑烟",
+    "black": "排气冒黑烟",
+    "throttle": "节气门",
+    "carbon": "积碳",
+}
+_COMPOSITE_HINTS = [
+    (("spark", "plug"), ["火花塞"]),
+    (("timing", "chain"), ["正时链条"]),
+    (("oil", "leak"), ["机油渗漏"]),
+    (("starter", "motor"), ["起动电机"]),
+    (("black", "smoke"), ["排气冒黑烟"]),
+]
 
 
 @dataclass
@@ -192,6 +223,7 @@ class FaultImageAnalysisService:
             text = str(value).strip()
             if not text:
                 continue
+            text = _ALIAS_KEYWORDS.get(text.lower(), text)
             lowered = text.lower()
             if lowered in seen:
                 continue
@@ -201,11 +233,15 @@ class FaultImageAnalysisService:
 
     def _extract_keywords(self, raw_text: str) -> list[str]:
         tokens = []
+        lowered_text = raw_text.lower()
+        for parts, aliases in _COMPOSITE_HINTS:
+            if all(part in lowered_text for part in parts):
+                tokens.extend(aliases)
         for token in _TOKEN_PATTERN.findall(raw_text):
             lowered = token.lower()
             if lowered in _IGNORE_TOKENS:
                 continue
-            tokens.append(token)
+            tokens.append(_ALIAS_KEYWORDS.get(lowered, token))
         return self._normalize_keywords(tokens)
 
     def _create_multimodal_llm(self, model_provider: str, model_name: str | None) -> Any | None:

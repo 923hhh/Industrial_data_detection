@@ -6,12 +6,14 @@
 
 当前仓库已进入**软件杯赛题适配阶段**。面向第十五届中国软件杯赛题《基于多模态大模型技术的设备检修知识检索与作业系统》，当前作品定义已冻结为“设备检修知识与作业助手”，现有工业故障诊断链路保留为**智能分析子模块**，不再作为主产品入口。
 
+当前后端已完成一轮**中等架构重组**：在不改变 FastAPI、PostgreSQL、Alembic 和现有静态前端页面的前提下，引入了 `bootstrap / shared / modules / integrations / persistence` 五层结构，为后续 `React + Next.js` 前端工程化预留稳定 API 边界。
+
 ## 当前能力
 
 - `POST /api/v1/diagnose`：返回完整诊断报告
 - `GET /api/v1/diagnose/stream`：通过 SSE 返回节点进度和最终报告
 - `POST /api/v1/knowledge/documents`：导入检修知识文本并自动拆分为可检索分段
-- `POST /api/v1/knowledge/search`：按文本、设备型号、单张故障图片联合检索知识条目并返回出处
+- `POST /api/v1/knowledge/search`：按文本、设备型号、单张故障图片联合检索知识条目，返回出处、有效检索词和图片识别线索
 - `POST /api/v1/tasks`：根据知识引用生成标准化检修任务和作业步骤
 - `PATCH /api/v1/tasks/{id}/steps/{step_id}`：更新检修步骤执行状态与备注
 - `POST /api/v1/cases`：上传待审核检修案例，沉淀任务执行结果和知识引用
@@ -28,7 +30,7 @@
 - `maintenance_tasks.html`：标准化检修任务联调页，支持任务生成、步骤执行、历史查看和导出摘要
 - `case_reviews.html`：案例沉淀与审核联调页，支持案例上传、人工修正、审核入库和后续回流展示
 - Alembic 管理数据库 schema，不再依赖隐式建表
-- 当前测试结果：`43 passed, 4 skipped`
+- 当前测试结果：`46 passed, 4 skipped`
 
 ## 软件杯赛题适配（当前冻结版）
 
@@ -165,6 +167,11 @@ venv\Scripts\python.exe scripts/run_softbei_eval.py
 
 ```text
 app/                    FastAPI 应用、路由、服务、智能体
+app/bootstrap/          应用工厂、lifespan、中间件、路由装配
+app/shared/             配置、数据库、日志等共享基础设施
+app/modules/            按业务域组织的知识、任务、案例、诊断模块
+app/integrations/       图片分析、PDF 导入、智能体/LLM 适配
+app/persistence/        面向业务域整理的模型导出层
 alembic/                Alembic 迁移环境与版本脚本
 scripts/                初始化数据库和导入数据脚本
 tests/                  异步接口、流式链路和回归测试
@@ -173,6 +180,7 @@ softbei_workbench.html  正式工作台
 diagnosis_console.html  智能分析子模块控制台
 docs/                   MVP 级部署和演示文档
 deploy/systemd/         Linux 部署示例
+front-end/              未来 React + Next.js 前端工程目录预留
 ```
 
 ## 当前还没做的事

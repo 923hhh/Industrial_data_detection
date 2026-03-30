@@ -94,11 +94,12 @@ Phase 14：软件杯赛题适配（Stage 1 已冻结）
 - 必须保持 Pydantic V2 和 SQLAlchemy 2.0 异步语法
 
 ## Current Verified Status
-- `pytest -q` 当前结果：43 通过 / 4 跳过
+- `pytest -q` 当前结果：46 通过 / 4 跳过
 - SSE 流式接口契约：`GET /api/v1/diagnose/stream`
 - 数据库初始化方式：`scripts/init_db.py --init-only` 或 `alembic upgrade head`
 - 正式工作台已接管前端主入口，旧 SSE 调试台已降级为智能分析子模块
 - 软件杯冲奖阶段优先级：见 `docs/SOFTBEI_AWARD_PRIORITY.md`
+- 后端已完成 `bootstrap / shared / modules / integrations / persistence` 中层重组，前端静态页面保持不变
 
 ## Phase 13: MVP 交付补齐
 - [x] 补 README 和演示说明

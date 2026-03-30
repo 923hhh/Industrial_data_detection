@@ -1,4 +1,5 @@
 """Phase 14: 知识库与知识检索主体测试."""
+import base64
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
@@ -8,6 +9,7 @@ from httpx import ASGITransport, AsyncClient
 from app.core.database import get_session
 from app.main import app
 from app.schemas.knowledge import KnowledgeSearchRequest
+from app.services.image_analysis_service import FaultImageAnalysisService, ImageAnalysisResult
 from app.services.knowledge_service import KnowledgeService, split_text_into_chunks
 
 
@@ -70,6 +72,23 @@ def test_extract_search_tokens_expands_synonyms():
     assert "火花塞" in tokens
 
 
+def test_build_effective_keywords_rewrites_fault_terms():
+    """长故障描述会被重写成更稳定的检修关键词集合。"""
+    service = KnowledgeService(session=SimpleNamespace())
+
+    keywords = service._build_effective_keywords(
+        query="发动机温度偏高，长时间运行后动力下降",
+        equipment_model="LX200",
+        fault_type="温度偏高",
+    )
+
+    assert "温度偏高" in keywords
+    assert "动力下降" in keywords
+    assert "润滑" in keywords
+    assert "机油液位" in keywords
+    assert "LX200" in keywords
+
+
 @pytest.mark.asyncio
 async def test_search_allows_generic_manual_for_specific_equipment_model():
     """指定具体型号时，通用手册条目仍应对该型号可见。"""
@@ -112,6 +131,56 @@ async def test_search_allows_generic_manual_for_specific_equipment_model():
     assert len(results) == 1
     assert results[0]["equipment_model"] is None
     assert "通用手册" in results[0]["recommendation_reason"]
+
+
+@pytest.mark.asyncio
+async def test_search_multimodal_returns_rewritten_keywords():
+    """多模态检索应返回可直接展示的重写关键词。"""
+    service = KnowledgeService(session=SimpleNamespace())
+    service.search = AsyncMock(return_value=[])
+    service.image_analysis_service.analyze = AsyncMock(
+        return_value=ImageAnalysisResult(
+            summary="火花塞积碳明显，建议检查点火系统。",
+            keywords=["spark", "plug", "积碳"],
+            source="fallback",
+        )
+    )
+
+    payload = await service.search_multimodal(
+        KnowledgeSearchRequest(
+            query="发动机启动困难，火花塞积碳明显",
+            equipment_type="摩托车发动机",
+            equipment_model="LX200",
+            fault_type="启动困难",
+            image_base64=base64.b64encode(b"fake-image").decode("ascii"),
+            image_mime_type="image/png",
+            image_filename="spark-plug-fault.png",
+        )
+    )
+
+    assert "火花塞" in payload["effective_keywords"]
+    assert "点火系统" in payload["effective_keywords"]
+    assert "LX200" in payload["effective_keywords"]
+    assert "火花塞" in payload["effective_query"]
+
+
+@pytest.mark.asyncio
+async def test_image_fallback_converts_english_filename_to_domain_terms():
+    """英文故障图片文件名也应转成中文检修术语。"""
+    service = FaultImageAnalysisService()
+
+    with patch.object(service, "_create_multimodal_llm", return_value=None):
+        result = await service.analyze(
+            image_base64=base64.b64encode(b"fake-image").decode("ascii"),
+            image_mime_type="image/png",
+            image_filename="spark-plug-oil-leak.png",
+            equipment_type="摩托车发动机",
+            equipment_model="LX200",
+        )
+
+    assert result.source == "fallback"
+    assert "火花塞" in result.keywords
+    assert "机油渗漏" in result.keywords
 
 
 @pytest.fixture(autouse=True)
@@ -173,6 +242,7 @@ async def test_search_knowledge_endpoint():
     mocked_payload = {
         "query": "启动困难",
         "effective_query": "启动困难 LX200 火花塞 供油",
+        "effective_keywords": ["启动困难", "LX200", "火花塞", "供油"],
         "image_analysis": {
             "summary": "图中疑似火花塞积碳，建议检查点火系统。",
             "keywords": ["火花塞", "积碳", "点火系统"],
@@ -217,6 +287,7 @@ async def test_search_knowledge_endpoint():
     data = response.json()
     assert data["total"] == 1
     assert data["effective_query"] == "启动困难 LX200 火花塞 供油"
+    assert data["effective_keywords"] == ["启动困难", "LX200", "火花塞", "供油"]
     assert data["image_analysis"]["source"] == "vision_model"
     assert data["results"][0]["source_name"] == "engine_manual.pdf"
     assert data["results"][0]["recommendation_reason"]

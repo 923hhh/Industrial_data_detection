@@ -23,9 +23,9 @@ import pandas as pd
 from alembic import command
 from alembic.config import Config
 
-from app.core.config import get_settings
-from app.core.database import get_engine, get_session_context
-from app.models.sensor_data import SensorData
+from app.persistence.models.sensor_data import SensorData
+from app.shared.config import get_settings
+from app.shared.database import get_engine, get_session_context
 
 
 # CSV 列名到模型字段名的映射（CSV列名 -> 模型字段名）

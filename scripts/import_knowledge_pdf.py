@@ -16,12 +16,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sqlalchemy import delete, select
 
-from app.core.config import get_settings
-from app.core.database import get_session_context
-from app.models.knowledge import KnowledgeDocument
-from app.schemas.knowledge import KnowledgeDocumentCreate
-from app.services.knowledge_service import KnowledgeService
-from app.services.pdf_import_service import PdfKnowledgeImportService
+from app.integrations.pdf_import import PdfKnowledgeImportService
+from app.modules.knowledge import KnowledgeDocumentCreate, KnowledgeService
+from app.persistence.models.knowledge import KnowledgeDocument
+from app.shared.config import get_settings
+from app.shared.database import get_session_context
 
 
 async def import_pdf(args: argparse.Namespace) -> None:

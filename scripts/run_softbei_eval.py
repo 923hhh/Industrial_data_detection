@@ -21,11 +21,12 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-import app.models  # noqa: F401  # ensure all models are registered on Base
-from app.core.database import get_session
 from app.evaluation.softbei_metrics import build_scorecard
-from app.main import app
-from app.models.sensor_data import Base
+from app.main import app as fastapi_app
+from app.persistence.models.sensor_data import Base
+from app.shared.database import get_session
+
+import app.persistence.models as persistence_models  # noqa: F401  # ensure all models are registered on Base
 
 
 CASES_PATH = ROOT / "evaluation" / "softbei_eval_cases.json"
@@ -134,8 +135,8 @@ async def create_eval_client(db_name: str) -> tuple[AsyncClient, async_sessionma
         async with session_factory() as session:
             yield session
 
-    app.dependency_overrides[get_session] = override_get_session
-    client = AsyncClient(transport=ASGITransport(app=app), base_url="http://softbei-eval")
+    fastapi_app.dependency_overrides[get_session] = override_get_session
+    client = AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://softbei-eval")
     return client, session_factory, engine
 
 
@@ -310,7 +311,7 @@ async def run_evaluation() -> dict[str, Any]:
         cases_response.raise_for_status()
     finally:
         await client.aclose()
-        app.dependency_overrides.pop(get_session, None)
+        fastapi_app.dependency_overrides.pop(get_session, None)
         await engine.dispose()
 
     current_summary = build_scorecard(case_records)

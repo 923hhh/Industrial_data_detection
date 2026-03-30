@@ -476,3 +476,56 @@
   - `docs/SOFTBEI_SUBMISSION_CHECKLIST.md` (created)
   - `README.md` (updated)
   - `todo_softbei.md` (updated)
+
+## Session: 2026-03-30 (Phase 21 / 知识检索稳定性优化)
+
+### 路线 B：长中文查询与图片兜底优化
+- **Status:** complete
+- Actions taken:
+  - 为 `KnowledgeService` 增加长中文故障描述的确定性 query rewrite，将自然语言故障描述收敛为更稳定的检修关键词集合
+  - 扩展多模态检索返回结构，新增 `effective_keywords`，供正式工作台、测试报告和答辩材料直接展示“有效检索词”
+  - 优化图片兜底链路，对英文故障图片文件名做中文检修术语映射，补齐 `spark-plug`、`timing-chain`、`oil-leak` 等常见命名方式
+  - 保持“具体型号可命中通用手册”与同义词扩展策略，并与新 query rewrite 组合提升知识检索稳定性
+  - 为上述逻辑补充单测，覆盖长中文故障描述重写、多模态有效检索词返回和英文图片文件名 fallback
+  - 验证 `pytest -q tests/test_phase14_knowledge.py` 结果为 `12 passed`
+  - 验证 `pytest -q tests/test_phase17_evaluation.py` 结果为 `3 passed`
+  - 验证全量 `pytest -q` 结果更新为 `46 passed, 4 skipped`
+- Files created/modified:
+  - `app/services/knowledge_service.py` (updated)
+  - `app/services/image_analysis_service.py` (updated)
+  - `app/schemas/knowledge.py` (updated)
+  - `app/routers/knowledge.py` (updated)
+  - `tests/test_phase14_knowledge.py` (updated)
+  - `evaluation/softbei_eval_results.json` (updated)
+
+## Session: 2026-03-30 (Phase 22 / 后端中层架构重组)
+
+### 参考 Intelligent-RS-System 的中等架构重组
+- **Status:** complete
+- Actions taken:
+  - 新增 `app/bootstrap/`，将应用工厂、lifespan、中间件和路由注册从 `app/main.py` 中拆出
+  - 新增 `app/shared/`，为配置、数据库、日志提供稳定共享出口
+  - 新增 `app/modules/`，按知识、任务、案例、诊断四个业务域聚合现有 public surface
+  - 新增 `app/integrations/`，收口图片分析、PDF 导入和智能体/LLM 适配出口
+  - 新增 `app/persistence/models/`，按业务域重新整理 ORM 模型导出层
+  - 将 `app/main.py` 精简为唯一 ASGI 入口壳文件，保持 `uvicorn app.main:app` 不变
+  - 将 `scripts/init_db.py`、`scripts/import_knowledge_pdf.py`、`scripts/run_softbei_eval.py` 切到新共享层和持久化层导入
+  - 新增 `front-end/README.md`，冻结未来 `React + Next.js` 前端工程目录，但本轮不迁移现有静态页面
+  - 更新 README、功能设计文档和技术决策记录，明确本轮为“后端中层重组，不动前端实现”
+  - 验证 `pytest -q tests/test_health.py` 通过
+  - 验证 `pytest -q tests/test_phase17_evaluation.py` 通过
+  - 验证全量 `pytest -q` 结果保持为 `46 passed, 4 skipped`
+- Files created/modified:
+  - `app/bootstrap/*` (created)
+  - `app/shared/*` (created)
+  - `app/modules/*` (created)
+  - `app/integrations/*` (created)
+  - `app/persistence/models/*` (created)
+  - `app/main.py` (updated)
+  - `scripts/init_db.py` (updated)
+  - `scripts/import_knowledge_pdf.py` (updated)
+  - `scripts/run_softbei_eval.py` (updated)
+  - `front-end/README.md` (created)
+  - `README.md` (updated)
+  - `docs/SOFTBEI_FUNCTIONAL_DESIGN.md` (updated)
+  - `findings.md` (updated)

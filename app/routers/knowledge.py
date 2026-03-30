@@ -81,6 +81,7 @@ async def search_knowledge(
     return KnowledgeSearchResponse(
         query=response_payload["query"],
         effective_query=response_payload["effective_query"],
+        effective_keywords=response_payload.get("effective_keywords") or [],
         image_analysis=(
             KnowledgeImageAnalysis(**response_payload["image_analysis"])
             if response_payload["image_analysis"] is not None
