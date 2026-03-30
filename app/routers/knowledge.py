@@ -9,6 +9,8 @@ from app.schemas.knowledge_imports import (
     KnowledgeChunkPreviewResponse,
     KnowledgeDocumentListItem,
     KnowledgeDocumentListResponse,
+    KnowledgeImportJobListResponse,
+    KnowledgeImportPreviewResponse,
     KnowledgeImportJobResponse,
 )
 from app.shared.database import get_session
@@ -63,6 +65,72 @@ async def create_knowledge_document(
         fault_type=document.fault_type,
         status=document.status,
         chunk_count=chunk_count,
+    )
+
+
+@router.post(
+    "/imports/preview",
+    response_model=KnowledgeImportPreviewResponse,
+    status_code=status.HTTP_200_OK,
+    summary="预览 PDF 知识导入任务",
+    description="在正式导入前解析 PDF 的页数、分段数和预览摘录，供知识中心确认导入内容。",
+)
+async def preview_knowledge_import(
+    file: UploadFile = File(..., description="待导入的 PDF 文档"),
+    equipment_type: str = Form(..., description="设备类型，例如摩托车发动机"),
+    title: str | None = Form(default=None, description="知识文档标题，默认使用文件名"),
+    equipment_model: str | None = Form(default=None, description="设备型号"),
+    fault_type: str | None = Form(default=None, description="故障类型"),
+    section_reference: str | None = Form(default=None, description="章节说明"),
+    source_type: str = Form(default="manual", description="知识来源类型，默认 manual"),
+    replace_existing: bool = Form(default=False, description="存在同名文档时是否覆盖导入"),
+    session: AsyncSession = Depends(get_session),
+) -> KnowledgeImportPreviewResponse:
+    filename = (file.filename or "").strip()
+    if not filename:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="上传文件必须包含文件名。")
+    if not filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="当前仅支持 PDF 文档导入。")
+
+    logger.info(
+        "knowledge_import_preview filename=%s equipment_type=%s equipment_model=%s replace_existing=%s",
+        filename,
+        equipment_type,
+        equipment_model or "",
+        replace_existing,
+    )
+    service = KnowledgeImportService(session)
+    payload = await service.preview_pdf_upload(
+        filename=filename,
+        file_bytes=await file.read(),
+        title=title,
+        equipment_type=equipment_type.strip(),
+        equipment_model=(equipment_model or "").strip() or None,
+        fault_type=(fault_type or "").strip() or None,
+        section_reference=(section_reference or "").strip() or None,
+        source_type=(source_type or "manual").strip() or "manual",
+        replace_existing=replace_existing,
+    )
+    return KnowledgeImportPreviewResponse(**payload)
+
+
+@router.get(
+    "/imports",
+    response_model=KnowledgeImportJobListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="知识导入任务列表",
+    description="返回最近的知识导入任务，供正式知识中心展示导入历史与状态。", 
+)
+async def list_knowledge_import_jobs(
+    limit: int = Query(default=8, ge=1, le=50, description="返回导入任务数量上限"),
+    status_filter: str | None = Query(default=None, alias="status", description="按任务状态过滤"),
+    session: AsyncSession = Depends(get_session),
+) -> KnowledgeImportJobListResponse:
+    service = KnowledgeImportService(session)
+    jobs = await service.list_import_jobs(limit=limit, status=status_filter)
+    return KnowledgeImportJobListResponse(
+        total=len(jobs),
+        jobs=[_build_import_job_response(payload) for payload in jobs],
     )
 
 

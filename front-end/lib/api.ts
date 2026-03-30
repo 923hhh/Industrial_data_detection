@@ -2,6 +2,8 @@ import type {
   AgentAssistResponse,
   KnowledgeChunkPreviewResponse,
   KnowledgeDocumentListResponse,
+  KnowledgeImportJobListResponse,
+  KnowledgeImportPreviewResponse,
   KnowledgeImportJobResponse,
   KnowledgeSearchResponse,
   MaintenanceCaseListResponse,
@@ -72,11 +74,28 @@ export async function importKnowledgePdf(formData: FormData): Promise<KnowledgeI
   return parseJson<KnowledgeImportJobResponse>(response);
 }
 
+export async function previewKnowledgeImport(
+  formData: FormData,
+): Promise<KnowledgeImportPreviewResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/knowledge/imports/preview`, {
+    method: "POST",
+    body: formData,
+  });
+  return parseJson<KnowledgeImportPreviewResponse>(response);
+}
+
 export async function getKnowledgeImportJob(jobId: number): Promise<KnowledgeImportJobResponse> {
   const response = await fetch(`${API_BASE_URL}/api/v1/knowledge/imports/${jobId}`, {
     cache: "no-store",
   });
   return parseJson<KnowledgeImportJobResponse>(response);
+}
+
+export async function getKnowledgeImportJobs(limit = 8): Promise<KnowledgeImportJobListResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/knowledge/imports?limit=${limit}`, {
+    cache: "no-store",
+  });
+  return parseJson<KnowledgeImportJobListResponse>(response);
 }
 
 export async function getKnowledgeDocuments(limit = 12): Promise<KnowledgeDocumentListResponse> {

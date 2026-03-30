@@ -25,6 +25,48 @@ def override_db_session():
 
 
 @pytest.mark.asyncio
+async def test_preview_knowledge_import_endpoint():
+    """导入前预览接口应返回页数、分段数和预览摘录。"""
+    mocked_preview = {
+        "normalized_title": "摩托车发动机维修手册",
+        "source_name": "manual.pdf",
+        "source_type": "manual",
+        "equipment_type": "摩托车发动机",
+        "equipment_model": "LX200",
+        "fault_type": None,
+        "section_reference": None,
+        "replace_existing": False,
+        "page_count": 18,
+        "chunk_count": 42,
+        "preview_excerpt": "火花塞检查与拆装步骤。",
+        "existing_document_detected": True,
+        "warning_message": "已存在同名知识文档，确认导入前请勾选覆盖导入或调整文件名。",
+    }
+
+    with patch(
+        "app.routers.knowledge.KnowledgeImportService.preview_pdf_upload",
+        new=AsyncMock(return_value=mocked_preview),
+    ):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/v1/knowledge/imports/preview",
+                files={"file": ("manual.pdf", b"%PDF-1.4\n", "application/pdf")},
+                data={
+                    "equipment_type": "摩托车发动机",
+                    "equipment_model": "LX200",
+                    "replace_existing": "false",
+                },
+            )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["page_count"] == 18
+    assert payload["existing_document_detected"] is True
+    assert payload["warning_message"] is not None
+
+
+@pytest.mark.asyncio
 async def test_knowledge_import_upload_endpoint():
     """上传 PDF 时应返回正式知识导入任务摘要。"""
     mocked_payload = {
@@ -84,6 +126,46 @@ async def test_knowledge_import_upload_rejects_non_pdf():
 
     assert response.status_code == 400
     assert "PDF" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_list_knowledge_import_jobs_endpoint():
+    """知识中心应能获取最近的导入记录列表。"""
+    mocked_jobs = [
+        {
+            "id": 11,
+            "import_type": "pdf",
+            "title": "摩托车发动机维修手册",
+            "source_name": "manual.pdf",
+            "source_type": "manual",
+            "equipment_type": "摩托车发动机",
+            "equipment_model": "LX200",
+            "fault_type": None,
+            "section_reference": None,
+            "replace_existing": True,
+            "status": "completed",
+            "page_count": 12,
+            "chunk_count": 31,
+            "document_id": 18,
+            "preview_excerpt": "火花塞检查与拆装步骤。",
+            "error_message": None,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }
+    ]
+
+    with patch(
+        "app.routers.knowledge.KnowledgeImportService.list_import_jobs",
+        new=AsyncMock(return_value=mocked_jobs),
+    ):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/api/v1/knowledge/imports?limit=5")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total"] == 1
+    assert payload["jobs"][0]["status"] == "completed"
 
 
 @pytest.mark.asyncio

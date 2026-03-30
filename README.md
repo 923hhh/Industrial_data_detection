@@ -18,6 +18,8 @@
 - `POST /api/v1/agents/assist`：统一触发知识召回、作业规划、风险校验与案例沉淀建议
 - `GET /api/v1/agents/runs/{id}`：回放最近一次 Agent 协作结果
 - `POST /api/v1/knowledge/documents`：导入检修知识文本并自动拆分为可检索分段
+- `POST /api/v1/knowledge/imports/preview`：在正式导入前预览 PDF 的页数、分段数和预览摘录
+- `GET /api/v1/knowledge/imports`：查看最近的知识导入任务列表与状态
 - `POST /api/v1/knowledge/imports`：上传 PDF 手册并创建正式知识导入任务，自动提取文本、切分分段并写入知识库
 - `GET /api/v1/knowledge/imports/{id}`：查看单个知识导入任务的状态、页数、分段数和失败原因
 - `GET /api/v1/knowledge/documents`：查看正式知识中心的文档列表与分段数
@@ -40,7 +42,7 @@
 - `case_reviews.html`：案例沉淀与审核联调页，支持案例上传、人工修正、审核入库和后续回流展示
 - `front-end/`：正式前端工程骨架，已提供工作台、知识检索、文档导入管理、任务、案例、历史与 Agent 页面入口
 - Alembic 管理数据库 schema，不再依赖隐式建表
-- 当前测试结果：`54 passed, 4 skipped`
+- 当前测试结果：`56 passed, 4 skipped`
 
 ## 软件杯赛题适配（当前冻结版）
 

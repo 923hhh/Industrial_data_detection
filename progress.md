@@ -287,6 +287,31 @@
   - `front-end/lib/types.ts` (updated)
   - `README.md` (updated)
 
+### 三个月大改计划：知识导入管理与知识中心升级（第二批）
+- **Status:** phase 2 preview/history complete
+- **Started:** 2026-03-30
+- Actions taken:
+  - 新增 `POST /api/v1/knowledge/imports/preview`，在正式导入前返回 PDF 页数、分段数、预览摘录和同名文档覆盖提醒
+  - 新增 `GET /api/v1/knowledge/imports`，供正式知识中心展示最近导入记录与任务状态
+  - 将 `front-end/components/knowledge-import-panel.tsx` 升级为“先预览、后确认导入”流程，避免过期预览直接被当作当前导入确认
+  - 新增导入记录列表组件，补齐知识中心的导入历史与失败原因展示
+  - 为新接口补充 `tests/test_phase19_knowledge_imports.py` 覆盖
+  - 验证 `pytest -q tests/test_phase19_knowledge_imports.py` 通过
+  - 验证全量 `pytest -q` 结果更新为 `56 passed, 4 skipped`
+  - 验证 `front-end` 的 `npm run typecheck` 通过
+- Files created/modified:
+  - `app/schemas/knowledge_imports.py` (updated)
+  - `app/services/knowledge_import_service.py` (updated)
+  - `app/routers/knowledge.py` (updated)
+  - `front-end/components/knowledge-import-panel.tsx` (updated)
+  - `front-end/components/knowledge-import-history.tsx` (created)
+  - `front-end/components/knowledge-management-center.tsx` (updated)
+  - `front-end/lib/api.ts` (updated)
+  - `front-end/lib/types.ts` (updated)
+  - `front-end/app/globals.css` (updated)
+  - `tests/test_phase19_knowledge_imports.py` (updated)
+  - `README.md` (updated)
+
 ## Session: 2026-03-28 (Phase 14 / 软件杯赛题适配 Stage 1)
 
 ### 赛题对齐与作品重定义

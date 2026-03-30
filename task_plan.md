@@ -97,6 +97,7 @@ Phase 14：软件杯赛题适配（Stage 1 已冻结）
 - `pytest -q` 当前结果：46 通过 / 4 跳过
 - `pytest -q` 当前结果：49 通过 / 4 跳过
 - `pytest -q` 当前结果：54 通过 / 4 跳过
+- `pytest -q` 当前结果：56 通过 / 4 跳过
 - SSE 流式接口契约：`GET /api/v1/diagnose/stream`
 - 数据库初始化方式：`scripts/init_db.py --init-only` 或 `alembic upgrade head`
 - 正式工作台已接管前端主入口，旧 SSE 调试台已降级为智能分析子模块
@@ -104,6 +105,7 @@ Phase 14：软件杯赛题适配（Stage 1 已冻结）
 - 后端已完成 `bootstrap / shared / modules / integrations / persistence` 中层重组，前端静态页面保持不变
 - 三个月大改已启动第一阶段：`front-end/` 下已新增 Next.js 正式前端骨架，并新增 `workbench/overview`、`agents/assist`、`agents/runs/{id}` 正式接口
 - 三个月大改已进入第二阶段的第一批交付：已新增 `knowledge/imports`、知识文档列表和分段预览接口，正式知识中心开始承担 PDF 导入管理
+- 三个月大改已进入第二阶段的第二批交付：已新增 `knowledge/imports/preview`、导入记录列表和前端“先预览再确认导入”流程
 
 ## Phase 13: MVP 交付补齐
 - [x] 补 README 和演示说明

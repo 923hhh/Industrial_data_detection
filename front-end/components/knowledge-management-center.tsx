@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { KnowledgeImportJobResponse } from "@/lib/types";
 
 import { KnowledgeDocumentLibrary } from "@/components/knowledge-document-library";
+import { KnowledgeImportHistory } from "@/components/knowledge-import-history";
 import { KnowledgeImportPanel } from "@/components/knowledge-import-panel";
 import { KnowledgeSearchPanel } from "@/components/knowledge-search-panel";
 import { SectionCard } from "@/components/section-card";
@@ -44,6 +45,13 @@ export function KnowledgeManagementCenter() {
           </div>
         </SectionCard>
       ) : null}
+
+      <SectionCard
+        title="导入记录列表"
+        description="查看最近的正式知识导入任务，快速确认导入状态、页数、分段数和失败原因。"
+      >
+        <KnowledgeImportHistory refreshToken={refreshToken} />
+      </SectionCard>
 
       <SectionCard
         title="正式检索入口"

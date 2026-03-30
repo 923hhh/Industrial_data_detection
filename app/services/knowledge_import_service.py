@@ -107,10 +107,72 @@ class KnowledgeImportService:
             await self.session.refresh(job)
             return self._serialize_job(job)
 
+    async def preview_pdf_upload(
+        self,
+        *,
+        filename: str,
+        file_bytes: bytes,
+        title: str | None,
+        equipment_type: str,
+        equipment_model: str | None,
+        fault_type: str | None,
+        section_reference: str | None,
+        source_type: str = "manual",
+        replace_existing: bool = False,
+    ) -> dict[str, Any]:
+        """Preview a PDF import without persisting it into the knowledge base."""
+        normalized_title = (title or "").strip() or self._derive_title(filename)
+        source_name = filename.strip()
+        pages = self.importer.extract_pages_from_bytes(file_bytes)
+        chunk_payloads = self.importer.build_chunk_payloads(
+            title=normalized_title,
+            pages=pages,
+        )
+        existing = await self._find_existing_document(source_name)
+        existing_document_detected = existing is not None
+        warning_message = None
+
+        if existing_document_detected and not replace_existing:
+            warning_message = "已存在同名知识文档，确认导入前请勾选覆盖导入或调整文件名。"
+
+        return {
+            "normalized_title": normalized_title,
+            "source_name": source_name,
+            "source_type": source_type,
+            "equipment_type": equipment_type,
+            "equipment_model": equipment_model,
+            "fault_type": fault_type,
+            "section_reference": section_reference,
+            "replace_existing": replace_existing,
+            "page_count": len(pages),
+            "chunk_count": len(chunk_payloads),
+            "preview_excerpt": chunk_payloads[0]["content"][:220] if chunk_payloads else None,
+            "existing_document_detected": existing_document_detected,
+            "warning_message": warning_message,
+        }
+
     async def get_import_job(self, job_id: int) -> dict[str, Any]:
         """Return one import job detail."""
         job = await self._load_job(job_id)
         return self._serialize_job(job)
+
+    async def list_import_jobs(
+        self,
+        *,
+        limit: int = 10,
+        status: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """List recent import jobs for the knowledge management center."""
+        stmt = (
+            select(KnowledgeImportJob)
+            .order_by(KnowledgeImportJob.updated_at.desc(), KnowledgeImportJob.id.desc())
+            .limit(limit)
+        )
+        if status:
+            stmt = stmt.where(KnowledgeImportJob.status == status)
+
+        jobs = (await self.session.execute(stmt)).scalars().all()
+        return [self._serialize_job(job) for job in jobs]
 
     async def list_documents(
         self,

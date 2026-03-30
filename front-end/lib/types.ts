@@ -89,6 +89,27 @@ export type KnowledgeImportJobResponse = {
   updated_at: string;
 };
 
+export type KnowledgeImportJobListResponse = {
+  total: number;
+  jobs: KnowledgeImportJobResponse[];
+};
+
+export type KnowledgeImportPreviewResponse = {
+  normalized_title: string;
+  source_name: string;
+  source_type: string;
+  equipment_type: string;
+  equipment_model?: string | null;
+  fault_type?: string | null;
+  section_reference?: string | null;
+  replace_existing: boolean;
+  page_count: number;
+  chunk_count: number;
+  preview_excerpt?: string | null;
+  existing_document_detected: boolean;
+  warning_message?: string | null;
+};
+
 export type KnowledgeDocumentListItem = {
   id: number;
   title: string;

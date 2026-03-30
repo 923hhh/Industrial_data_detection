@@ -61,24 +61,29 @@ export function AgentAssistPanel() {
           </div>
           <p>{result.summary}</p>
           <div className="agentGrid">
-            {result.agents.map((agent) => (
-              <article key={agent.agent_name} className="resultCard">
-                <h3>{agent.title}</h3>
-                <p className="muted">{agent.agent_name}</p>
-                <p>{agent.summary}</p>
-                {agent.citations.length ? (
-                  <ul className="bulletList">
-                    {agent.citations.map((citation) => (
-                      <li key={citation}>{citation}</li>
-                    ))}
-                  </ul>
-                ) : null}
-              </article>
-            ))}
+            {result.agents.map((agent) => {
+              const uniqueCitations = Array.from(
+                new Set(agent.citations.map((citation) => citation.trim()).filter(Boolean)),
+              );
+
+              return (
+                <article key={agent.agent_name} className="resultCard">
+                  <h3>{agent.title}</h3>
+                  <p className="muted">{agent.agent_name}</p>
+                  <p>{agent.summary}</p>
+                  {uniqueCitations.length ? (
+                    <ul className="bulletList">
+                      {uniqueCitations.map((citation) => (
+                        <li key={citation}>{citation}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </article>
+              );
+            })}
           </div>
         </div>
       ) : null}
     </div>
   );
 }
-

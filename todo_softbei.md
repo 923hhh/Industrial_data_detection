@@ -286,9 +286,12 @@
 - 已新增 `knowledge_import_jobs` 持久化表，导入任务不再只是脚本输出，而是正式业务记录。
 - 已将 `front-end/app/knowledge/page.tsx` 升级为知识管理中心，补齐 PDF 导入、文档列表、分段预览和正式检索入口。
 - 已执行 `tests/test_phase19_knowledge_imports.py` 和全量 `pytest -q`，当前结果更新为 `54 passed, 4 skipped`。
+- 已补齐 `POST /api/v1/knowledge/imports/preview` 和 `GET /api/v1/knowledge/imports`，正式知识中心现已支持“先预览、后确认导入”以及最近导入记录列表。
+- 已将 `front-end/components/knowledge-import-panel.tsx` 升级为预览确认流程，并新增导入记录列表组件。
+- 已再次执行 `tests/test_phase19_knowledge_imports.py` 和全量 `pytest -q`，当前结果更新为 `56 passed, 4 skipped`。
 - 当前遗留问题：
   - 仍未实现真正的异步后台导入 worker，当前导入流程为同步请求内完成。
-  - 知识管理后台尚未补齐“导入记录列表”和“导入前预览确认”独立页面，后续继续收口。
+  - 导入预览目前仍是后端接口级确认，尚未补知识管理页中的“命名冲突智能建议”和“批量导入队列”。
 
 ### 2026-03-28（TODO-SB-3）
 
