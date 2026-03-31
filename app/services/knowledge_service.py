@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime, timezone
 from time import perf_counter
 from typing import Any
 
@@ -131,6 +132,21 @@ QUERY_REWRITE_RULES = [
         "add": ["润滑", "机油液位", "散热"],
     },
 ]
+SAFETY_PRIORITY_TERMS = {
+    "安全",
+    "隔离",
+    "停机",
+    "断电",
+    "风险",
+    "高温",
+    "防护",
+    "急停",
+}
+SOURCE_TYPE_RERANK_BONUS = {
+    "manual": 0.8,
+    "procedure": 0.9,
+    "case": 0.4,
+}
 
 
 def split_text_into_chunks(content: str, max_chars: int = 480) -> list[str]:
@@ -226,27 +242,42 @@ class KnowledgeService:
         dialect_name = self.session.get_bind().dialect.name
         query = (request.query or "").strip()
         tokens = self._extract_search_tokens(query) if query else []
+        candidate_limit = self._resolve_candidate_limit(request.limit)
 
         if query and dialect_name == "postgresql":
-            search_text = func.concat_ws(
+            chunk_search_text = func.concat_ws(
                 " ",
-                KnowledgeDocument.title,
+                func.coalesce(KnowledgeChunk.heading, ""),
                 func.coalesce(KnowledgeChunk.content, ""),
                 func.coalesce(KnowledgeChunk.equipment_model, ""),
                 func.coalesce(KnowledgeChunk.fault_type, ""),
-                func.coalesce(KnowledgeDocument.source_name, ""),
+                func.coalesce(KnowledgeChunk.section_reference, ""),
+                func.coalesce(KnowledgeChunk.page_reference, ""),
             )
-            ts_vector = func.to_tsvector("simple", search_text)
+            document_search_text = func.concat_ws(
+                " ",
+                func.coalesce(KnowledgeDocument.title, ""),
+                func.coalesce(KnowledgeDocument.source_name, ""),
+                func.coalesce(KnowledgeDocument.equipment_model, ""),
+                func.coalesce(KnowledgeDocument.fault_type, ""),
+            )
+            chunk_tsv = func.to_tsvector("simple", chunk_search_text)
+            document_tsv = func.to_tsvector("simple", document_search_text)
             ts_query_text = " ".join(tokens) if tokens else query
             ts_query = func.plainto_tsquery("simple", ts_query_text)
-            ts_match = ts_vector.bool_op("@@")(ts_query)
+            chunk_match = chunk_tsv.bool_op("@@")(ts_query)
+            document_match = document_tsv.bool_op("@@")(ts_query)
             token_score_expr, token_match_expr = self._build_token_search_expressions(tokens)
-            score_expr = case((ts_match, func.ts_rank_cd(ts_vector, ts_query) * 10.0), else_=0.0) + token_score_expr
+            score_expr = (
+                case((chunk_match, func.ts_rank_cd(chunk_tsv, ts_query) * 8.0), else_=0.0)
+                + case((document_match, func.ts_rank_cd(document_tsv, ts_query) * 5.0), else_=0.0)
+                + token_score_expr
+            )
             stmt = (
                 select(KnowledgeChunk, KnowledgeDocument, score_expr.label("score"))
                 .join(KnowledgeDocument, KnowledgeChunk.document_id == KnowledgeDocument.id)
                 .where(KnowledgeDocument.status == "published")
-                .where(or_(ts_match, token_match_expr))
+                .where(or_(chunk_match, document_match, token_match_expr))
             )
         else:
             score_expr = literal(0.0)
@@ -276,7 +307,7 @@ class KnowledgeService:
         else:
             stmt = stmt.order_by(KnowledgeDocument.updated_at.desc(), KnowledgeChunk.chunk_index.asc())
 
-        rows = (await self.session.execute(stmt.limit(request.limit))).all()
+        rows = (await self.session.execute(stmt.limit(candidate_limit))).all()
         if (
             not rows
             and query
@@ -300,26 +331,19 @@ class KnowledgeService:
                 KnowledgeDocument.updated_at.desc(),
                 KnowledgeChunk.chunk_index.asc(),
             )
-            rows = (await self.session.execute(fallback_stmt.limit(request.limit))).all()
+            rows = (await self.session.execute(fallback_stmt.limit(candidate_limit))).all()
 
-        return [
-            {
-                "chunk_id": chunk.id,
-                "document_id": document.id,
-                "title": document.title,
-                "source_name": document.source_name,
-                "source_type": document.source_type,
-                "equipment_type": chunk.equipment_type,
-                "equipment_model": chunk.equipment_model,
-                "fault_type": chunk.fault_type,
-                "excerpt": self._build_excerpt(chunk.content, query),
-                "section_reference": chunk.section_reference or document.section_reference,
-                "page_reference": chunk.page_reference or document.page_reference,
-                "recommendation_reason": self._build_reason(request, document, chunk),
-                "score": float(score) if score is not None else None,
-            }
+        candidates = [
+            self._serialize_search_row(
+                request=request,
+                query=query,
+                chunk=chunk,
+                document=document,
+                retrieval_score=score,
+            )
             for chunk, document, score in rows
         ]
+        return self._rerank_results(request, candidates)
 
     async def search_multimodal(self, request: KnowledgeSearchRequest) -> dict[str, Any]:
         """Search knowledge with optional image-derived retrieval hints."""
@@ -382,6 +406,203 @@ class KnowledgeService:
             ),
             "results": results,
         }
+
+    def _serialize_search_row(
+        self,
+        *,
+        request: KnowledgeSearchRequest,
+        query: str,
+        chunk: KnowledgeChunk,
+        document: KnowledgeDocument,
+        retrieval_score: float | None,
+    ) -> dict[str, Any]:
+        retrieval_score_value = float(retrieval_score) if retrieval_score is not None else 0.0
+        return {
+            "chunk_id": chunk.id,
+            "document_id": document.id,
+            "title": document.title,
+            "source_name": document.source_name,
+            "source_type": document.source_type,
+            "equipment_type": chunk.equipment_type,
+            "equipment_model": chunk.equipment_model,
+            "fault_type": chunk.fault_type,
+            "excerpt": self._build_excerpt(chunk.content, query),
+            "section_reference": chunk.section_reference or document.section_reference,
+            "page_reference": chunk.page_reference or document.page_reference,
+            "recommendation_reason": self._build_reason(request, document, chunk),
+            "score": retrieval_score_value,
+            "retrieval_score": retrieval_score_value,
+            "rerank_score": retrieval_score_value,
+            "_content": chunk.content,
+            "_heading": getattr(chunk, "heading", None),
+            "_document_updated_at": getattr(document, "updated_at", None),
+        }
+
+    def _rerank_results(
+        self,
+        request: KnowledgeSearchRequest,
+        candidates: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Apply deterministic rerank based on business context and metadata."""
+        reranked: list[dict[str, Any]] = []
+        for item in candidates:
+            final_score = float(item.get("retrieval_score") or item.get("score") or 0.0)
+            rerank_reasons: list[str] = []
+
+            model_bonus = self._compute_equipment_model_bonus(request, item)
+            if model_bonus > 0:
+                final_score += model_bonus
+                if item.get("equipment_model"):
+                    rerank_reasons.append(f"同型号 {item['equipment_model']}")
+                else:
+                    rerank_reasons.append("当前型号可复用的通用手册")
+
+            fault_bonus = self._compute_fault_type_bonus(request, item)
+            if fault_bonus > 0:
+                final_score += fault_bonus
+                if request.fault_type and item.get("fault_type") == request.fault_type:
+                    rerank_reasons.append(f"同故障类型 {request.fault_type}")
+                elif item.get("fault_type"):
+                    rerank_reasons.append(f"故障相近：{item['fault_type']}")
+
+            source_bonus = self._compute_source_type_bonus(request, item)
+            if source_bonus > 0:
+                final_score += source_bonus
+                if request.maintenance_level == "emergency" and item.get("source_type") in {"manual", "procedure"}:
+                    rerank_reasons.append("应急场景优先标准作业依据")
+                elif request.priority in {"high", "urgent"} and item.get("source_type") in {"manual", "procedure"}:
+                    rerank_reasons.append("高优工单优先标准手册")
+
+            coverage_bonus, matched_tokens = self._compute_token_coverage_bonus(request, item)
+            if coverage_bonus > 0:
+                final_score += coverage_bonus
+                rerank_reasons.append(f"覆盖关键词 {', '.join(matched_tokens[:3])}")
+
+            recency_bonus = self._compute_recency_bonus(item.get("_document_updated_at"))
+            if recency_bonus > 0:
+                final_score += recency_bonus
+                rerank_reasons.append("近期更新")
+
+            item["rerank_score"] = round(final_score, 4)
+            item["score"] = item["rerank_score"]
+            if rerank_reasons:
+                item["recommendation_reason"] = (
+                    f"{item['recommendation_reason']}，rerank 优先：{'、'.join(rerank_reasons)}"
+                )
+
+            item.pop("_content", None)
+            item.pop("_heading", None)
+            item.pop("_document_updated_at", None)
+            reranked.append(item)
+
+        reranked.sort(
+            key=lambda entry: (
+                float(entry.get("rerank_score") or 0.0),
+                float(entry.get("retrieval_score") or 0.0),
+                entry["chunk_id"],
+            ),
+            reverse=True,
+        )
+        return reranked[: request.limit]
+
+    def _resolve_candidate_limit(self, limit: int) -> int:
+        """Fetch more candidates than the final limit so rerank has room to work."""
+        return min(max(limit * 4, 12), 80)
+
+    def _compute_equipment_model_bonus(
+        self,
+        request: KnowledgeSearchRequest,
+        item: dict[str, Any],
+    ) -> float:
+        candidate_model = (item.get("equipment_model") or "").strip()
+        if not request.equipment_model:
+            return 0.0
+        if candidate_model and candidate_model.lower() == request.equipment_model.lower():
+            return 4.0
+        if not candidate_model:
+            return 1.2
+        return 0.0
+
+    def _compute_fault_type_bonus(
+        self,
+        request: KnowledgeSearchRequest,
+        item: dict[str, Any],
+    ) -> float:
+        candidate_fault = (item.get("fault_type") or "").strip()
+        requested_fault = (request.fault_type or "").strip()
+        if not requested_fault or not candidate_fault:
+            return 0.0
+        if candidate_fault == requested_fault:
+            return 3.0
+        if requested_fault in candidate_fault or candidate_fault in requested_fault:
+            return 1.5
+        return 0.0
+
+    def _compute_source_type_bonus(
+        self,
+        request: KnowledgeSearchRequest,
+        item: dict[str, Any],
+    ) -> float:
+        source_type = item.get("source_type") or ""
+        bonus = SOURCE_TYPE_RERANK_BONUS.get(source_type, 0.0)
+        if request.maintenance_level == "emergency" and source_type in {"manual", "procedure"}:
+            bonus += 1.4
+        if request.priority in {"high", "urgent"} and source_type in {"manual", "procedure"}:
+            bonus += 0.7
+        if self._contains_safety_terms(item) and request.maintenance_level == "emergency":
+            bonus += 1.2
+        return bonus
+
+    def _compute_token_coverage_bonus(
+        self,
+        request: KnowledgeSearchRequest,
+        item: dict[str, Any],
+    ) -> tuple[float, list[str]]:
+        if not request.query:
+            return 0.0, []
+        tokens = self._extract_search_tokens(request.query)[:6]
+        if not tokens:
+            return 0.0, []
+        haystack = " ".join(
+            part
+            for part in [
+                item.get("title") or "",
+                item.get("_heading") or "",
+                item.get("_content") or "",
+                item.get("section_reference") or "",
+                item.get("page_reference") or "",
+            ]
+            if part
+        ).lower()
+        matched = [token for token in tokens if token.lower() in haystack]
+        if not matched:
+            return 0.0, []
+        return min(len(matched), 4) * 0.45, matched
+
+    def _compute_recency_bonus(self, updated_at: datetime | None) -> float:
+        if updated_at is None:
+            return 0.0
+        if updated_at.tzinfo is None:
+            updated_at = updated_at.replace(tzinfo=timezone.utc)
+        age_days = max((datetime.now(timezone.utc) - updated_at).total_seconds() / 86400.0, 0.0)
+        if age_days <= 7:
+            return 0.4
+        if age_days <= 30:
+            return 0.2
+        return 0.0
+
+    def _contains_safety_terms(self, item: dict[str, Any]) -> bool:
+        haystack = " ".join(
+            part
+            for part in [
+                item.get("title") or "",
+                item.get("_heading") or "",
+                item.get("_content") or "",
+                item.get("excerpt") or "",
+            ]
+            if part
+        )
+        return any(term in haystack for term in SAFETY_PRIORITY_TERMS)
 
     async def _ensure_device_model(self, data: KnowledgeDocumentCreate) -> None:
         """Create a device model record when a new model code appears."""

@@ -114,6 +114,9 @@
 | 统一错误响应固定为 `error_code + message + request_id + details` | 前端不应继续依赖零散 `detail` 字符串判断失败原因，后端也需要为排障和日志关联提供稳定契约 |
 | `X-Request-ID` 通过中间件透传或生成，并同步进入响应头和日志上下文 | 这样一次失败请求可以在浏览器、接口日志和业务错误记录之间直接串起来，适合演示环境快速排障 |
 | 基础指标先采用进程内 JSON 快照 `/api/v1/system/metrics`，不提前引入 Prometheus 等外部栈 | 当前目标是低成本补齐可观测性和验收能力，而不是扩展完整监控平台 |
+| PostgreSQL 检索改为“文档 tsvector + 分段 tsvector”双表达式匹配 | 原先跨表拼接的单个 `to_tsvector` 难以真正命中索引，拆成两条表达式后可以直接落 GIN 索引并保持打分可解释 |
+| rerank 先采用确定性规则重排，而不是再引入额外 LLM/向量重排服务 | 当前阶段更需要稳定、低依赖、可调试的相关性提升，且要兼容比赛现场和本地回归 |
+| PostgreSQL 集成测试通过 `TEST_POSTGRESQL_URL` 按需启用 | 默认本地回归继续保持轻量，而有真实 PG 环境时可直接验证索引迁移和主链路闭环 |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -126,6 +129,7 @@
 | 当前工作区对新建文件型 SQLite 库的 DDL 验证会出现 `disk I/O error` | TODO-3 验证改用 SQLite 共享内存库，避免文件系统噪声影响迁移真实性判断 |
 | 全量回归时 `SensorService.count()` 因 ORM 列对象不存在 `.count()` 而失败 | 改为 `func.count()` 聚合查询后，全量 `pytest -q` 恢复为 `60 passed, 4 skipped` |
 | 前后端此前对失败请求仅依赖裸 `detail` 文案和控制台日志，缺少可关联的请求追踪 | 本轮补 `request_id`、统一错误体和进程内指标端点后，失败请求已可通过错误码和请求 ID 快速定位 |
+| 本地文件型 SQLite Alembic 烟测在当前工作区仍会触发 `disk I/O error` | 延续既有 workaround，改用 `sqlite+aiosqlite:///file:...?...cache=shared&uri=true` 共享内存 URL 完成迁移烟测 |
 
 ## Resources
 <!-- 有用的链接 -->

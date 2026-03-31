@@ -58,6 +58,8 @@ export type KnowledgeSearchHit = {
   page_reference?: string | null;
   recommendation_reason: string;
   score?: number | null;
+  retrieval_score?: number | null;
+  rerank_score?: number | null;
 };
 
 export type KnowledgeImageAnalysis = {

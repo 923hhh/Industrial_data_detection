@@ -938,3 +938,29 @@
   - `todo_softbei.md` (updated)
   - `progress.md` (updated)
   - `findings.md` (updated)
+
+### TODO-SB-9C PostgreSQL 索引、检索 rerank 与集成测试
+- **Status:** complete
+- Actions taken:
+  - 新增 Alembic 迁移 `c9e4f7a1b2d3`，为知识全文检索、文档/分段回看、任务步骤顺序加载、导入任务历史、任务/案例运营页等高频路径补复合索引
+  - 在 PostgreSQL 路径将知识检索改为“文档 tsvector + 分段 tsvector”双表达式全文检索，便于实际命中 GIN 索引
+  - 为知识检索新增候选集 rerank：综合设备型号、故障类型、应急/高优场景、来源类型、关键词覆盖和文档新鲜度重排结果
+  - 将工单上下文中的 `priority` 与 `maintenance_level` 下沉到知识检索请求，Agent 协作已把这些上下文正式透传到 rerank 层
+  - 为检索结果补 `retrieval_score` / `rerank_score`，保留数据库初始得分与最终重排得分，便于调试和答辩展示
+  - 新增 `tests/test_phase21_rerank.py`，覆盖“同型号优先”和“应急场景优先安全手册”两条 rerank 规则
+  - 新增 `tests/test_phase21_postgres_integration.py`，在设置 `TEST_POSTGRESQL_URL` 后可验证 PostgreSQL 索引存在性，以及“导入 -> 检索 -> 任务 -> 案例审核 -> Agent 回放”主链路
+  - 使用项目虚拟环境执行共享内存 SQLite 迁移烟测，确认 Alembic 已可稳定升级到 `c9e4f7a1b2d3`
+  - 验证 `pytest -q tests/test_phase14_knowledge.py tests/test_phase21_rerank.py tests/test_phase21_postgres_integration.py` 结果为 `14 passed, 2 skipped`
+  - 验证 `front-end` 的 `npm run typecheck` 通过
+  - 验证全量 `pytest -q` 结果更新为 `66 passed, 6 skipped`
+- Files created/modified:
+  - `app/schemas/knowledge.py` (updated)
+  - `app/services/agent_orchestration_service.py` (updated)
+  - `app/services/knowledge_service.py` (updated)
+  - `front-end/lib/types.ts` (updated)
+  - `alembic/versions/c9e4f7a1b2d3_add_postgres_search_and_workflow_indexes.py` (created)
+  - `tests/test_phase21_rerank.py` (created)
+  - `tests/test_phase21_postgres_integration.py` (created)
+  - `todo_softbei.md` (updated)
+  - `progress.md` (updated)
+  - `findings.md` (updated)

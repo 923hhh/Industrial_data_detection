@@ -33,6 +33,10 @@ class KnowledgeDocumentResponse(BaseModel):
 class KnowledgeSearchRequest(BaseModel):
     """Knowledge search request."""
 
+    work_order_id: str | None = Field(default=None, description="工单编号")
+    report_source: str | None = Field(default=None, description="报修来源")
+    priority: str = Field(default="medium", description="工单优先级")
+    maintenance_level: str = Field(default="standard", description="检修等级")
     query: str | None = Field(default=None, description="检修问题或关键词")
     equipment_type: str | None = Field(default=None, description="设备类型")
     equipment_model: str | None = Field(default=None, description="设备型号")
@@ -46,6 +50,8 @@ class KnowledgeSearchRequest(BaseModel):
 
     @field_validator(
         "query",
+        "work_order_id",
+        "report_source",
         "equipment_type",
         "equipment_model",
         "fault_type",
@@ -62,6 +68,24 @@ class KnowledgeSearchRequest(BaseModel):
             stripped = value.strip()
             return stripped or None
         return value
+
+    @field_validator("maintenance_level")
+    @classmethod
+    def normalize_level(cls, value: str) -> str:
+        normalized = (value or "standard").strip().lower()
+        allowed = {"routine", "standard", "emergency"}
+        if normalized not in allowed:
+            raise ValueError("maintenance_level 仅支持 routine、standard、emergency。")
+        return normalized
+
+    @field_validator("priority")
+    @classmethod
+    def normalize_priority(cls, value: str) -> str:
+        normalized = (value or "medium").strip().lower()
+        allowed = {"low", "medium", "high", "urgent"}
+        if normalized not in allowed:
+            raise ValueError("priority 仅支持 low、medium、high、urgent。")
+        return normalized
 
     @model_validator(mode="after")
     def validate_search_inputs(self) -> "KnowledgeSearchRequest":
@@ -107,6 +131,8 @@ class KnowledgeSearchHit(BaseModel):
     page_reference: str | None = None
     recommendation_reason: str
     score: float | None = None
+    retrieval_score: float | None = None
+    rerank_score: float | None = None
 
 
 class KnowledgeSearchResponse(BaseModel):

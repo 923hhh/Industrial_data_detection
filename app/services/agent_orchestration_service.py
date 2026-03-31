@@ -53,6 +53,10 @@ class AgentOrchestrationService:
             ]
         ):
             knowledge_request = KnowledgeSearchRequest(
+                work_order_id=request.work_order_id,
+                report_source=request.report_source,
+                priority=request.priority,
+                maintenance_level=request.maintenance_level,
                 query=request.query,
                 equipment_type=request.equipment_type,
                 equipment_model=request.equipment_model,

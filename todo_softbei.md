@@ -102,6 +102,7 @@
 > - 当前阶段先不拆微服务，继续保持 `FastAPI + PostgreSQL + Alembic + Next.js` 单体架构演进，优先保证部署、回归和答辩稳定性。
 > - `TODO-SB-9A` 已完成第一轮落地：Agent 协作 Run 已切换为数据库持久化；知识导入接口已改为 `pending -> processing -> completed / failed` 异步任务流，并补最小后台 worker、失败重试入口和前端轮询。
 > - `TODO-SB-9B` 已完成第一轮落地：后端已补 `X-Request-ID` 透传、统一错误结构、全局异常处理、进程内基础指标端点 `/api/v1/system/metrics`，并为 Agent 协作、知识导入、知识检索主链路补结构化计数与耗时指标。
+> - `TODO-SB-9C` 已完成第一轮落地：新增 PostgreSQL 检索与业务列表索引迁移，知识检索补候选集 rerank，并新增本地 rerank 测试、可选 PostgreSQL 集成测试和共享内存 SQLite 迁移烟测。
 
 ## 主任务列表
 
@@ -325,7 +326,7 @@
   - PostgreSQL 上的知识检索与业务列表查询具备可接受的响应时间和明确索引支撑。
   - 至少有一组 PostgreSQL 集成测试可以覆盖导入、检索、任务、案例和回放主链路。
 - 依赖关系：依赖 `TODO-SB-2` 到 `TODO-SB-7` 的现有正式链路，建议在 `TODO-SB-8` 最终提交物收口前完成。
-- 状态：进行中（`TODO-SB-9A`、`TODO-SB-9B` 已完成，`TODO-SB-9C` 待继续）
+- 状态：已完成（`TODO-SB-9A` ~ `TODO-SB-9C` 已全部完成）
 
 ## 风险清单
 
