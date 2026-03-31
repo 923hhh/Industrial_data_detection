@@ -12,11 +12,13 @@ import { SectionCard } from "@/components/section-card";
 
 type KnowledgeManagementCenterProps = {
   focusDocumentId?: number | null;
+  focusChunkId?: number | null;
   initialSourceType?: string;
 };
 
 export function KnowledgeManagementCenter({
   focusDocumentId = null,
+  focusChunkId = null,
   initialSourceType = "",
 }: KnowledgeManagementCenterProps) {
   const [refreshToken, setRefreshToken] = useState(0);
@@ -75,6 +77,7 @@ export function KnowledgeManagementCenter({
         <KnowledgeDocumentLibrary
           refreshToken={refreshToken}
           initialDocumentId={focusDocumentId}
+          initialChunkId={focusChunkId}
           initialSourceType={initialSourceType}
         />
       </SectionCard>

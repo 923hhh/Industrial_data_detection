@@ -321,11 +321,16 @@ async def get_knowledge_document_detail(
 async def get_knowledge_document_chunks(
     document_id: int,
     limit: int = Query(default=6, ge=1, le=20, description="返回分段数量上限"),
+    focus_chunk_id: int | None = Query(default=None, description="优先定位的知识分段 ID"),
     session: AsyncSession = Depends(get_session),
 ) -> KnowledgeChunkPreviewResponse:
     service = KnowledgeImportService(session)
     try:
-        chunks = await service.list_document_chunks(document_id, limit=limit)
+        chunks = await service.list_document_chunks(
+            document_id,
+            limit=limit,
+            focus_chunk_id=focus_chunk_id,
+        )
     except ValueError as exc:
         raise AppError(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -343,6 +348,9 @@ async def get_knowledge_document_chunks(
                 content=item["content"],
                 page_reference=item.get("page_reference"),
                 section_reference=item.get("section_reference"),
+                section_path=item.get("section_path"),
+                step_anchor=item.get("step_anchor"),
+                image_anchor=item.get("image_anchor"),
             )
             for item in chunks
         ],

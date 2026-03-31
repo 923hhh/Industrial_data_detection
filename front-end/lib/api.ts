@@ -269,9 +269,15 @@ export async function getKnowledgeDocumentDetail(
 export async function getKnowledgeDocumentChunks(
   documentId: number,
   limit = 6,
+  focusChunkId?: number | null,
 ): Promise<KnowledgeChunkPreviewResponse> {
+  const search = new URLSearchParams();
+  search.set("limit", String(limit));
+  if (typeof focusChunkId === "number" && focusChunkId > 0) {
+    search.set("focus_chunk_id", String(focusChunkId));
+  }
   const response = await fetch(
-    `${API_BASE_URL}/api/v1/knowledge/documents/${documentId}/chunks?limit=${limit}`,
+    `${API_BASE_URL}/api/v1/knowledge/documents/${documentId}/chunks?${search.toString()}`,
     {
       cache: "no-store",
     },

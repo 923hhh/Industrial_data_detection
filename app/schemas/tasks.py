@@ -15,7 +15,10 @@ class KnowledgeReference(BaseModel):
     equipment_model: str | None = None
     fault_type: str | None = None
     section_reference: str | None = None
+    section_path: str | None = None
+    step_anchor: str | None = None
     page_reference: str | None = None
+    image_anchor: str | None = None
     excerpt: str
 
 

@@ -3,13 +3,15 @@ import { KnowledgeManagementCenter } from "@/components/knowledge-management-cen
 type KnowledgePageProps = {
   searchParams: Promise<{
     documentId?: string;
+    chunkId?: string;
     sourceType?: string;
   }>;
 };
 
 export default async function KnowledgePage({ searchParams }: KnowledgePageProps) {
-  const { documentId, sourceType } = await searchParams;
+  const { documentId, chunkId, sourceType } = await searchParams;
   const focusDocumentId = Number(documentId);
+  const focusChunkId = Number(chunkId);
 
   return (
     <div className="page">
@@ -24,6 +26,7 @@ export default async function KnowledgePage({ searchParams }: KnowledgePageProps
 
       <KnowledgeManagementCenter
         focusDocumentId={Number.isFinite(focusDocumentId) && focusDocumentId > 0 ? focusDocumentId : null}
+        focusChunkId={Number.isFinite(focusChunkId) && focusChunkId > 0 ? focusChunkId : null}
         initialSourceType={sourceType || ""}
       />
     </div>

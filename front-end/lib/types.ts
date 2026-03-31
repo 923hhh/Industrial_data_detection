@@ -55,7 +55,10 @@ export type KnowledgeSearchHit = {
   fault_type?: string | null;
   excerpt: string;
   section_reference?: string | null;
+  section_path?: string | null;
+  step_anchor?: string | null;
   page_reference?: string | null;
+  image_anchor?: string | null;
   recommendation_reason: string;
   score?: number | null;
   retrieval_score?: number | null;
@@ -155,6 +158,9 @@ export type KnowledgeChunkPreview = {
   content: string;
   page_reference?: string | null;
   section_reference?: string | null;
+  section_path?: string | null;
+  step_anchor?: string | null;
+  image_anchor?: string | null;
 };
 
 export type KnowledgeChunkPreviewResponse = {
@@ -283,7 +289,10 @@ export type KnowledgeReference = {
   equipment_model?: string | null;
   fault_type?: string | null;
   section_reference?: string | null;
+  section_path?: string | null;
+  step_anchor?: string | null;
   page_reference?: string | null;
+  image_anchor?: string | null;
   excerpt: string;
 };
 

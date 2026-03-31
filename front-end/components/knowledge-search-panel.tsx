@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { searchKnowledge } from "@/lib/api";
+import { buildKnowledgeTraceHref, formatKnowledgeAnchor } from "@/lib/knowledge-anchors";
 import type { KnowledgeSearchResponse } from "@/lib/types";
 
 export function KnowledgeSearchPanel() {
@@ -130,12 +132,23 @@ export function KnowledgeSearchPanel() {
               <article key={item.chunk_id} className="resultCard">
                 <div className="resultMeta">
                   <h3>{item.title}</h3>
-                  <p>
-                    {item.source_name} · {item.page_reference ?? "页码待补充"}
-                  </p>
+                  <p>{item.source_name}</p>
+                  <p>{formatKnowledgeAnchor(item)}</p>
                 </div>
                 <p className="excerpt">{item.excerpt}</p>
                 <p className="reason">{item.recommendation_reason}</p>
+                <div className="buttonRow">
+                  <Link
+                    href={buildKnowledgeTraceHref({
+                      documentId: item.document_id,
+                      chunkId: item.chunk_id,
+                      sourceType: item.source_type,
+                    })}
+                    className="inlineActionLink"
+                  >
+                    定位回看来源
+                  </Link>
+                </div>
               </article>
             ))
           ) : (

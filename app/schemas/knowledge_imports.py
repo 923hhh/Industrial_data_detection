@@ -95,6 +95,9 @@ class KnowledgeChunkPreview(BaseModel):
     content: str
     page_reference: str | None = None
     section_reference: str | None = None
+    section_path: str | None = None
+    step_anchor: str | None = None
+    image_anchor: str | None = None
 
 
 class KnowledgeChunkPreviewResponse(BaseModel):

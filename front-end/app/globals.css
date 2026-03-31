@@ -296,6 +296,11 @@ select {
   padding: 1rem;
 }
 
+.focusedCard {
+  border-color: rgba(67, 212, 255, 0.48);
+  box-shadow: 0 0 0 1px rgba(67, 212, 255, 0.16), var(--shadow);
+}
+
 .resultMeta {
   display: flex;
   flex-direction: column;

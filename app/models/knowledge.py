@@ -134,7 +134,10 @@ class KnowledgeChunk(Base):
     equipment_model: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     fault_type: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     section_reference: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    section_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    step_anchor: Mapped[str | None] = mapped_column(String(255), nullable=True)
     page_reference: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    image_anchor: Mapped[str | None] = mapped_column(String(100), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     document: Mapped[KnowledgeDocument] = relationship(back_populates="chunks")

@@ -6,7 +6,7 @@ from io import BytesIO
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.services.knowledge_service import split_text_into_chunks
+from app.services.knowledge_service import build_anchored_chunk_payloads
 
 WHITESPACE_PATTERN = re.compile(r"\s+")
 
@@ -94,14 +94,27 @@ class PdfKnowledgeImportService:
         """Build page-aware chunk payloads for the knowledge service."""
         payloads: list[dict[str, str | None]] = []
         for page in pages:
-            page_chunks = split_text_into_chunks(page.text, max_chars=max_chars)
-            for chunk_index, chunk_text in enumerate(page_chunks, start=1):
+            page_chunks = build_anchored_chunk_payloads(
+                page.text,
+                title=title,
+                max_chars=max_chars,
+                page_reference=f"P{page.page_number}",
+            )
+            for chunk_index, chunk_payload in enumerate(page_chunks, start=1):
                 suffix = "" if len(page_chunks) == 1 else f" - 第 {chunk_index} 段"
                 payloads.append(
                     {
-                        "heading": f"{title} - 第 {page.page_number} 页{suffix}",
-                        "content": chunk_text,
-                        "page_reference": f"P{page.page_number}",
+                        "heading": (
+                            f"{chunk_payload['section_path']}{suffix}"
+                            if chunk_payload.get("section_path")
+                            else f"{title} - 第 {page.page_number} 页{suffix}"
+                        ),
+                        "content": chunk_payload["content"],
+                        "page_reference": chunk_payload.get("page_reference") or f"P{page.page_number}",
+                        "section_reference": chunk_payload.get("section_reference"),
+                        "section_path": chunk_payload.get("section_path"),
+                        "step_anchor": chunk_payload.get("step_anchor"),
+                        "image_anchor": chunk_payload.get("image_anchor"),
                     }
                 )
         return payloads

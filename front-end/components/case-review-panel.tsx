@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { addMaintenanceCaseCorrection, reviewMaintenanceCase } from "@/lib/api";
+import { buildKnowledgeTraceHref, formatKnowledgeAnchor } from "@/lib/knowledge-anchors";
 import { SectionCard } from "@/components/section-card";
 import type { MaintenanceCaseResponse } from "@/lib/types";
 
@@ -84,6 +85,7 @@ export function CaseReviewPanel({ initialCase }: CaseReviewPanelProps) {
   const [submittingCorrection, setSubmittingCorrection] = useState(false);
   const [submittingReview, setSubmittingReview] = useState<"approve" | "reject" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const primaryKnowledgeRef = caseDetail.knowledge_refs[0] ?? null;
 
   async function handleCorrectionSubmit() {
     setSubmittingCorrection(true);
@@ -166,7 +168,18 @@ export function CaseReviewPanel({ initialCase }: CaseReviewPanelProps) {
               ) : null}
               {caseDetail.source_document_id ? (
                 <Link
-                  href={`/knowledge?documentId=${caseDetail.source_document_id}&sourceType=case`}
+                  href={
+                    primaryKnowledgeRef
+                      ? buildKnowledgeTraceHref({
+                          documentId: primaryKnowledgeRef.document_id,
+                          chunkId: primaryKnowledgeRef.chunk_id,
+                          sourceType: "case",
+                        })
+                      : buildKnowledgeTraceHref({
+                          documentId: caseDetail.source_document_id,
+                          sourceType: "case",
+                        })
+                  }
                   className="inlineActionLink"
                 >
                   回看来源知识文档
@@ -216,7 +229,16 @@ export function CaseReviewPanel({ initialCase }: CaseReviewPanelProps) {
                 {caseDetail.knowledge_refs.length ? (
                   caseDetail.knowledge_refs.map((ref) => (
                     <li key={ref.chunk_id}>
-                      {ref.title} · {ref.section_reference || "章节待补充"} · {ref.page_reference || "页码待补充"}
+                      <Link
+                        href={buildKnowledgeTraceHref({
+                          documentId: ref.document_id,
+                          chunkId: ref.chunk_id,
+                          sourceType: "case",
+                        })}
+                        className="inlineActionLink"
+                      >
+                        {ref.title} · {formatKnowledgeAnchor(ref)}
+                      </Link>
                     </li>
                   ))
                 ) : (

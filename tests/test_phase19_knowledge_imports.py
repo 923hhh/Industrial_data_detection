@@ -441,6 +441,9 @@ async def test_get_knowledge_document_chunks_endpoint():
             "content": "检查火花塞积碳和间隙。",
             "page_reference": "P1",
             "section_reference": "1.1",
+            "section_path": "第1章 点火系统 > 1.1 火花塞检查",
+            "step_anchor": "1. 检查火花塞积碳和间隙。",
+            "image_anchor": None,
         }
     ]
 
@@ -456,3 +459,20 @@ async def test_get_knowledge_document_chunks_endpoint():
     payload = response.json()
     assert payload["document_id"] == 3
     assert payload["chunks"][0]["chunk_id"] == 51
+    assert payload["chunks"][0]["section_path"] == "第1章 点火系统 > 1.1 火花塞检查"
+    assert payload["chunks"][0]["step_anchor"] == "1. 检查火花塞积碳和间隙。"
+
+
+@pytest.mark.asyncio
+async def test_get_knowledge_document_chunks_forwards_focus_chunk_id():
+    """来源回看模式应把 focus_chunk_id 透传到服务层，确保命中 chunk 被包含在预览窗口里。"""
+    with patch(
+        "app.routers.knowledge.KnowledgeImportService.list_document_chunks",
+        new=AsyncMock(return_value=[]),
+    ) as mocked_list_chunks:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/api/v1/knowledge/documents/3/chunks?limit=8&focus_chunk_id=51")
+
+    assert response.status_code == 200
+    mocked_list_chunks.assert_awaited_once_with(3, limit=8, focus_chunk_id=51)

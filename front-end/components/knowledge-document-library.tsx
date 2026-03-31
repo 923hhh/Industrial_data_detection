@@ -7,6 +7,7 @@ import {
   getKnowledgeDocumentDetail,
   getKnowledgeDocuments,
 } from "@/lib/api";
+import { formatKnowledgeAnchor } from "@/lib/knowledge-anchors";
 import type {
   KnowledgeChunkPreview,
   KnowledgeDocumentDetailResponse,
@@ -16,18 +17,21 @@ import type {
 type KnowledgeDocumentLibraryProps = {
   refreshToken?: number;
   initialDocumentId?: number | null;
+  initialChunkId?: number | null;
   initialSourceType?: string;
 };
 
 export function KnowledgeDocumentLibrary({
   refreshToken = 0,
   initialDocumentId = null,
+  initialChunkId = null,
   initialSourceType = "",
 }: KnowledgeDocumentLibraryProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [documents, setDocuments] = useState<KnowledgeDocumentListItem[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(initialDocumentId);
+  const [focusedChunkId, setFocusedChunkId] = useState<number | null>(initialChunkId);
   const [selectedDocument, setSelectedDocument] = useState<KnowledgeDocumentDetailResponse | null>(null);
   const [chunks, setChunks] = useState<KnowledgeChunkPreview[]>([]);
   const [chunkLoading, setChunkLoading] = useState(false);
@@ -48,6 +52,10 @@ export function KnowledgeDocumentLibrary({
   }, [initialDocumentId]);
 
   useEffect(() => {
+    setFocusedChunkId(initialChunkId);
+  }, [initialChunkId]);
+
+  useEffect(() => {
     setSourceType(initialSourceType || "");
   }, [initialSourceType]);
 
@@ -57,8 +65,20 @@ export function KnowledgeDocumentLibrary({
       setSelectedDocument(null);
       return;
     }
-    void Promise.all([loadDocumentDetail(selectedDocumentId), loadChunks(selectedDocumentId)]);
-  }, [selectedDocumentId]);
+    void Promise.all([loadDocumentDetail(selectedDocumentId), loadChunks(selectedDocumentId, focusedChunkId)]);
+  }, [selectedDocumentId, focusedChunkId]);
+
+  useEffect(() => {
+    if (!focusedChunkId) return;
+    if (!chunks.some((chunk) => chunk.chunk_id === focusedChunkId)) return;
+    const timer = window.setTimeout(() => {
+      document.getElementById(`knowledge-chunk-${focusedChunkId}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [chunks, focusedChunkId]);
 
   async function loadDocuments(options?: {
     preferredDocumentId?: number | null;
@@ -116,10 +136,14 @@ export function KnowledgeDocumentLibrary({
     }
   }
 
-  async function loadChunks(documentId: number) {
+  async function loadChunks(documentId: number, nextFocusedChunkId?: number | null) {
     setChunkLoading(true);
     try {
-      const payload = await getKnowledgeDocumentChunks(documentId);
+      const payload = await getKnowledgeDocumentChunks(
+        documentId,
+        nextFocusedChunkId ? 8 : 6,
+        nextFocusedChunkId,
+      );
       setChunks(payload.chunks);
     } catch {
       setChunks([]);
@@ -127,6 +151,10 @@ export function KnowledgeDocumentLibrary({
       setChunkLoading(false);
     }
   }
+
+  const focusedChunk = focusedChunkId
+    ? chunks.find((chunk) => chunk.chunk_id === focusedChunkId) ?? null
+    : null;
 
   return (
     <div className="panelStack">
@@ -174,7 +202,10 @@ export function KnowledgeDocumentLibrary({
                 <tr
                   key={document.id}
                   className={selectedDocumentId === document.id ? "selectedRow" : undefined}
-                  onClick={() => setSelectedDocumentId(document.id)}
+                  onClick={() => {
+                    setSelectedDocumentId(document.id);
+                    setFocusedChunkId(null);
+                  }}
                 >
                   <td>{document.title}</td>
                   <td>{document.source_name}</td>
@@ -203,6 +234,9 @@ export function KnowledgeDocumentLibrary({
                 来源回溯：{selectedDocument.page_reference || "页码待补充"} ·{" "}
                 {selectedDocument.section_reference || "章节待补充"} · 状态 {selectedDocument.status}
               </p>
+              {focusedChunk ? (
+                <p className="muted">当前定位：{formatKnowledgeAnchor(focusedChunk)}</p>
+              ) : null}
               {selectedDocument.fault_type ? <p className="muted">故障类型：{selectedDocument.fault_type}</p> : null}
               {selectedDocument.content_excerpt ? <p className="excerpt">{selectedDocument.content_excerpt}</p> : null}
             </div>
@@ -211,12 +245,14 @@ export function KnowledgeDocumentLibrary({
           {!chunkLoading && !chunks.length ? <p className="muted">当前文档暂无分段预览。</p> : null}
           <div className="chunkList">
             {chunks.map((chunk) => (
-              <article key={chunk.chunk_id} className="resultCard">
+              <article
+                key={chunk.chunk_id}
+                id={`knowledge-chunk-${chunk.chunk_id}`}
+                className={`resultCard ${focusedChunkId === chunk.chunk_id ? "focusedCard" : ""}`}
+              >
                 <div className="resultMeta">
                   <h3>{chunk.heading || `第 ${chunk.chunk_index} 段`}</h3>
-                  <p>
-                    {chunk.page_reference || "页码待补充"} · {chunk.section_reference || "章节待补充"}
-                  </p>
+                  <p>{formatKnowledgeAnchor(chunk)}</p>
                 </div>
                 <p className="excerpt">{chunk.content}</p>
               </article>

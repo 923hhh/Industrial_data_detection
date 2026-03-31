@@ -510,7 +510,10 @@ class MaintenanceTaskService:
                     "equipment_model": chunk.equipment_model,
                     "fault_type": chunk.fault_type,
                     "section_reference": chunk.section_reference or document.section_reference,
+                    "section_path": chunk.section_path,
+                    "step_anchor": chunk.step_anchor,
                     "page_reference": chunk.page_reference or document.page_reference,
+                    "image_anchor": chunk.image_anchor,
                     "excerpt": self._truncate_excerpt(chunk.content),
                 }
             )

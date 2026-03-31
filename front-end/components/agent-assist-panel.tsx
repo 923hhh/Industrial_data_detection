@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { startTransition, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -9,6 +10,7 @@ import {
   createMaintenanceTask,
   getAgentRun,
 } from "@/lib/api";
+import { buildKnowledgeTraceHref, formatKnowledgeAnchor } from "@/lib/knowledge-anchors";
 import { SectionCard } from "@/components/section-card";
 import type {
   AgentAssistResponse,
@@ -881,10 +883,8 @@ export function AgentAssistPanel({
                     <div className="cardTitleRow">
                       <div className="resultMeta">
                         <h3>{item.title}</h3>
-                        <p>
-                          {item.source_name} · {item.page_reference ?? "页码待补充"} ·{" "}
-                          {item.section_reference ?? "章节待补充"}
-                        </p>
+                        <p>{item.source_name}</p>
+                        <p>{formatKnowledgeAnchor(item)}</p>
                       </div>
                       <label className="toggleRow">
                         <input
@@ -897,6 +897,18 @@ export function AgentAssistPanel({
                     </div>
                     <p className="excerpt">{item.excerpt}</p>
                     <p className="reason">{item.recommendation_reason}</p>
+                    <div className="buttonRow">
+                      <Link
+                        href={buildKnowledgeTraceHref({
+                          documentId: item.document_id,
+                          chunkId: item.chunk_id,
+                          sourceType: item.source_type,
+                        })}
+                        className="inlineActionLink"
+                      >
+                        定位回看来源
+                      </Link>
+                    </div>
                   </article>
                 ))
               ) : (

@@ -119,6 +119,8 @@
 | PostgreSQL 集成测试通过 `TEST_POSTGRESQL_URL` 按需启用 | 默认本地回归继续保持轻量，而有真实 PG 环境时可直接验证索引迁移和主链路闭环 |
 | P0 首批先落“工具注册表 + 合规校验 + 授权判定 + 执行审计”，再继续做事件流、知识锚点和评测集 | 先把 Agent 从“生成建议”推进到“可调用业务工具并留下审计链”，比一次性摊开全部 P0 更稳、更容易验证 |
 | `/agents` 流式协作先限定为“无图片的正式业务流”，图片场景继续回退到既有 POST 协作接口 | `EventSource` 只适合轻量 query 参数；当前不值得为了图片流式而把大体积 Base64 塞进 GET 或额外引入上传会话机制 |
+| 知识锚点先持久化到 `knowledge_chunks.section_path / step_anchor / image_anchor`，而不是只在前端按文本临时猜 | 只有把锚点变成后端稳定字段，检索、任务引用、案例回看和知识中心定位才能共用同一套来源语义 |
+| 知识中心通过 `documentId + chunkId` 查询参数和 `focus_chunk_id` 预览窗口承接精确回看 | 这样可以最小改动复用现有文档库与分段预览页，不需要再新建一层“锚点详情页” |
 
 ## Issues Encountered
 | Issue | Resolution |

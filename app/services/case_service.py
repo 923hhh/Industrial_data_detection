@@ -21,7 +21,7 @@ from app.schemas.cases import (
     MaintenanceCaseCreate,
     MaintenanceCaseReviewRequest,
 )
-from app.services.knowledge_service import split_text_into_chunks
+from app.services.knowledge_service import build_anchored_chunk_payloads, split_text_into_chunks
 
 
 class MaintenanceCaseService:
@@ -338,20 +338,42 @@ class MaintenanceCaseService:
             )
             await self.session.flush()
 
+        chunk_payloads = build_anchored_chunk_payloads(
+            document_content,
+            title=case.title,
+            section_reference="案例审核入库",
+        )
+        if not chunk_payloads:
+            chunk_payloads = [
+                {
+                    "heading": case.title,
+                    "content": chunk_text,
+                    "section_reference": "案例审核入库",
+                    "section_path": "案例审核入库",
+                    "step_anchor": None,
+                    "page_reference": None,
+                    "image_anchor": None,
+                }
+                for chunk_text in chunks
+            ]
+
         self.session.add_all(
             [
                 KnowledgeChunk(
                     document_id=document.id,
                     chunk_index=index,
-                    heading=case.title,
-                    content=chunk_text,
+                    heading=payload.get("heading") or case.title,
+                    content=payload.get("content") or "",
                     equipment_type=case.equipment_type,
                     equipment_model=case.equipment_model,
                     fault_type=case.fault_type,
-                    section_reference="案例审核入库",
-                    page_reference=None,
+                    section_reference=payload.get("section_reference") or "案例审核入库",
+                    section_path=payload.get("section_path") or "案例审核入库",
+                    step_anchor=payload.get("step_anchor"),
+                    page_reference=payload.get("page_reference"),
+                    image_anchor=payload.get("image_anchor"),
                 )
-                for index, chunk_text in enumerate(chunks, start=1)
+                for index, payload in enumerate(chunk_payloads, start=1)
             ]
         )
         await self.session.flush()

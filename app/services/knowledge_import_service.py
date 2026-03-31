@@ -13,7 +13,10 @@ from app.core.metrics import increment_counter, observe_duration
 from app.integrations.pdf_import import PdfKnowledgeImportService
 from app.models.knowledge import KnowledgeChunk, KnowledgeDocument, KnowledgeImportJob
 from app.schemas.knowledge import KnowledgeDocumentCreate
-from app.services.knowledge_service import KnowledgeService, split_text_into_chunks
+from app.services.knowledge_service import (
+    KnowledgeService,
+    build_anchored_chunk_payloads,
+)
 from app.services.ocr_service import KnowledgeOcrService
 
 IMAGE_MIME_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
@@ -384,16 +387,30 @@ class KnowledgeImportService:
         document_id: int,
         *,
         limit: int = 8,
+        focus_chunk_id: int | None = None,
     ) -> list[dict[str, Any]]:
         """Return ordered preview chunks for one document."""
         await self._ensure_document(document_id)
-        stmt = (
+        base_stmt = (
             select(KnowledgeChunk)
             .where(KnowledgeChunk.document_id == document_id)
             .order_by(KnowledgeChunk.chunk_index.asc())
-            .limit(limit)
         )
-        chunks = (await self.session.execute(stmt)).scalars().all()
+        if focus_chunk_id is None:
+            chunks = (await self.session.execute(base_stmt.limit(limit))).scalars().all()
+        else:
+            ordered_chunks = (await self.session.execute(base_stmt)).scalars().all()
+            focus_index = next(
+                (index for index, chunk in enumerate(ordered_chunks) if chunk.id == focus_chunk_id),
+                None,
+            )
+            if focus_index is None:
+                chunks = ordered_chunks[:limit]
+            else:
+                start = max(focus_index - (limit // 2), 0)
+                end = min(start + limit, len(ordered_chunks))
+                start = max(end - limit, 0)
+                chunks = ordered_chunks[start:end]
         return [
             {
                 "id": chunk.id,
@@ -402,6 +419,9 @@ class KnowledgeImportService:
                 "content": chunk.content,
                 "page_reference": chunk.page_reference,
                 "section_reference": chunk.section_reference,
+                "section_path": chunk.section_path,
+                "step_anchor": chunk.step_anchor,
+                "image_anchor": chunk.image_anchor,
             }
             for chunk in chunks
         ]
@@ -561,17 +581,22 @@ class KnowledgeImportService:
         recognized_text: str,
         section_reference: str | None,
     ) -> list[dict[str, str | None]]:
-        chunks = split_text_into_chunks(recognized_text, max_chars=420)
-        payloads: list[dict[str, str | None]] = []
-        for index, chunk_text in enumerate(chunks, start=1):
-            payloads.append(
-                {
-                    "heading": f"{title} - OCR 导入 - 第 {index} 段",
-                    "content": chunk_text,
-                    "page_reference": "IMG1",
-                    "section_reference": section_reference,
-                }
+        payloads = build_anchored_chunk_payloads(
+            recognized_text,
+            title=title,
+            max_chars=420,
+            section_reference=section_reference,
+            page_reference="IMG1",
+            image_anchor_prefix="IMG1#OCR",
+        )
+        for index, payload in enumerate(payloads, start=1):
+            payload["heading"] = (
+                f"{payload['section_path']} - OCR 第 {index} 段"
+                if payload.get("section_path")
+                else f"{title} - OCR 导入 - 第 {index} 段"
             )
+            if not payload.get("image_anchor"):
+                payload["image_anchor"] = f"IMG1#OCR-{index}"
         return payloads
 
     def _build_processing_note(self, import_type: str) -> str | None:

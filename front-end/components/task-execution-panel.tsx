@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { getMaintenanceTaskExport, updateMaintenanceTaskStep } from "@/lib/api";
+import { buildKnowledgeTraceHref, formatKnowledgeAnchor } from "@/lib/knowledge-anchors";
 import { SectionCard } from "@/components/section-card";
 import type { MaintenanceTaskResponse } from "@/lib/types";
 
@@ -266,12 +267,21 @@ export function TaskExecutionPanel({
                 <article key={ref.chunk_id} className="resultCard">
                   <div className="resultMeta">
                     <h3>{ref.title}</h3>
-                    <p>
-                      {ref.source_name} · {ref.section_reference || "章节待补充"} ·{" "}
-                      {ref.page_reference || "页码待补充"}
-                    </p>
+                    <p>{ref.source_name}</p>
+                    <p>{formatKnowledgeAnchor(ref)}</p>
                   </div>
                   <p className="excerpt">{ref.excerpt}</p>
+                  <div className="buttonRow">
+                    <Link
+                      href={buildKnowledgeTraceHref({
+                        documentId: ref.document_id,
+                        chunkId: ref.chunk_id,
+                      })}
+                      className="inlineActionLink"
+                    >
+                      定位回看来源
+                    </Link>
+                  </div>
                 </article>
               ))
             ) : (

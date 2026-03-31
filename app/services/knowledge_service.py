@@ -15,6 +15,19 @@ from app.schemas.knowledge import KnowledgeDocumentCreate, KnowledgeSearchReques
 from app.services.image_analysis_service import FaultImageAnalysisService
 
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9\u4e00-\u9fff]{2,}")
+SECTION_HEADING_PATTERNS = [
+    (1, re.compile(r"^第[一二三四五六七八九十百零\d]+章(?:[：:\s-]+.+)?$")),
+    (2, re.compile(r"^第[一二三四五六七八九十百零\d]+节(?:[：:\s-]+.+)?$")),
+    (3, re.compile(r"^第[一二三四五六七八九十百零\d]+条(?:[：:\s-]+.+)?$")),
+]
+DECIMAL_SECTION_PATTERN = re.compile(r"^(\d+(?:\.\d+){1,3})(?:[：:\s-]+.+)?$")
+LIST_SECTION_PATTERN = re.compile(r"^[一二三四五六七八九十]+、.+$")
+STEP_ANCHOR_PATTERNS = [
+    re.compile(r"^(步骤\s*\d+)(?:[：:、.\s-]+.*)?$"),
+    re.compile(r"^(\d+)(?:[.、:：)\s-]+.*)$"),
+    re.compile(r"^[（(](\d+)[)）](?:[：:、.\s-]+.*)?$"),
+    re.compile(r"^([一二三四五六七八九十]+)、(?:.*)$"),
+]
 SEARCH_TOKEN_LIMIT = 24
 SEARCH_IGNORE_TOKENS = {
     "当前",
@@ -149,10 +162,175 @@ SOURCE_TYPE_RERANK_BONUS = {
 }
 
 
-def split_text_into_chunks(content: str, max_chars: int = 480) -> list[str]:
-    """Split long knowledge content into deterministic searchable chunks."""
+def split_text_into_paragraphs(content: str) -> list[str]:
+    """Split raw content into stable paragraphs for chunking and anchor extraction."""
     normalized = "\n".join(line.strip() for line in content.splitlines())
     paragraphs = [part.strip() for part in normalized.split("\n\n") if part.strip()]
+    if paragraphs:
+        return paragraphs
+    stripped = content.strip()
+    return [stripped] if stripped else []
+
+
+def _normalize_anchor_text(value: str | None, *, max_length: int = 120) -> str | None:
+    condensed = " ".join((value or "").split()).strip()
+    if not condensed:
+        return None
+    if len(condensed) <= max_length:
+        return condensed
+    return condensed[: max_length - 1].rstrip() + "…"
+
+
+def _split_segment_by_length(text: str, max_chars: int) -> list[str]:
+    """Split one paragraph into deterministic sub-segments when it is too long."""
+    condensed = text.strip()
+    if not condensed:
+        return []
+    if len(condensed) <= max_chars:
+        return [condensed]
+
+    segments: list[str] = []
+    remaining = condensed
+    boundary_tokens = ("。", "；", "！", "？", "，", ";", ",", " ")
+    while remaining:
+        if len(remaining) <= max_chars:
+            segments.append(remaining.strip())
+            break
+
+        end = max_chars
+        best_boundary = -1
+        for token in boundary_tokens:
+            boundary = remaining.rfind(token, 0, max_chars)
+            if boundary > best_boundary:
+                best_boundary = boundary
+        if best_boundary >= max_chars // 3:
+            end = best_boundary + 1
+
+        segments.append(remaining[:end].strip())
+        remaining = remaining[end:].strip()
+
+    return [segment for segment in segments if segment]
+
+
+def _detect_section_heading(paragraph: str) -> tuple[int, str] | None:
+    normalized = _normalize_anchor_text(paragraph, max_length=140)
+    if not normalized:
+        return None
+
+    for level, pattern in SECTION_HEADING_PATTERNS:
+        if pattern.match(normalized):
+            return level, normalized
+
+    decimal_match = DECIMAL_SECTION_PATTERN.match(normalized)
+    if decimal_match:
+        numbering = decimal_match.group(1)
+        return min(numbering.count(".") + 2, 4), normalized
+
+    if len(normalized) <= 36 and LIST_SECTION_PATTERN.match(normalized) and "。" not in normalized:
+        return 3, normalized
+    return None
+
+
+def _detect_step_anchor(paragraph: str) -> str | None:
+    normalized = _normalize_anchor_text(paragraph, max_length=100)
+    if not normalized:
+        return None
+
+    for pattern in STEP_ANCHOR_PATTERNS:
+        if pattern.match(normalized):
+            return normalized
+    return None
+
+
+def build_anchored_chunk_payloads(
+    content: str,
+    *,
+    title: str,
+    max_chars: int = 480,
+    section_reference: str | None = None,
+    page_reference: str | None = None,
+    image_anchor_prefix: str | None = None,
+) -> list[dict[str, str | None]]:
+    """Build searchable chunk payloads together with hierarchical anchor metadata."""
+    paragraphs = split_text_into_paragraphs(content)
+    if not paragraphs:
+        return []
+
+    section_stack: list[str] = []
+    default_section = _normalize_anchor_text(section_reference, max_length=140)
+    segments: list[dict[str, str | None]] = []
+    for paragraph in paragraphs:
+        heading_info = _detect_section_heading(paragraph)
+        if heading_info is not None:
+            level, heading = heading_info
+            section_stack = section_stack[: level - 1]
+            section_stack.append(heading)
+
+        section_path = " > ".join(section_stack) if section_stack else default_section
+        section_label = section_stack[-1] if section_stack else default_section
+        step_anchor = _detect_step_anchor(paragraph)
+        for segment in _split_segment_by_length(paragraph, max_chars):
+            segments.append(
+                {
+                    "text": segment,
+                    "section_reference": section_label,
+                    "section_path": section_path,
+                    "step_anchor": step_anchor,
+                }
+            )
+
+    payloads: list[dict[str, str | None]] = []
+    current_segments: list[str] = []
+    current_section_reference: str | None = None
+    current_section_path: str | None = None
+    current_step_anchor: str | None = None
+
+    def flush_current() -> None:
+        nonlocal current_segments, current_section_reference, current_section_path, current_step_anchor
+        if not current_segments:
+            return
+        chunk_number = len(payloads) + 1
+        payloads.append(
+            {
+                "heading": current_section_path or current_section_reference or title,
+                "content": "\n\n".join(current_segments).strip(),
+                "section_reference": current_section_reference or default_section,
+                "section_path": current_section_path or default_section,
+                "step_anchor": current_step_anchor,
+                "page_reference": page_reference,
+                "image_anchor": (
+                    f"{image_anchor_prefix}-{chunk_number}" if image_anchor_prefix else None
+                ),
+            }
+        )
+        current_segments = []
+        current_section_reference = None
+        current_section_path = None
+        current_step_anchor = None
+
+    for segment in segments:
+        text = segment["text"] or ""
+        candidate = (
+            f"{'\n\n'.join(current_segments)}\n\n{text}".strip() if current_segments else text
+        )
+        if current_segments and len(candidate) > max_chars:
+            flush_current()
+
+        current_segments.append(text)
+        if segment.get("section_reference"):
+            current_section_reference = segment["section_reference"]
+        if segment.get("section_path"):
+            current_section_path = segment["section_path"]
+        if not current_step_anchor and segment.get("step_anchor"):
+            current_step_anchor = segment["step_anchor"]
+
+    flush_current()
+    return payloads
+
+
+def split_text_into_chunks(content: str, max_chars: int = 480) -> list[str]:
+    """Split long knowledge content into deterministic searchable chunks."""
+    paragraphs = split_text_into_paragraphs(content)
     if not paragraphs:
         return [content.strip()]
 
@@ -172,11 +350,7 @@ def split_text_into_chunks(content: str, max_chars: int = 480) -> list[str]:
             current = paragraph
             continue
 
-        start = 0
-        while start < len(paragraph):
-            end = start + max_chars
-            chunks.append(paragraph[start:end].strip())
-            start = end
+        chunks.extend(_split_segment_by_length(paragraph, max_chars))
 
     if current:
         chunks.append(current)
@@ -227,7 +401,10 @@ class KnowledgeService:
                     equipment_model=chunk_payload["equipment_model"] or data.equipment_model,
                     fault_type=chunk_payload["fault_type"] or data.fault_type,
                     section_reference=chunk_payload["section_reference"] or data.section_reference,
+                    section_path=chunk_payload.get("section_path"),
+                    step_anchor=chunk_payload.get("step_anchor"),
                     page_reference=chunk_payload["page_reference"] or data.page_reference,
+                    image_anchor=chunk_payload.get("image_anchor"),
                 )
                 for index, chunk_payload in enumerate(chunk_payloads, start=1)
             ]
@@ -252,7 +429,10 @@ class KnowledgeService:
                 func.coalesce(KnowledgeChunk.equipment_model, ""),
                 func.coalesce(KnowledgeChunk.fault_type, ""),
                 func.coalesce(KnowledgeChunk.section_reference, ""),
+                func.coalesce(KnowledgeChunk.section_path, ""),
+                func.coalesce(KnowledgeChunk.step_anchor, ""),
                 func.coalesce(KnowledgeChunk.page_reference, ""),
+                func.coalesce(KnowledgeChunk.image_anchor, ""),
             )
             document_search_text = func.concat_ws(
                 " ",
@@ -428,7 +608,10 @@ class KnowledgeService:
             "fault_type": chunk.fault_type,
             "excerpt": self._build_excerpt(chunk.content, query),
             "section_reference": chunk.section_reference or document.section_reference,
+            "section_path": getattr(chunk, "section_path", None),
+            "step_anchor": getattr(chunk, "step_anchor", None),
             "page_reference": chunk.page_reference or document.page_reference,
+            "image_anchor": getattr(chunk, "image_anchor", None),
             "recommendation_reason": self._build_reason(request, document, chunk),
             "score": retrieval_score_value,
             "retrieval_score": retrieval_score_value,
@@ -570,7 +753,10 @@ class KnowledgeService:
                 item.get("_heading") or "",
                 item.get("_content") or "",
                 item.get("section_reference") or "",
+                item.get("section_path") or "",
+                item.get("step_anchor") or "",
                 item.get("page_reference") or "",
+                item.get("image_anchor") or "",
             ]
             if part
         ).lower()
@@ -828,17 +1014,37 @@ class KnowledgeService:
             case((KnowledgeChunk.fault_type.ilike(f"%{token}%"), 1.0), else_=0.0)
             for token in tokens
         ]
+        anchor_matches = [
+            case(
+                (
+                    KnowledgeChunk.section_path.ilike(f"%{token}%")
+                    | KnowledgeChunk.step_anchor.ilike(f"%{token}%")
+                    | KnowledgeChunk.section_reference.ilike(f"%{token}%")
+                    | KnowledgeChunk.page_reference.ilike(f"%{token}%")
+                    | KnowledgeChunk.image_anchor.ilike(f"%{token}%"),
+                    1.4,
+                ),
+                else_=0.0,
+            )
+            for token in tokens
+        ]
         score_expr = (
             sum(title_matches, literal(0.0))
             + sum(content_matches, literal(0.0))
             + sum(model_matches, literal(0.0))
             + sum(fault_matches, literal(0.0))
+            + sum(anchor_matches, literal(0.0))
         )
         match_expr = or_(
             *[KnowledgeDocument.title.ilike(f"%{token}%") for token in tokens],
             *[KnowledgeChunk.content.ilike(f"%{token}%") for token in tokens],
             *[KnowledgeChunk.equipment_model.ilike(f"%{token}%") for token in tokens],
             *[KnowledgeChunk.fault_type.ilike(f"%{token}%") for token in tokens],
+            *[KnowledgeChunk.section_path.ilike(f"%{token}%") for token in tokens],
+            *[KnowledgeChunk.step_anchor.ilike(f"%{token}%") for token in tokens],
+            *[KnowledgeChunk.section_reference.ilike(f"%{token}%") for token in tokens],
+            *[KnowledgeChunk.page_reference.ilike(f"%{token}%") for token in tokens],
+            *[KnowledgeChunk.image_anchor.ilike(f"%{token}%") for token in tokens],
         )
         return score_expr, match_expr
 
@@ -854,15 +1060,37 @@ class KnowledgeService:
                 content = (payload.get("content") or "").strip()
                 if not content:
                     continue
+                normalized_heading = (payload.get("heading") or data.title).strip()
+                normalized_section_reference = (
+                    payload.get("section_reference") or data.section_reference
+                )
+                normalized_page_reference = payload.get("page_reference") or data.page_reference
+                inferred_anchors = build_anchored_chunk_payloads(
+                    content,
+                    title=normalized_heading,
+                    max_chars=max(len(content) + 8, 64),
+                    section_reference=normalized_section_reference,
+                    page_reference=normalized_page_reference,
+                    image_anchor_prefix=(
+                        normalized_page_reference
+                        if (normalized_page_reference or "").startswith("IMG")
+                        else None
+                    ),
+                )
+                inferred = inferred_anchors[0] if inferred_anchors else {}
                 prepared_payloads.append(
                     {
-                        "heading": (payload.get("heading") or data.title).strip(),
+                        "heading": normalized_heading,
                         "content": content,
                         "equipment_type": payload.get("equipment_type") or data.equipment_type,
                         "equipment_model": payload.get("equipment_model") or data.equipment_model,
                         "fault_type": payload.get("fault_type") or data.fault_type,
-                        "section_reference": payload.get("section_reference") or data.section_reference,
-                        "page_reference": payload.get("page_reference") or data.page_reference,
+                        "section_reference": normalized_section_reference
+                        or inferred.get("section_reference"),
+                        "section_path": payload.get("section_path") or inferred.get("section_path"),
+                        "step_anchor": payload.get("step_anchor") or inferred.get("step_anchor"),
+                        "page_reference": normalized_page_reference,
+                        "image_anchor": payload.get("image_anchor") or inferred.get("image_anchor"),
                     }
                 )
 
@@ -871,13 +1099,24 @@ class KnowledgeService:
 
         return [
             {
-                "heading": data.title,
-                "content": chunk_text,
+                "heading": payload["heading"],
+                "content": payload["content"],
                 "equipment_type": data.equipment_type,
                 "equipment_model": data.equipment_model,
                 "fault_type": data.fault_type,
-                "section_reference": data.section_reference,
-                "page_reference": data.page_reference,
+                "section_reference": payload.get("section_reference"),
+                "section_path": payload.get("section_path"),
+                "step_anchor": payload.get("step_anchor"),
+                "page_reference": payload.get("page_reference"),
+                "image_anchor": payload.get("image_anchor"),
             }
-            for chunk_text in split_text_into_chunks(data.content)
+            for payload in build_anchored_chunk_payloads(
+                data.content,
+                title=data.title,
+                section_reference=data.section_reference,
+                page_reference=data.page_reference,
+                image_anchor_prefix=(
+                    data.page_reference if (data.page_reference or "").startswith("IMG") else None
+                ),
+            )
         ]

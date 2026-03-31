@@ -1017,3 +1017,45 @@
   - `todo_softbei.md` (updated)
   - `progress.md` (updated)
   - `findings.md` (updated)
+
+### TODO-SB-10 P0 第三批：层级化知识锚点与可定位检索
+- **Status:** complete
+- Actions taken:
+  - 为 `knowledge_chunks` 新增 `section_path`、`step_anchor`、`image_anchor` 三类锚点字段，并新增 Alembic 迁移 `d2f6e4c1b8a9`
+  - 为 PDF、图片 OCR、案例审核入库三条知识写入链路补层级锚点抽取，让知识分段不再只有“页码 + 章节”两层来源信息
+  - 知识检索结果新增层级锚点返回，并将锚点字段纳入 PostgreSQL/SQLite 检索与 token 匹配范围，提升可定位检索和章节词命中能力
+  - 知识中心 `/knowledge` 新增 `chunkId` 定位参数，文档分段预览支持 `focus_chunk_id`，可按命中 chunk 自动包含、滚动并高亮目标分段
+  - 正式前端 `/agents`、`/tasks/[id]`、`/cases/[id]`、知识检索页都新增“定位回看来源”入口，直接跳到知识中心对应文档和命中锚点
+  - 新增 `front-end/lib/knowledge-anchors.ts`，统一前端锚点文案与来源回看链接拼装
+  - 新增 `tests/test_phase24_knowledge_anchors.py`，覆盖锚点抽取与检索结果锚点透传；扩展 `tests/test_phase19_knowledge_imports.py` 覆盖 `focus_chunk_id`
+  - 验证 `pytest -q tests/test_phase24_knowledge_anchors.py tests/test_phase19_knowledge_imports.py tests/test_phase21_rerank.py` 结果为 `17 passed`
+  - 验证 `front-end` 的 `npm run typecheck` 通过
+  - 验证全量 `pytest -q` 结果更新为 `73 passed, 6 skipped`
+- Files created/modified:
+  - `app/models/knowledge.py` (updated)
+  - `app/routers/knowledge.py` (updated)
+  - `app/schemas/knowledge.py` (updated)
+  - `app/schemas/knowledge_imports.py` (updated)
+  - `app/schemas/tasks.py` (updated)
+  - `app/services/knowledge_service.py` (updated)
+  - `app/services/pdf_import_service.py` (updated)
+  - `app/services/knowledge_import_service.py` (updated)
+  - `app/services/case_service.py` (updated)
+  - `app/services/maintenance_task_service.py` (updated)
+  - `front-end/app/knowledge/page.tsx` (updated)
+  - `front-end/components/knowledge-management-center.tsx` (updated)
+  - `front-end/components/knowledge-document-library.tsx` (updated)
+  - `front-end/components/knowledge-search-panel.tsx` (updated)
+  - `front-end/components/agent-assist-panel.tsx` (updated)
+  - `front-end/components/task-execution-panel.tsx` (updated)
+  - `front-end/components/case-review-panel.tsx` (updated)
+  - `front-end/lib/api.ts` (updated)
+  - `front-end/lib/types.ts` (updated)
+  - `front-end/lib/knowledge-anchors.ts` (created)
+  - `front-end/app/globals.css` (updated)
+  - `alembic/versions/d2f6e4c1b8a9_add_knowledge_chunk_anchor_fields.py` (created)
+  - `tests/test_phase19_knowledge_imports.py` (updated)
+  - `tests/test_phase24_knowledge_anchors.py` (created)
+  - `todo_softbei.md` (updated)
+  - `progress.md` (updated)
+  - `findings.md` (updated)

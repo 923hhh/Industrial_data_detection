@@ -128,7 +128,10 @@ class KnowledgeSearchHit(BaseModel):
     fault_type: str | None = None
     excerpt: str
     section_reference: str | None = None
+    section_path: str | None = None
+    step_anchor: str | None = None
     page_reference: str | None = None
+    image_anchor: str | None = None
     recommendation_reason: str
     score: float | None = None
     retrieval_score: float | None = None

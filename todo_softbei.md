@@ -354,7 +354,7 @@
   - 高风险或应急场景下会明确输出 `authorization_required` 与 `blocking_issues`。
   - `/agents` 和 `/tasks/[id]` 可以直接看到前置条件和授权提示。
 - 依赖关系：依赖 `TODO-SB-4`、`TODO-SB-6`、`TODO-SB-9` 的现有正式链路和后端基础设施。
-- 状态：进行中（第一批“工具注册表 + 合规执行基础”和第二批“正式主链路事件流化”已完成，P0 其余项待继续）
+- 状态：进行中（第一批“工具注册表 + 合规执行基础”、第二批“正式主链路事件流化”和第三批“层级化知识锚点与可定位检索”已完成，P0 最后一项“评测集与业务指标固化”待继续）
 
 ## 风险清单
 
@@ -432,6 +432,23 @@
 - 当前遗留问题补充：
   - 当前 OCR 仍采用“多模态模型提取 + fallback 提示”策略，尚未接入本地 OCR 引擎。
   - 图片型知识导入已可用，但“扫描件 PDF OCR”“导入后人工校对”与“批量图片导入”仍待后续增强。
+
+### 2026-03-31（TODO-SB-10 P0 第三批）
+
+- 已完成 `层级化知识锚点与可定位检索` 这一项 P0 剩余能力。
+- 当前处理：
+  - 已扩展 `knowledge_chunks`，新增 `section_path`、`step_anchor`、`image_anchor`，并补 Alembic 迁移 `d2f6e4c1b8a9_add_knowledge_chunk_anchor_fields.py`。
+  - 已为 PDF 导入、图片 OCR 导入和案例审核入库统一补锚点抽取逻辑，让知识分段可稳定携带“页码 -> 章节路径 -> 步骤/图片锚点”。
+  - 已将层级锚点纳入知识检索结果返回，并同步纳入检索打分与 token 命中范围，提升章节词、步骤词和来源定位能力。
+  - 已为知识中心增加 `documentId + chunkId` 定位模式，分段预览支持 `focus_chunk_id`，会自动包含并高亮目标 chunk。
+  - 已在 `/agents`、`/tasks/[id]`、`/cases/[id]` 和正式知识检索页补“定位回看来源”入口，命中后可直接跳转到知识中心对应分段。
+- 验证结果：
+  - `pytest -q tests/test_phase24_knowledge_anchors.py tests/test_phase19_knowledge_imports.py tests/test_phase21_rerank.py` 通过，结果为 `17 passed`。
+  - `front-end` 的 `npm run typecheck` 通过。
+  - 已执行全量 `pytest -q` 回归，当前结果更新为 `73 passed, 6 skipped`。
+- 当前遗留问题：
+  - 当前锚点抽取仍以规则解析为主，尚未接入更强的章节树解析或图文统一结构化理解。
+  - P0 最后一项“评测集与业务指标固化”仍待继续。
 
 ### 2026-03-28（TODO-SB-3）
 
