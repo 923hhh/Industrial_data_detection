@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { importKnowledgePdf, previewKnowledgeImport } from "@/lib/api";
+import { getKnowledgeImportJob, importKnowledgePdf, previewKnowledgeImport } from "@/lib/api";
 import type { KnowledgeImportJobResponse, KnowledgeImportPreviewResponse } from "@/lib/types";
 
 type KnowledgeImportPanelProps = {
@@ -23,16 +23,27 @@ export function KnowledgeImportPanel({ onImported }: KnowledgeImportPanelProps) 
   const [preview, setPreview] = useState<KnowledgeImportPreviewResponse | null>(null);
   const [job, setJob] = useState<KnowledgeImportJobResponse | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const latestNotificationRef = useRef<string | null>(null);
 
   function resetDerivedState() {
     setPreview(null);
     setJob(null);
     setError(null);
+    latestNotificationRef.current = null;
+  }
+
+  function notifyImported(nextJob: KnowledgeImportJobResponse) {
+    const fingerprint = `${nextJob.id}:${nextJob.status}:${nextJob.document_id ?? "none"}`;
+    if (latestNotificationRef.current === fingerprint) {
+      return;
+    }
+    latestNotificationRef.current = fingerprint;
+    onImported?.(nextJob);
   }
 
   function buildFormData() {
     if (!file) {
-      throw new Error("请先选择一个 PDF 手册文件。");
+      throw new Error("请先选择一个待导入的 PDF 或图片文件。");
     }
 
     const formData = new FormData();
@@ -67,19 +78,51 @@ export function KnowledgeImportPanel({ onImported }: KnowledgeImportPanelProps) 
     try {
       const payload = await importKnowledgePdf(buildFormData());
       setJob(payload);
-      onImported?.(payload);
+      notifyImported(payload);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "PDF 导入失败");
+      setError(submitError instanceof Error ? submitError.message : "导入任务提交失败");
     } finally {
       setLoading(false);
     }
   }
 
+  useEffect(() => {
+    if (!job || !["pending", "processing"].includes(job.status)) {
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setInterval(async () => {
+      try {
+        const latestJob = await getKnowledgeImportJob(job.id);
+        if (cancelled) {
+          return;
+        }
+        setJob(latestJob);
+        notifyImported(latestJob);
+        if (!["pending", "processing"].includes(latestJob.status)) {
+          window.clearInterval(timer);
+        }
+      } catch (pollError) {
+        if (cancelled) {
+          return;
+        }
+        setError(pollError instanceof Error ? pollError.message : "导入任务轮询失败");
+        window.clearInterval(timer);
+      }
+    }, 1500);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [job, onImported]);
+
   return (
     <div className="panelStack">
       <div className="formGrid">
         <label>
-          <span>PDF 手册文件</span>
+          <span>PDF / 图片文件</span>
           <input
             className="fileInput"
             type="file"
@@ -167,7 +210,7 @@ export function KnowledgeImportPanel({ onImported }: KnowledgeImportPanelProps) 
           {previewLoading ? "预览生成中..." : "生成导入预览"}
         </button>
         <button onClick={handleSubmit} disabled={loading || !preview}>
-          {loading ? "导入中..." : "确认导入 PDF"}
+          {loading ? "任务提交中..." : "提交导入任务"}
         </button>
       </div>
       {error ? <p className="errorText">{error}</p> : null}
@@ -193,6 +236,9 @@ export function KnowledgeImportPanel({ onImported }: KnowledgeImportPanelProps) 
               任务 #{job.id} · {job.import_type} · {job.status} · {job.page_count ?? 0} 页 / {job.chunk_count ?? 0} 段
             </p>
           </div>
+          {["pending", "processing"].includes(job.status) ? (
+            <p className="muted">后台 worker 正在处理该导入任务，完成后会自动刷新当前状态。</p>
+          ) : null}
           {job.processing_note ? <p className="muted">{job.processing_note}</p> : null}
           {job.preview_excerpt ? <p className="excerpt">{job.preview_excerpt}</p> : null}
           {job.error_message ? <p className="errorText">{job.error_message}</p> : null}

@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import (
 # 导入项目模型和数据库配置
 from app.core.config import get_settings
 from app.models import (  # noqa: F401 - 导入所有模型以注册 metadata
+    AgentRun,
     Base,
     DeviceModel,
     KnowledgeChunk,

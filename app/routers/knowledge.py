@@ -24,6 +24,7 @@ from app.schemas.knowledge import (
     KnowledgeSearchResponse,
 )
 from app.services.knowledge_import_service import KnowledgeImportService
+from app.services.knowledge_import_worker import KnowledgeImportWorker
 from app.services.knowledge_service import KnowledgeService
 
 router = APIRouter(prefix="/api/v1/knowledge", tags=["知识库"])
@@ -141,9 +142,9 @@ async def list_knowledge_import_jobs(
 @router.post(
     "/imports",
     response_model=KnowledgeImportJobResponse,
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_202_ACCEPTED,
     summary="上传并导入知识文档",
-    description="通过正式知识中心上传 PDF 手册或图片型知识文档，自动提取文本、切分分段并写入知识库。",
+    description="通过正式知识中心上传 PDF 手册或图片型知识文档，先创建导入任务，再由后台 worker 异步提取文本并写入知识库。",
 )
 async def import_knowledge_document(
     file: UploadFile = File(..., description="待导入的 PDF 手册或图片文件"),
@@ -184,6 +185,29 @@ async def import_knowledge_document(
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    KnowledgeImportWorker.schedule_job(payload["id"])
+    return _build_import_job_response(payload)
+
+
+@router.post(
+    "/imports/{job_id}/retry",
+    response_model=KnowledgeImportJobResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="重试知识导入任务",
+    description="将失败的知识导入任务重新放回后台队列，再次执行 OCR/PDF 解析与入库流程。",
+)
+async def retry_knowledge_import_job(
+    job_id: int,
+    session: AsyncSession = Depends(get_session),
+) -> KnowledgeImportJobResponse:
+    service = KnowledgeImportService(session)
+    try:
+        payload = await service.retry_job(job_id)
+    except ValueError as exc:
+        message = str(exc)
+        status_code = status.HTTP_404_NOT_FOUND if "不存在" in message else status.HTTP_400_BAD_REQUEST
+        raise HTTPException(status_code=status_code, detail=message) from exc
+    KnowledgeImportWorker.schedule_job(job_id)
     return _build_import_job_response(payload)
 
 

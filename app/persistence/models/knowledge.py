@@ -1,5 +1,6 @@
 """Knowledge-domain model exports."""
 from app.models.knowledge import (
+    AgentRun,
     DeviceModel,
     KnowledgeChunk,
     KnowledgeDocument,
@@ -10,6 +11,7 @@ from app.models.knowledge import (
 )
 
 __all__ = [
+    "AgentRun",
     "DeviceModel",
     "KnowledgeDocument",
     "KnowledgeImportJob",

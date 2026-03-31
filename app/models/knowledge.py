@@ -7,6 +7,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -74,12 +75,17 @@ class KnowledgeImportJob(Base):
     title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     source_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     source_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    content_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
     equipment_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     equipment_model: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     fault_type: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     section_reference: Mapped[str | None] = mapped_column(String(100), nullable=True)
     replace_existing: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    status: Mapped[str] = mapped_column(String(30), default="processing", nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(30), default="pending", nullable=False, index=True)
+    file_bytes: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     page_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     chunk_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     document_id: Mapped[int | None] = mapped_column(
@@ -89,6 +95,21 @@ class KnowledgeImportJob(Base):
     )
     preview_excerpt: Mapped[str | None] = mapped_column(Text, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+
+class AgentRun(Base):
+    """Persisted agent collaboration run snapshot for playback and recovery."""
+
+    __tablename__ = "agent_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False

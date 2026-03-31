@@ -70,7 +70,7 @@ async def test_preview_knowledge_import_endpoint():
 
 @pytest.mark.asyncio
 async def test_knowledge_import_upload_endpoint():
-    """上传 PDF 时应返回正式知识导入任务摘要。"""
+    """上传 PDF 时应先返回已受理的导入任务摘要。"""
     mocked_payload = {
         "id": 7,
         "import_type": "pdf",
@@ -83,11 +83,11 @@ async def test_knowledge_import_upload_endpoint():
         "fault_type": None,
         "section_reference": None,
         "replace_existing": True,
-        "status": "completed",
-        "page_count": 12,
-        "chunk_count": 31,
-        "document_id": 18,
-        "preview_excerpt": "火花塞检查与拆装步骤。",
+        "status": "pending",
+        "page_count": None,
+        "chunk_count": None,
+        "document_id": None,
+        "preview_excerpt": None,
         "error_message": None,
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc),
@@ -96,7 +96,7 @@ async def test_knowledge_import_upload_endpoint():
     with patch(
         "app.routers.knowledge.KnowledgeImportService.import_pdf_upload",
         new=AsyncMock(return_value=mocked_payload),
-    ):
+    ), patch("app.routers.knowledge.KnowledgeImportWorker.schedule_job"):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.post(
@@ -109,11 +109,11 @@ async def test_knowledge_import_upload_endpoint():
                 },
             )
 
-    assert response.status_code == 201
+    assert response.status_code == 202
     payload = response.json()
-    assert payload["status"] == "completed"
-    assert payload["chunk_count"] == 31
-    assert payload["document_id"] == 18
+    assert payload["status"] == "pending"
+    assert payload["chunk_count"] is None
+    assert payload["document_id"] is None
 
 
 @pytest.mark.asyncio
@@ -176,7 +176,7 @@ async def test_preview_knowledge_import_accepts_image_upload():
 
 @pytest.mark.asyncio
 async def test_knowledge_import_upload_accepts_image_upload():
-    """正式导入接口应接受图片型知识文档。"""
+    """正式导入接口应接受图片型知识文档并先返回排队状态。"""
     mocked_payload = {
         "id": 12,
         "import_type": "image_ocr",
@@ -189,11 +189,11 @@ async def test_knowledge_import_upload_accepts_image_upload():
         "fault_type": None,
         "section_reference": "点火系统",
         "replace_existing": True,
-        "status": "completed",
-        "page_count": 1,
-        "chunk_count": 3,
-        "document_id": 25,
-        "preview_excerpt": "图像 OCR 已识别火花塞拆装与检查步骤。",
+        "status": "pending",
+        "page_count": None,
+        "chunk_count": None,
+        "document_id": None,
+        "preview_excerpt": None,
         "error_message": None,
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc),
@@ -202,7 +202,7 @@ async def test_knowledge_import_upload_accepts_image_upload():
     with patch(
         "app.routers.knowledge.KnowledgeImportService.import_pdf_upload",
         new=AsyncMock(return_value=mocked_payload),
-    ):
+    ), patch("app.routers.knowledge.KnowledgeImportWorker.schedule_job"):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.post(
@@ -215,10 +215,49 @@ async def test_knowledge_import_upload_accepts_image_upload():
                 },
             )
 
-    assert response.status_code == 201
+    assert response.status_code == 202
     payload = response.json()
     assert payload["import_type"] == "image_ocr"
-    assert payload["document_id"] == 25
+    assert payload["status"] == "pending"
+
+
+@pytest.mark.asyncio
+async def test_retry_knowledge_import_job_endpoint():
+    """失败任务应能重新入队。"""
+    mocked_payload = {
+        "id": 15,
+        "import_type": "pdf",
+        "processing_note": None,
+        "title": "摩托车发动机维修手册",
+        "source_name": "manual.pdf",
+        "source_type": "manual",
+        "equipment_type": "摩托车发动机",
+        "equipment_model": None,
+        "fault_type": None,
+        "section_reference": None,
+        "replace_existing": False,
+        "status": "pending",
+        "page_count": None,
+        "chunk_count": None,
+        "document_id": None,
+        "preview_excerpt": None,
+        "error_message": None,
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+    }
+
+    with patch(
+        "app.routers.knowledge.KnowledgeImportService.retry_job",
+        new=AsyncMock(return_value=mocked_payload),
+    ), patch("app.routers.knowledge.KnowledgeImportWorker.schedule_job"):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post("/api/v1/knowledge/imports/15/retry")
+
+    assert response.status_code == 202
+    payload = response.json()
+    assert payload["id"] == 15
+    assert payload["status"] == "pending"
 
 
 @pytest.mark.asyncio

@@ -5,7 +5,7 @@ import mimetypes
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.integrations.pdf_import import PdfKnowledgeImportService
@@ -41,7 +41,7 @@ class KnowledgeImportService:
         source_type: str = "manual",
         replace_existing: bool = False,
     ) -> dict[str, Any]:
-        """Import an uploaded PDF or image into the knowledge base and persist a job record."""
+        """Accept an uploaded file and enqueue a persisted import job."""
         normalized_title = (title or "").strip() or self._derive_title(filename)
         source_name = filename.strip()
         import_type, processing_note = self._classify_import_file(
@@ -54,51 +54,94 @@ class KnowledgeImportService:
             title=normalized_title,
             source_name=source_name,
             source_type=source_type,
+            content_type=(content_type or "").strip() or None,
             equipment_type=equipment_type,
             equipment_model=equipment_model,
             fault_type=fault_type,
             section_reference=section_reference,
             replace_existing=replace_existing,
-            status="processing",
+            status="pending",
+            file_bytes=file_bytes,
         )
         self.session.add(job)
         await self.session.commit()
         await self.session.refresh(job)
+        return self._serialize_job(job, processing_note=processing_note)
+
+    async def retry_job(self, job_id: int) -> dict[str, Any]:
+        """Requeue a failed job for another background attempt."""
+        job = await self._load_job(job_id)
+        if job.status != "failed":
+            raise ValueError("只有失败的知识导入任务才能重试。")
+        if not job.file_bytes:
+            raise ValueError("当前导入任务缺少源文件载荷，无法重试。")
+
+        job.status = "pending"
+        job.error_message = None
+        job.page_count = None
+        job.chunk_count = None
+        job.document_id = None
+        job.preview_excerpt = None
+        job.started_at = None
+        job.finished_at = None
+        job.updated_at = datetime.utcnow()
+        await self.session.commit()
+        await self.session.refresh(job)
+        return self._serialize_job(job)
+
+    async def process_job(self, job_id: int) -> dict[str, Any]:
+        """Process one queued job inside a worker-owned session."""
+        processing_note: str | None = None
+        job = await self._load_job(job_id)
+        if job.status == "completed":
+            return self._serialize_job(job)
+
+        claimed = await self._mark_job_processing(job_id)
+        if not claimed:
+            job = await self._load_job(job_id)
+            return self._serialize_job(job)
+
+        job = await self._load_job(job_id)
+        processing_note = self._build_processing_note(job.import_type)
+        normalized_title = (job.title or "").strip() or self._derive_title(job.source_name)
 
         try:
-            if not replace_existing:
-                existing = await self._find_existing_document(source_name)
+            if not job.file_bytes:
+                raise ValueError("当前导入任务缺少源文件载荷，无法继续处理。")
+
+            if not job.replace_existing:
+                existing = await self._find_existing_document(job.source_name)
                 if existing is not None:
                     raise ValueError("已存在同名知识文档，请勾选覆盖导入后重试。")
 
             prepared = await self._prepare_upload_content(
-                import_type=import_type,
-                filename=filename,
-                file_bytes=file_bytes,
-                content_type=content_type,
+                import_type=job.import_type,
+                filename=job.source_name,
+                file_bytes=job.file_bytes or b"",
+                content_type=job.content_type,
                 title=normalized_title,
-                equipment_type=equipment_type,
-                equipment_model=equipment_model,
-                fault_type=fault_type,
-                section_reference=section_reference,
+                equipment_type=job.equipment_type,
+                equipment_model=job.equipment_model,
+                fault_type=job.fault_type,
+                section_reference=job.section_reference,
             )
-            job.import_type = prepared.get("final_import_type", import_type)
+            processing_note = prepared.get("processing_note") or processing_note
             content = prepared["content"]
             chunk_payloads = prepared["chunk_payloads"]
             document_request = KnowledgeDocumentCreate(
                 title=normalized_title,
-                source_name=source_name,
-                source_type=source_type,
-                equipment_type=equipment_type,
-                equipment_model=equipment_model,
-                fault_type=fault_type,
-                section_reference=section_reference,
+                source_name=job.source_name,
+                source_type=job.source_type,
+                equipment_type=job.equipment_type,
+                equipment_model=job.equipment_model,
+                fault_type=job.fault_type,
+                section_reference=job.section_reference,
                 page_reference=prepared["page_reference"],
                 content=content,
             )
 
-            if replace_existing:
-                await self._delete_existing_documents(source_name)
+            if job.replace_existing:
+                await self._delete_existing_documents(job.source_name)
 
             document, chunk_count = await self.knowledge_service.create_document(
                 document_request,
@@ -106,28 +149,48 @@ class KnowledgeImportService:
             )
 
             job = await self._load_job(job.id)
+            job.import_type = prepared.get("final_import_type", job.import_type)
             job.status = "completed"
             job.page_count = prepared["page_count"]
             job.chunk_count = chunk_count
             job.document_id = document.id
             job.preview_excerpt = chunk_payloads[0]["content"][:220] if chunk_payloads else None
             job.error_message = None
-            job.updated_at = datetime.utcnow()
-            await self.session.commit()
-            await self.session.refresh(job)
-            return self._serialize_job(
-                job,
-                processing_note=prepared.get("processing_note") or processing_note,
-            )
-        except Exception as exc:
-            await self.session.rollback()
-            job = await self._load_job(job.id)
-            job.status = "failed"
-            job.error_message = str(exc)
-            job.updated_at = datetime.utcnow()
+            job.file_bytes = None
+            job.finished_at = datetime.utcnow()
+            job.updated_at = job.finished_at
             await self.session.commit()
             await self.session.refresh(job)
             return self._serialize_job(job, processing_note=processing_note)
+        except Exception as exc:
+            await self.session.rollback()
+            job = await self._load_job(job_id)
+            job.status = "failed"
+            job.error_message = str(exc)
+            job.finished_at = datetime.utcnow()
+            job.updated_at = job.finished_at
+            await self.session.commit()
+            await self.session.refresh(job)
+            return self._serialize_job(job, processing_note=processing_note)
+
+    async def list_restartable_job_ids(self, limit: int = 20) -> list[int]:
+        """Return queued job ids and recover stale processing jobs after restart."""
+        now = datetime.utcnow()
+        await self.session.execute(
+            update(KnowledgeImportJob)
+            .where(KnowledgeImportJob.status == "processing")
+            .values(status="pending", updated_at=now)
+        )
+        await self.session.commit()
+
+        stmt = (
+            select(KnowledgeImportJob.id)
+            .where(KnowledgeImportJob.status == "pending")
+            .order_by(KnowledgeImportJob.created_at.asc(), KnowledgeImportJob.id.asc())
+            .limit(limit)
+        )
+        rows = (await self.session.execute(stmt)).scalars().all()
+        return [int(job_id) for job_id in rows]
 
     async def preview_pdf_upload(
         self,
@@ -336,6 +399,24 @@ class KnowledgeImportService:
         if job is None:
             raise ValueError("指定的知识导入任务不存在。")
         return job
+
+    async def _mark_job_processing(self, job_id: int) -> bool:
+        now = datetime.utcnow()
+        result = await self.session.execute(
+            update(KnowledgeImportJob)
+            .where(KnowledgeImportJob.id == job_id)
+            .where(KnowledgeImportJob.status == "pending")
+            .values(
+                status="processing",
+                attempt_count=KnowledgeImportJob.attempt_count + 1,
+                started_at=now,
+                finished_at=None,
+                updated_at=now,
+                error_message=None,
+            )
+        )
+        await self.session.commit()
+        return bool(result.rowcount)
 
     async def _ensure_document(self, document_id: int) -> KnowledgeDocument:
         stmt = select(KnowledgeDocument).where(KnowledgeDocument.id == document_id)

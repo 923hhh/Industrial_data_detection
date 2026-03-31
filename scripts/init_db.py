@@ -13,19 +13,22 @@
 import argparse
 import asyncio
 import sys
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 # 添加项目根目录到导入路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import pandas as pd
 from alembic import command
 from alembic.config import Config
 
 from app.persistence.models.sensor_data import SensorData
 from app.shared.config import get_settings
 from app.shared.database import get_engine, get_session_context
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 # CSV 列名到模型字段名的映射（CSV列名 -> 模型字段名）
@@ -117,13 +120,25 @@ MISSING_DB_DRIVER_MESSAGE = """错误: 当前 Python 环境缺少数据库驱动
   pip install -r requirements.txt
 """
 
+MISSING_PANDAS_MESSAGE = """错误: 当前 Python 环境缺少 CSV 导入依赖: pandas
+
+如果你只是初始化数据库，请直接运行:
+  python scripts/init_db.py --init-only
+
+如果你还需要导入 CSV，请先安装依赖:
+  pip install -r requirements.txt
+
+或使用项目虚拟环境:
+  ./venv/bin/python scripts/init_db.py --csv-path <your_csv_path>
+"""
+
 
 def parse_timestamp(ts_str: str) -> datetime:
     """解析 CSV 中的时间戳字符串"""
     return datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S")
 
 
-def dataframe_to_records(df: pd.DataFrame) -> list[dict]:
+def dataframe_to_records(df: Any) -> list[dict]:
     """将 DataFrame 行转换为 ORM 记录字典列表
 
     Args:
@@ -195,6 +210,13 @@ async def import_csv(csv_path: str, chunk_size: int = 5000):
         return
 
     try:
+        try:
+            import pandas as pd
+        except ModuleNotFoundError as exc:
+            if exc.name == "pandas":
+                raise SystemExit(MISSING_PANDAS_MESSAGE) from exc
+            raise
+
         # 分块读取 CSV
         for i, chunk in enumerate(pd.read_csv(csv_path, chunksize=chunk_size)):
             # 转换为记录格式

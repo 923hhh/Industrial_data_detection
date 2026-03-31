@@ -1,5 +1,6 @@
 """Persistence model exports grouped by business domain."""
 from app.persistence.models.knowledge import (
+    AgentRun,
     DeviceModel,
     KnowledgeChunk,
     KnowledgeDocument,
@@ -19,6 +20,7 @@ from app.persistence.models.tasks import (
 __all__ = [
     "Base",
     "SensorData",
+    "AgentRun",
     "DeviceModel",
     "KnowledgeDocument",
     "KnowledgeImportJob",

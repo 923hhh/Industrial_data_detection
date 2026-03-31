@@ -2,6 +2,7 @@
 """SQLAlchemy ORM models."""
 from app.models.sensor_data import SensorData, Base
 from app.models.knowledge import (
+    AgentRun,
     DeviceModel,
     KnowledgeDocument,
     KnowledgeImportJob,
@@ -20,6 +21,7 @@ from app.models.tasks import (
 __all__ = [
     "Base",
     "SensorData",
+    "AgentRun",
     "DeviceModel",
     "KnowledgeDocument",
     "KnowledgeImportJob",

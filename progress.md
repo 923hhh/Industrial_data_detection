@@ -844,3 +844,59 @@
   - `front-end/app/globals.css` (updated)
   - `progress.md` (updated)
   - `findings.md` (updated)
+
+### 服务器部署 Runbook 收口
+- **Status:** ops runbook complete
+- Actions taken:
+  - 新增服务器部署 runbook，统一首次部署、重复更新、迁移、前端重建、服务重启与上线后验证步骤
+  - 将近期真实故障经验补充为排障条目，重点覆盖“漏跑迁移导致 `/api/v1/workbench/overview` 500”“前端环境变量改后未重建”“误用系统 Python 导致缺包”等场景
+  - 在仓库 README 与前端 README 中补充 runbook 入口、前端生产启动命令和 `NEXT_PUBLIC_*` 重建提示
+- Files created/modified:
+  - `docs/SOFTBEI_SERVER_DEPLOY_RUNBOOK.md` (created)
+  - `README.md` (updated)
+  - `front-end/README.md` (updated)
+  - `progress.md` (updated)
+  - `findings.md` (updated)
+
+### 后端工程增强专项纳入主任务源
+- **Status:** planning
+- Actions taken:
+  - 将下一轮后端增强统一整理为 `TODO-SB-9 后端稳定性、可观测性与检索增强专项`
+  - 明确执行顺序固定为三批：`Agent run 持久化 + 知识导入异步任务化` -> `请求 ID + 统一错误码 + 指标/日志` -> `PostgreSQL 索引 + rerank + 集成测试`
+  - 将该专项直接并入 `todo_softbei.md`，继续保持 `todo_softbei.md` 为软件杯当前唯一任务源，不再另起平行 TODO 文档
+  - 同步在 `findings.md` 记录“先补稳定性与排障能力，再补检索质量与集成验证”的技术顺序
+  - 本轮为规划收口，未运行额外测试
+- Files created/modified:
+  - `todo_softbei.md` (updated)
+  - `progress.md` (updated)
+  - `findings.md` (updated)
+
+### TODO-SB-9A Agent Run 持久化与知识导入异步任务化
+- **Status:** complete
+- Actions taken:
+  - 为 Agent 协作新增 `agent_runs` 持久化表，将 `/api/v1/agents/runs/{id}` 从进程内内存回放切换为数据库回放
+  - 为知识导入任务补充 `content_type`、`file_bytes`、`attempt_count`、`started_at`、`finished_at` 等字段，并新增 Alembic 迁移
+  - 将知识导入接口改为“先落库 pending 任务，再由后台 worker 异步处理”的模式，正式形成 `pending -> processing -> completed / failed` 状态流
+  - 新增最小 `KnowledgeImportWorker`，支持导入任务调度、服务启动时恢复待处理任务，以及失败任务重试接口 `/api/v1/knowledge/imports/{id}/retry`
+  - 升级正式知识中心前端导入面板：提交任务后自动轮询导入状态，避免页面停留在受理态无反馈
+  - 验证 `pytest -q tests/test_phase18_workbench_agents.py tests/test_phase19_knowledge_imports.py` 结果为 `15 passed`
+  - 验证 `front-end` 的 `npm run typecheck` 通过
+  - 验证全量 `pytest -q` 结果更新为 `61 passed, 4 skipped`
+- Files created/modified:
+  - `app/models/knowledge.py` (updated)
+  - `app/models/__init__.py` (updated)
+  - `app/persistence/models/knowledge.py` (updated)
+  - `app/persistence/models/__init__.py` (updated)
+  - `app/services/agent_orchestration_service.py` (updated)
+  - `app/services/knowledge_import_service.py` (updated)
+  - `app/services/knowledge_import_worker.py` (created)
+  - `app/routers/knowledge.py` (updated)
+  - `app/bootstrap/lifespan.py` (updated)
+  - `alembic/env.py` (updated)
+  - `alembic/versions/b4d8e1f2a3c4_add_agent_runs_and_async_import_fields.py` (created)
+  - `front-end/components/knowledge-import-panel.tsx` (updated)
+  - `tests/test_phase18_workbench_agents.py` (updated)
+  - `tests/test_phase19_knowledge_imports.py` (updated)
+  - `todo_softbei.md` (updated)
+  - `progress.md` (updated)
+  - `findings.md` (updated)

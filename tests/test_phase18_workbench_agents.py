@@ -175,6 +175,7 @@ async def test_agent_assist_supports_selected_chunk_only_input():
     """即使只有已选知识条目，也应能生成 Agent 协作预案。"""
     service = AgentOrchestrationService(session=SimpleNamespace())
     service.knowledge_service.search_multimodal = AsyncMock()
+    service._store_run = AsyncMock()
     service.task_service._load_knowledge_refs = AsyncMock(
         return_value=[
             {
@@ -209,6 +210,7 @@ async def test_agent_assist_supports_selected_chunk_only_input():
     payload = await service.assist(AgentAssistRequest(selected_chunk_ids=[11]))
 
     service.knowledge_service.search_multimodal.assert_not_called()
+    service._store_run.assert_awaited_once()
     assert payload["task_plan_preview"][0]["title"] == "检修前安全确认"
     assert payload["agents"][0]["agent_name"] == "KnowledgeRetrieverAgent"
     assert payload["request_context"]["selected_chunk_ids"] == [11]

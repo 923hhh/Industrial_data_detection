@@ -1,37 +1,21 @@
 """Agent orchestration service for the formal workbench."""
 from __future__ import annotations
 
-from collections import OrderedDict
 from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
+from fastapi.encoders import jsonable_encoder
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.knowledge import AgentRun
 from app.schemas.agents import AgentAssistRequest
 from app.schemas.knowledge import KnowledgeSearchRequest
 from app.schemas.tasks import MaintenanceTaskCreate
 from app.services.case_service import MaintenanceCaseService
 from app.services.knowledge_service import KnowledgeService
 from app.services.maintenance_task_service import MaintenanceTaskService
-
-
-class _InMemoryAgentRunStore:
-    """Simple in-memory run store for front-end detail playback."""
-
-    _runs: "OrderedDict[str, dict[str, Any]]" = OrderedDict()
-    _max_size = 50
-
-    @classmethod
-    def put(cls, payload: dict[str, Any]) -> None:
-        cls._runs[payload["run_id"]] = payload
-        cls._runs.move_to_end(payload["run_id"])
-        while len(cls._runs) > cls._max_size:
-            cls._runs.popitem(last=False)
-
-    @classmethod
-    def get(cls, run_id: str) -> dict[str, Any] | None:
-        return cls._runs.get(run_id)
 
 
 class AgentOrchestrationService:
@@ -44,7 +28,7 @@ class AgentOrchestrationService:
         self.case_service = MaintenanceCaseService(session)
 
     async def assist(self, request: AgentAssistRequest) -> dict[str, Any]:
-        """Run the agent collaboration pipeline and persist a lightweight run snapshot."""
+        """Run the agent collaboration pipeline and persist a run snapshot."""
         retrieval_payload = {
             "query": request.query,
             "effective_query": request.query,
@@ -154,12 +138,33 @@ class AgentOrchestrationService:
             "agents": agents,
             "created_at": datetime.now(timezone.utc),
         }
-        _InMemoryAgentRunStore.put(run_payload)
+        await self._store_run(run_payload)
         return run_payload
 
     async def get_run(self, run_id: str) -> dict[str, Any] | None:
         """Fetch a stored agent run snapshot."""
-        return _InMemoryAgentRunStore.get(run_id)
+        stmt = select(AgentRun).where(AgentRun.run_id == run_id)
+        record = (await self.session.execute(stmt)).scalar_one_or_none()
+        if record is None:
+            return None
+        return dict(record.payload)
+
+    async def _store_run(self, payload: dict[str, Any]) -> None:
+        """Persist a JSON-safe playback snapshot."""
+        created_at = payload.get("created_at")
+        if isinstance(created_at, datetime):
+            stored_created_at = created_at.astimezone(timezone.utc).replace(tzinfo=None)
+        else:
+            stored_created_at = datetime.utcnow()
+
+        record = AgentRun(
+            run_id=payload["run_id"],
+            status=payload["status"],
+            payload=jsonable_encoder(payload),
+            created_at=stored_created_at,
+        )
+        self.session.add(record)
+        await self.session.commit()
 
     async def _build_task_preview(
         self,

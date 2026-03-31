@@ -63,6 +63,7 @@
 - [docs/SOFTBEI_FUNCTIONAL_DESIGN.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_FUNCTIONAL_DESIGN.md)
 - [docs/SOFTBEI_PRODUCT_MANUAL.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_PRODUCT_MANUAL.md)
 - [docs/SOFTBEI_COMPETITION_DEPLOYMENT.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_COMPETITION_DEPLOYMENT.md)
+- [docs/SOFTBEI_SERVER_DEPLOY_RUNBOOK.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_SERVER_DEPLOY_RUNBOOK.md)
 - [docs/SOFTBEI_TEST_REPORT.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_TEST_REPORT.md)
 - [docs/SOFTBEI_DEMO_RUNBOOK.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_DEMO_RUNBOOK.md)
 - [docs/SOFTBEI_PPT_OUTLINE.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_PPT_OUTLINE.md)
@@ -158,6 +159,7 @@ python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - 后端容器镜像：见 [Dockerfile](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/Dockerfile)
 - 数据库容器：见 [docker-compose.yml](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docker-compose.yml)
 - 最小部署说明：见 [docs/DEPLOYMENT.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/DEPLOYMENT.md)
+- 服务器重复部署 runbook：见 [docs/SOFTBEI_SERVER_DEPLOY_RUNBOOK.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_SERVER_DEPLOY_RUNBOOK.md)
 - Linux systemd 样例：见 [deploy/systemd/fault-detection.service.example](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/deploy/systemd/fault-detection.service.example)
 
 ## 自动化验证

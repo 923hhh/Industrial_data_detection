@@ -33,9 +33,18 @@ npm install
 npm run dev
 ```
 
+生产部署最小命令：
+
+```bash
+npm install
+npm run build
+npm run start -- --hostname 0.0.0.0 --port 3000
+```
+
 ## 说明
 
 - 当前静态页面仍保留在仓库根目录，作为兼容和兜底演示入口。
+- `NEXT_PUBLIC_API_BASE_URL` 变更后必须重新执行 `npm run build`，只重启 `npm run start` 不会生效。
 - 新前端优先消费正式 API：
   - `/api/v1/workbench/overview`
   - `/api/v1/agents/assist`
