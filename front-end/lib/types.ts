@@ -173,6 +173,9 @@ export type AgentTaskPreviewStep = {
   required_tools: string[];
   required_materials: string[];
   estimated_minutes?: number | null;
+  safety_preconditions: string[];
+  requires_manual_authorization?: boolean;
+  authorization_hint?: string | null;
 };
 
 export type AgentRequestContext = {
@@ -194,6 +197,8 @@ export type AgentExecutionBrief = {
   decision: string;
   recommended_path: string;
   next_actions: string[];
+  blocking_issues: string[];
+  authorization_required: boolean;
 };
 
 export type AgentRunStep = {
@@ -202,6 +207,19 @@ export type AgentRunStep = {
   status: string;
   summary: string;
   citations: string[];
+};
+
+export type AgentToolCall = {
+  tool_name: string;
+  title: string;
+  status: string;
+  summary: string;
+  risk_level: string;
+  blocking: boolean;
+  requires_human_authorization: boolean;
+  input_summary?: string | null;
+  details: string[];
+  output_payload: Record<string, unknown>;
 };
 
 export type AgentRelatedCase = {
@@ -231,6 +249,7 @@ export type AgentAssistResponse = {
   risk_findings: string[];
   case_suggestions: string[];
   agents: AgentRunStep[];
+  tool_calls: AgentToolCall[];
   created_at: string;
 };
 
@@ -283,6 +302,9 @@ export type MaintenanceTaskStep = {
   completion_note?: string | null;
   completed_at?: string | null;
   knowledge_refs: KnowledgeReference[];
+  safety_preconditions: string[];
+  requires_manual_authorization?: boolean;
+  authorization_hint?: string | null;
 };
 
 export type MaintenanceTaskResponse = {

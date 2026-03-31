@@ -121,6 +121,9 @@ class MaintenanceTaskStepResponse(BaseModel):
     completion_note: str | None = None
     completed_at: datetime | None = None
     knowledge_refs: list[KnowledgeReference] = Field(default_factory=list)
+    safety_preconditions: list[str] = Field(default_factory=list)
+    requires_manual_authorization: bool = False
+    authorization_hint: str | None = None
 
 
 class MaintenanceTaskResponse(BaseModel):

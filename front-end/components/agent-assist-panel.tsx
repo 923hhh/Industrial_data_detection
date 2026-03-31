@@ -103,6 +103,18 @@ const EXECUTION_STATUS_LABELS: Record<string, string> = {
   need_more_input: "待补充信息",
 };
 
+const TOOL_STATUS_LABELS: Record<string, string> = {
+  completed: "已完成",
+  no_data: "无数据",
+  unavailable: "未接入",
+  passed: "已通过",
+  attention: "需关注",
+  blocked: "已拦截",
+  required: "需授权",
+  not_required: "无需授权",
+  failed: "执行失败",
+};
+
 async function toBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -143,6 +155,19 @@ function getExecutionTone(status?: string | null): string {
     return "status-review";
   }
   return "status-pending";
+}
+
+function getToolTone(status?: string | null): string {
+  if (status === "completed" || status === "passed" || status === "not_required") {
+    return "status-ready";
+  }
+  if (status === "attention" || status === "required") {
+    return "status-review";
+  }
+  if (status === "blocked" || status === "failed") {
+    return "status-pending";
+  }
+  return "status-muted";
 }
 
 export function AgentAssistPanel({
@@ -609,12 +634,18 @@ export function AgentAssistPanel({
                   <p>{result.execution_brief?.decision || "待补充执行决策。"}</p>
                   <ul className="simpleList">
                     <li>推荐流程：{result.execution_brief?.recommended_path || "待生成"}</li>
+                    <li>人工授权：{result.execution_brief?.authorization_required ? "需要" : "当前无需"}</li>
                     <li>有效查询：{result.effective_query || "无"}</li>
                     <li>
                       有效检索词：
                       {result.effective_keywords.length ? result.effective_keywords.join(" / ") : "无"}
                     </li>
                   </ul>
+                  {result.execution_brief?.blocking_issues?.length ? (
+                    <p className="errorText">
+                      当前拦截：{result.execution_brief.blocking_issues.join(" / ")}
+                    </p>
+                  ) : null}
                   {result.image_analysis ? (
                     <p className="muted">
                       图片分析：
@@ -711,9 +742,13 @@ export function AgentAssistPanel({
                       {step.required_materials.length ? (
                         <p className="muted">材料：{step.required_materials.join(" / ")}</p>
                       ) : null}
+                      {step.safety_preconditions.length ? (
+                        <p className="muted">前置条件：{step.safety_preconditions.join(" / ")}</p>
+                      ) : null}
                       {step.risk_warning ? <p className="errorText">风险：{step.risk_warning}</p> : null}
                       {step.caution ? <p className="muted">注意：{step.caution}</p> : null}
                       {step.confirmation_text ? <p className="muted">确认：{step.confirmation_text}</p> : null}
+                      {step.authorization_hint ? <p className="errorText">授权：{step.authorization_hint}</p> : null}
                     </article>
                   ))
                 ) : (
@@ -723,21 +758,54 @@ export function AgentAssistPanel({
             </SectionCard>
 
             <SectionCard
-              title="风险控制与下一步"
-              description="RiskControlAgent 会输出现场风险、缺项提醒以及当前工单的执行建议。"
+              title="工具执行与合规校验"
+              description="P0 第一批已接入工具注册表，当前会展示遥测查询、历史案例查询、前置条件校验和人工授权判定。"
             >
               <div className="panelStack">
                 <article className="resultCard">
-                  <h3>执行建议</h3>
+                  <h3>工具执行记录</h3>
+                  <div className="stackList">
+                    {result.tool_calls.length ? (
+                      result.tool_calls.map((tool) => (
+                        <article key={tool.tool_name} className="resultCard">
+                          <div className="selectionSummary">
+                            <div className="resultMeta">
+                              <h3>{tool.title}</h3>
+                              <p>{tool.tool_name}</p>
+                            </div>
+                            <span className={`statusBadge ${getToolTone(tool.status)}`}>
+                              {TOOL_STATUS_LABELS[tool.status] || tool.status}
+                            </span>
+                          </div>
+                          <p>{tool.summary}</p>
+                          {tool.details.length ? (
+                            <ul className="simpleList">
+                              {tool.details.map((item) => (
+                                <li key={`${tool.tool_name}-${item}`}>{item}</li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </article>
+                      ))
+                    ) : (
+                      <p className="muted">当前尚未生成工具执行记录。</p>
+                    )}
+                  </div>
+                </article>
+
+                <article className="resultCard">
+                  <h3>执行建议与拦截</h3>
                   <p>{result.execution_brief?.decision || "待生成执行建议。"}</p>
                   <ul className="simpleList">
                     {(result.execution_brief?.next_actions || []).map((item) => (
                       <li key={item}>{item}</li>
                     ))}
                   </ul>
-                </article>
-
-                <article className="resultCard">
+                  {result.execution_brief?.blocking_issues?.length ? (
+                    <p className="errorText">
+                      拦截项：{result.execution_brief.blocking_issues.join(" / ")}
+                    </p>
+                  ) : null}
                   <h3>风险提示</h3>
                   <ul className="simpleList">
                     {result.risk_findings.length ? (

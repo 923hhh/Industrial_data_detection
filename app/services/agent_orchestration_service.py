@@ -14,8 +14,10 @@ from app.models.knowledge import AgentRun
 from app.schemas.agents import AgentAssistRequest
 from app.schemas.knowledge import KnowledgeSearchRequest
 from app.schemas.tasks import MaintenanceTaskCreate
+from app.services.agent_tooling_service import AgentToolingService
 from app.services.case_service import MaintenanceCaseService
 from app.services.knowledge_service import KnowledgeService
+from app.services.maintenance_safety_service import MaintenanceSafetyService
 from app.services.maintenance_task_service import MaintenanceTaskService
 
 
@@ -27,6 +29,7 @@ class AgentOrchestrationService:
         self.knowledge_service = KnowledgeService(session)
         self.task_service = MaintenanceTaskService(session)
         self.case_service = MaintenanceCaseService(session)
+        self.tooling_service = AgentToolingService(session)
 
     async def assist(self, request: AgentAssistRequest) -> dict[str, Any]:
         """Run the agent collaboration pipeline and persist a run snapshot."""
@@ -76,21 +79,34 @@ class AgentOrchestrationService:
         ]
         knowledge_refs = await self.task_service._load_knowledge_refs(selected_chunk_ids)
         task_preview = await self._build_task_preview(request, knowledge_refs)
-        risk_findings = self._build_risk_findings(request, task_preview, knowledge_refs)
         related_cases = await self.case_service.recommend_cases(
             equipment_type=request.equipment_type,
             equipment_model=request.equipment_model,
             fault_type=request.fault_type or retrieval_payload.get("effective_query"),
             limit=3,
         )
+        tool_chain = await self.tooling_service.run_tool_chain(
+            request=request,
+            knowledge_refs=knowledge_refs,
+            task_preview=task_preview,
+            related_cases=related_cases,
+        )
+        tool_calls = tool_chain["tool_calls"]
         case_suggestions = self._build_case_suggestions(request, knowledge_refs, related_cases)
+        risk_findings = self._build_risk_findings(
+            request,
+            task_preview,
+            knowledge_refs,
+            tool_calls,
+        )
         execution_brief = self._build_execution_brief(
             request,
             retrieval_results,
             selected_chunk_ids,
             task_preview,
-            risk_findings,
             related_cases,
+            tool_calls,
+            risk_findings,
         )
 
         agents = [
@@ -147,6 +163,7 @@ class AgentOrchestrationService:
             "risk_findings": risk_findings,
             "case_suggestions": case_suggestions,
             "agents": agents,
+            "tool_calls": tool_calls,
             "created_at": datetime.now(timezone.utc),
         }
         await self._store_run(run_payload)
@@ -193,6 +210,10 @@ class AgentOrchestrationService:
         equipment_type = request.equipment_type or "摩托车发动机"
         template = await self.task_service._ensure_template(equipment_type, request.maintenance_level)
         preview_data = MaintenanceTaskCreate(
+            work_order_id=request.work_order_id,
+            asset_code=request.asset_code,
+            report_source=request.report_source,
+            priority=request.priority,
             equipment_type=equipment_type,
             equipment_model=request.equipment_model,
             maintenance_level=request.maintenance_level,
@@ -202,6 +223,16 @@ class AgentOrchestrationService:
         )
         preview_steps: list[dict[str, Any]] = []
         for index, template_step in enumerate(template.steps, start=1):
+            guardrails = MaintenanceSafetyService.build_step_guardrails(
+                step_title=template_step.title,
+                step_order=index,
+                maintenance_level=request.maintenance_level,
+                priority=request.priority,
+                symptom_description=request.query or request.fault_type,
+                has_image=bool(request.image_base64),
+                knowledge_locked=bool(knowledge_refs),
+                risk_warning=template_step.risk_warning,
+            )
             preview_steps.append(
                 {
                     "step_order": index,
@@ -221,6 +252,9 @@ class AgentOrchestrationService:
                         getattr(template_step, "required_materials", None)
                     ),
                     "estimated_minutes": getattr(template_step, "estimated_minutes", None),
+                    "safety_preconditions": guardrails["safety_preconditions"],
+                    "requires_manual_authorization": guardrails["requires_manual_authorization"],
+                    "authorization_hint": guardrails["authorization_hint"],
                 }
             )
         return preview_steps
@@ -230,6 +264,7 @@ class AgentOrchestrationService:
         request: AgentAssistRequest,
         task_preview: list[dict[str, Any]],
         knowledge_refs: list[dict[str, Any]],
+        tool_calls: list[dict[str, Any]],
     ) -> list[str]:
         findings = []
         if knowledge_refs:
@@ -243,6 +278,9 @@ class AgentOrchestrationService:
         if task_preview:
             warnings = [step["risk_warning"] for step in task_preview[:2] if step.get("risk_warning")]
             findings.extend(warnings)
+        for tool_call in tool_calls:
+            if tool_call.get("blocking"):
+                findings.extend(tool_call.get("details") or [])
         return list(dict.fromkeys(findings))[:5]
 
     def _build_case_suggestions(
@@ -291,18 +329,34 @@ class AgentOrchestrationService:
         knowledge_results: list[dict[str, Any]],
         selected_chunk_ids: list[int],
         task_preview: list[dict[str, Any]],
-        risk_findings: list[str],
         related_cases: list[dict[str, Any]],
+        tool_calls: list[dict[str, Any]],
+        risk_findings: list[str],
     ) -> dict[str, Any]:
         recommended_path = {
             "routine": "例行检修流程",
             "standard": "标准检修流程",
             "emergency": "应急检修流程",
         }.get(request.maintenance_level, "标准检修流程")
+        blocking_issues = list(
+            dict.fromkeys(
+                issue
+                for tool_call in tool_calls
+                for issue in tool_call.get("details", [])
+                if tool_call.get("blocking")
+            )
+        )
+        authorization_required = any(tool_call.get("requires_human_authorization") for tool_call in tool_calls)
 
         if not knowledge_results and not selected_chunk_ids:
             status = "need_more_input"
             decision = "当前知识依据不足，需补充更明确的故障描述、设备型号或故障图片后再下发预案。"
+        elif blocking_issues:
+            status = "review_required"
+            decision = "当前仍有前置安全条件未满足，建议先完成合规校验与人工复核，再进入现场执行。"
+        elif authorization_required:
+            status = "review_required"
+            decision = "当前工单包含高风险或高优先级操作，需人工授权后再推进关键步骤。"
         elif request.maintenance_level == "emergency":
             status = "review_required" if risk_findings else "ready"
             decision = "当前工单进入应急处置模式，建议先隔离风险源，再执行最小闭环排查。"
@@ -323,12 +377,18 @@ class AgentOrchestrationService:
         if related_cases:
             next_actions.append(f"对照案例《{related_cases[0]['title']}》检查是否存在相同处理分支。")
         next_actions.append("完成检修后沉淀案例并提交审核回流。")
+        if blocking_issues:
+            next_actions.insert(0, "先关闭未满足的前置安全条件，再重新触发执行评估。")
+        elif authorization_required:
+            next_actions.insert(0, "先由班组长或专家完成高风险步骤授权。")
 
         return {
             "status": status,
             "decision": decision,
             "recommended_path": recommended_path,
             "next_actions": next_actions[:4],
+            "blocking_issues": blocking_issues[:4],
+            "authorization_required": authorization_required,
         }
 
     def _build_retrieval_summary(self, effective_query: str | None, results: list[dict[str, Any]]) -> str:

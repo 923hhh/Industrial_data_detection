@@ -45,6 +45,7 @@ from app.schemas.agents import (
     AgentAssistResponse,
     AgentRunStep,
     AgentTaskPreviewStep,
+    AgentToolCall,
 )
 from app.schemas.workbench import (
     WorkbenchCaseSummary,
@@ -88,6 +89,7 @@ __all__ = [
     "AgentAssistResponse",
     "AgentRunStep",
     "AgentTaskPreviewStep",
+    "AgentToolCall",
     "WorkbenchOverviewResponse",
     "WorkbenchStatCard",
     "WorkbenchTaskSummary",

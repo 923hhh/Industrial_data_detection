@@ -17,6 +17,7 @@ from app.models.tasks import (
     MaintenanceTaskTemplateStep,
 )
 from app.schemas.tasks import MaintenanceTaskCreate, MaintenanceTaskStepUpdate
+from app.services.maintenance_safety_service import MaintenanceSafetyService
 
 
 DEFAULT_TEMPLATE_CATALOG: dict[str, dict[str, dict[str, Any]]] = {
@@ -351,7 +352,7 @@ class MaintenanceTaskService:
             raise ValueError("指定的检修任务不存在。")
 
         source_refs = task.source_snapshot or []
-        steps_payload = [self._serialize_step(step) for step in task.steps]
+        steps_payload = [self._serialize_step(step, task) for step in task.steps]
         completed_steps = sum(1 for step in task.steps if step.status == "completed")
 
         return {
@@ -559,7 +560,17 @@ class MaintenanceTaskService:
             rendered = f"{rendered} 本步引用：{source_titles}。"
         return rendered
 
-    def _serialize_step(self, step: MaintenanceTaskStep) -> dict[str, Any]:
+    def _serialize_step(self, step: MaintenanceTaskStep, task: MaintenanceTask) -> dict[str, Any]:
+        guardrails = MaintenanceSafetyService.build_step_guardrails(
+            step_title=step.title,
+            step_order=step.step_order,
+            maintenance_level=task.maintenance_level,
+            priority=task.priority,
+            symptom_description=task.symptom_description,
+            has_image=False,
+            knowledge_locked=bool(step.knowledge_refs),
+            risk_warning=step.risk_warning,
+        )
         return {
             "id": step.id,
             "step_order": step.step_order,
@@ -575,6 +586,9 @@ class MaintenanceTaskService:
             "completion_note": step.completion_note,
             "completed_at": step.completed_at,
             "knowledge_refs": step.knowledge_refs or [],
+            "safety_preconditions": guardrails["safety_preconditions"],
+            "requires_manual_authorization": guardrails["requires_manual_authorization"],
+            "authorization_hint": guardrails["authorization_hint"],
         }
 
     def _build_export_summary(self, task: dict[str, Any]) -> str:

@@ -107,6 +107,8 @@ class AgentExecutionBrief(BaseModel):
     decision: str
     recommended_path: str
     next_actions: list[str] = Field(default_factory=list)
+    blocking_issues: list[str] = Field(default_factory=list)
+    authorization_required: bool = False
 
 
 class AgentTaskPreviewStep(BaseModel):
@@ -121,6 +123,9 @@ class AgentTaskPreviewStep(BaseModel):
     required_tools: list[str] = Field(default_factory=list)
     required_materials: list[str] = Field(default_factory=list)
     estimated_minutes: int | None = None
+    safety_preconditions: list[str] = Field(default_factory=list)
+    requires_manual_authorization: bool = False
+    authorization_hint: str | None = None
 
 
 class AgentRunStep(BaseModel):
@@ -131,6 +136,21 @@ class AgentRunStep(BaseModel):
     status: str
     summary: str
     citations: list[str] = Field(default_factory=list)
+
+
+class AgentToolCall(BaseModel):
+    """Structured business tool execution inside one Agent run."""
+
+    tool_name: str
+    title: str
+    status: str
+    summary: str
+    risk_level: str = "low"
+    blocking: bool = False
+    requires_human_authorization: bool = False
+    input_summary: str | None = None
+    details: list[str] = Field(default_factory=list)
+    output_payload: dict = Field(default_factory=dict)
 
 
 class AgentRelatedCase(BaseModel):
@@ -164,4 +184,5 @@ class AgentAssistResponse(BaseModel):
     risk_findings: list[str] = Field(default_factory=list)
     case_suggestions: list[str] = Field(default_factory=list)
     agents: list[AgentRunStep] = Field(default_factory=list)
+    tool_calls: list[AgentToolCall] = Field(default_factory=list)
     created_at: datetime

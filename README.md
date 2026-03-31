@@ -61,6 +61,7 @@
 - [docs/SOFTBEI_AWARD_PRIORITY.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_AWARD_PRIORITY.md)
 - [docs/SOFTBEI_REQUIREMENTS_ANALYSIS.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_REQUIREMENTS_ANALYSIS.md)
 - [docs/SOFTBEI_FUNCTIONAL_DESIGN.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_FUNCTIONAL_DESIGN.md)
+- [docs/SOFTBEI_TECH_IMPROVEMENT_PRIORITIES.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_TECH_IMPROVEMENT_PRIORITIES.md)
 - [docs/SOFTBEI_PRODUCT_MANUAL.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_PRODUCT_MANUAL.md)
 - [docs/SOFTBEI_COMPETITION_DEPLOYMENT.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_COMPETITION_DEPLOYMENT.md)
 - [docs/SOFTBEI_SERVER_DEPLOY_RUNBOOK.md](/e:/南京航空航天大学/aaa大创/智能体案例/dachuang_project/docs/SOFTBEI_SERVER_DEPLOY_RUNBOOK.md)

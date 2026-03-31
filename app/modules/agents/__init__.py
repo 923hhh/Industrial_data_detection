@@ -1,6 +1,12 @@
 """Agent orchestration module public surface."""
 from app.routers.agents import router
-from app.schemas.agents import AgentAssistRequest, AgentAssistResponse, AgentRunStep, AgentTaskPreviewStep
+from app.schemas.agents import (
+    AgentAssistRequest,
+    AgentAssistResponse,
+    AgentRunStep,
+    AgentTaskPreviewStep,
+    AgentToolCall,
+)
 from app.services.agent_orchestration_service import AgentOrchestrationService
 
 __all__ = [
@@ -10,5 +16,5 @@ __all__ = [
     "AgentAssistResponse",
     "AgentTaskPreviewStep",
     "AgentRunStep",
+    "AgentToolCall",
 ]
-

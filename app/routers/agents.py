@@ -13,6 +13,7 @@ from app.schemas.agents import (
     AgentRequestContext,
     AgentRunStep,
     AgentTaskPreviewStep,
+    AgentToolCall,
 )
 from app.schemas.knowledge import KnowledgeImageAnalysis, KnowledgeSearchHit
 from app.shared.database import get_session
@@ -50,6 +51,7 @@ def _build_agent_response(payload: dict) -> AgentAssistResponse:
         risk_findings=payload.get("risk_findings", []),
         case_suggestions=payload.get("case_suggestions", []),
         agents=[AgentRunStep(**item) for item in payload.get("agents", [])],
+        tool_calls=[AgentToolCall(**item) for item in payload.get("tool_calls", [])],
         created_at=payload["created_at"],
     )
 

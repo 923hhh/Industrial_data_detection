@@ -964,3 +964,34 @@
   - `todo_softbei.md` (updated)
   - `progress.md` (updated)
   - `findings.md` (updated)
+
+### TODO-SB-10 P0 第一批：Agent 工具注册表与合规执行基础
+- **Status:** in progress
+- Actions taken:
+  - 新增 `MaintenanceSafetyService`，统一生成步骤级与运行级前置条件、拦截项和人工授权提示
+  - 新增 `AgentToolingService`，为 `/api/v1/agents/assist` 接入第一批正式业务工具：`query_device_telemetry`、`fetch_historical_repairs`、`validate_safety_preconditions`、`require_human_authorization`
+  - Agent 协作响应新增 `tool_calls`、`blocking_issues`、`authorization_required`，并将工具调用记录写入 Agent Run 持久化快照，供回放和前端展示
+  - Agent 步骤预案新增 `safety_preconditions`、`requires_manual_authorization`、`authorization_hint`
+  - 任务执行页步骤响应同步补结构化前置条件和授权提示，让 `/tasks/[id]` 可直接展示执行约束
+  - 正式前端 `/agents` 新增“工具执行与合规校验”区域，能够展示工具调用结果、授权判定和执行拦截信息
+  - 新增 `tests/test_phase22_agent_guardrails.py`，覆盖高风险场景的工具调用、授权要求和步骤前置条件
+  - 验证 `pytest -q tests/test_phase22_agent_guardrails.py tests/test_phase18_workbench_agents.py tests/test_phase15_tasks.py` 结果为 `10 passed`
+  - 验证 `front-end` 的 `npm run typecheck` 通过
+  - 验证全量 `pytest -q` 结果更新为 `68 passed, 6 skipped`
+- Files created/modified:
+  - `app/services/maintenance_safety_service.py` (created)
+  - `app/services/agent_tooling_service.py` (created)
+  - `app/services/agent_orchestration_service.py` (updated)
+  - `app/services/maintenance_task_service.py` (updated)
+  - `app/schemas/agents.py` (updated)
+  - `app/schemas/tasks.py` (updated)
+  - `app/schemas/__init__.py` (updated)
+  - `app/modules/agents/__init__.py` (updated)
+  - `app/routers/agents.py` (updated)
+  - `front-end/lib/types.ts` (updated)
+  - `front-end/components/agent-assist-panel.tsx` (updated)
+  - `front-end/components/task-execution-panel.tsx` (updated)
+  - `tests/test_phase22_agent_guardrails.py` (created)
+  - `todo_softbei.md` (updated)
+  - `progress.md` (updated)
+  - `findings.md` (updated)

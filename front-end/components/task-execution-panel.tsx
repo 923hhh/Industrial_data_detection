@@ -204,9 +204,13 @@ export function TaskExecutionPanel({
                 {step.required_materials.length ? (
                   <p className="muted">材料：{step.required_materials.join(" / ")}</p>
                 ) : null}
+                {step.safety_preconditions.length ? (
+                  <p className="muted">前置条件：{step.safety_preconditions.join(" / ")}</p>
+                ) : null}
                 {step.risk_warning ? <p className="errorText">风险：{step.risk_warning}</p> : null}
                 {step.caution ? <p className="muted">注意：{step.caution}</p> : null}
                 {step.confirmation_text ? <p className="muted">确认：{step.confirmation_text}</p> : null}
+                {step.authorization_hint ? <p className="errorText">授权：{step.authorization_hint}</p> : null}
 
                 <label className="stepNoteField">
                   <span>执行备注</span>
