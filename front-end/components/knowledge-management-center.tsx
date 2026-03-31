@@ -10,7 +10,15 @@ import { KnowledgeImportPanel } from "@/components/knowledge-import-panel";
 import { KnowledgeSearchPanel } from "@/components/knowledge-search-panel";
 import { SectionCard } from "@/components/section-card";
 
-export function KnowledgeManagementCenter() {
+type KnowledgeManagementCenterProps = {
+  focusDocumentId?: number | null;
+  initialSourceType?: string;
+};
+
+export function KnowledgeManagementCenter({
+  focusDocumentId = null,
+  initialSourceType = "",
+}: KnowledgeManagementCenterProps) {
   const [refreshToken, setRefreshToken] = useState(0);
   const [latestJob, setLatestJob] = useState<KnowledgeImportJobResponse | null>(null);
 
@@ -64,7 +72,11 @@ export function KnowledgeManagementCenter() {
         title="知识文档库与分段预览"
         description="查看已导入的正式知识文档、分段数和前几段内容，为命中调试与来源回溯服务。"
       >
-        <KnowledgeDocumentLibrary refreshToken={refreshToken} />
+        <KnowledgeDocumentLibrary
+          refreshToken={refreshToken}
+          initialDocumentId={focusDocumentId}
+          initialSourceType={initialSourceType}
+        />
       </SectionCard>
     </div>
   );

@@ -153,6 +153,14 @@ export function CaseReviewPanel({ initialCase }: CaseReviewPanelProps) {
                   返回关联任务
                 </Link>
               ) : null}
+              {caseDetail.source_document_id ? (
+                <Link
+                  href={`/knowledge?documentId=${caseDetail.source_document_id}&sourceType=case`}
+                  className="inlineActionLink"
+                >
+                  回看来源知识文档
+                </Link>
+              ) : null}
             </article>
 
             <article className="resultCard">

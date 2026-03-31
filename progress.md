@@ -692,7 +692,7 @@
   - 全量回归时发现旧 `SensorService.count()` 聚合写法失效，已顺手修复为 `func.count()` 查询
   - 验证 `pytest -q tests/test_phase18_workbench_agents.py` 结果为 `3 passed`
   - 验证 `front-end` 的 `npm run typecheck` 通过
-  - 验证全量 `pytest -q` 结果更新为 `64 passed`
+  - 验证全量 `pytest -q` 结果更新为 `60 passed, 4 skipped`
 - Files created/modified:
   - `app/schemas/agents.py` (updated)
   - `app/routers/agents.py` (updated)
@@ -717,7 +717,7 @@
   - 将 Agent 协作页接入“创建正式任务并进入执行”按钮，复用当前协作上下文和已锁定知识依据直接创建任务
   - 验证 `npm run typecheck` 通过
   - 验证 `pytest -q tests/test_phase15_tasks.py tests/test_phase18_workbench_agents.py` 结果为 `8 passed`
-  - 验证全量 `pytest -q` 结果保持为 `64 passed`
+  - 验证全量 `pytest -q` 结果保持为 `60 passed, 4 skipped`
 - Files created/modified:
   - `front-end/lib/api.ts` (updated)
   - `front-end/lib/types.ts` (updated)
@@ -739,7 +739,7 @@
   - 将案例列表页升级为支持查看详情和手动新建案例
   - 验证 `npm run typecheck` 通过
   - 验证 `pytest -q tests/test_phase15_tasks.py tests/test_phase16_cases.py tests/test_phase18_workbench_agents.py` 结果为 `13 passed`
-  - 验证全量 `pytest -q` 结果保持为 `64 passed`
+  - 验证全量 `pytest -q` 结果保持为 `60 passed, 4 skipped`
 - Files created/modified:
   - `front-end/lib/api.ts` (updated)
   - `front-end/lib/types.ts` (updated)
@@ -749,5 +749,21 @@
   - `front-end/app/cases/[caseId]/page.tsx` (created)
   - `front-end/app/cases/page.tsx` (updated)
   - `front-end/components/task-execution-panel.tsx` (updated)
+  - `progress.md` (updated)
+  - `findings.md` (updated)
+
+### 案例审核后直达知识来源回溯
+- **Status:** phase 3 source trace complete
+- Actions taken:
+  - 将正式前端 `/knowledge` 升级为支持 `documentId` 和 `sourceType` 查询参数，便于从业务详情页直接带着来源上下文进入知识中心
+  - 升级知识文档库组件，支持按指定文档自动聚焦并在列表中补载目标文档，用于案例审核后的来源回看
+  - 在案例详情页新增“回看来源知识文档”入口，审核入库后可直接跳转到对应知识文档及分段预览
+  - 验证 `front-end` 的 `npm run typecheck` 通过
+  - 验证全量 `pytest -q` 结果保持为 `60 passed, 4 skipped`
+- Files created/modified:
+  - `front-end/app/knowledge/page.tsx` (updated)
+  - `front-end/components/knowledge-management-center.tsx` (updated)
+  - `front-end/components/knowledge-document-library.tsx` (updated)
+  - `front-end/components/case-review-panel.tsx` (updated)
   - `progress.md` (updated)
   - `findings.md` (updated)

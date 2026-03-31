@@ -19,7 +19,6 @@
 - 当前全量测试结果已更新为 `56 passed, 4 skipped`
 - 当前全量测试结果已更新为 `58 passed, 4 skipped`
 - 当前全量测试结果已更新为 `60 passed, 4 skipped`
-- 当前全量测试结果已更新为 `64 passed`
 - 仓库此前缺少面向评审和部署的正式 README、部署文档、CI workflow 和 Dockerfile
 
 ## Technical Decisions
@@ -99,6 +98,7 @@
 | 正式任务执行页先采用“任务总览 + 步骤执行 + 知识引用 + 导出摘要刷新”的最小闭环 | 先让评委能从 Agent 页面一路走到任务执行，再继续补更完整的工单和案例联动 |
 | 案例沉淀页先复用现有 `POST /api/v1/cases`、`GET /api/v1/cases/{id}`、`POST /api/v1/cases/{id}/corrections`、`POST /api/v1/cases/{id}/review` 打通前端闭环 | 当前重点是把已有案例能力接到正式前端，而不是新增一层中间接口 |
 | 任务详情页直接跳到 `/cases/new?taskId=...` 并预填步骤、总结和知识引用 | 这样最符合“任务执行完成后立即沉淀案例”的业务习惯，也避免重复录入 |
+| 知识中心通过 `documentId` 与 `sourceType` 查询参数承接业务页来源回溯 | 避免为案例来源回看再新建中间页，直接复用现有知识文档库与分段预览能力 |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -109,7 +109,7 @@
 | alembic 运行在系统 Python 但 aiosqlite 在 venv | 使用 venv Python (`venv/Scripts/python.exe`) 运行 alembic |
 | Phase 10 循环导入：graph.py → nodes/__init__ → supervisor.py → graph.py.DiagnosisState | 将 DiagnosisState 抽取到独立文件 app/agents/state.py |
 | 当前工作区对新建文件型 SQLite 库的 DDL 验证会出现 `disk I/O error` | TODO-3 验证改用 SQLite 共享内存库，避免文件系统噪声影响迁移真实性判断 |
-| 全量回归时 `SensorService.count()` 因 ORM 列对象不存在 `.count()` 而失败 | 改为 `func.count()` 聚合查询后，全量 `pytest -q` 恢复为 `64 passed` |
+| 全量回归时 `SensorService.count()` 因 ORM 列对象不存在 `.count()` 而失败 | 改为 `func.count()` 聚合查询后，全量 `pytest -q` 恢复为 `60 passed, 4 skipped` |
 
 ## Resources
 <!-- 有用的链接 -->

@@ -15,26 +15,41 @@ import type {
 
 type KnowledgeDocumentLibraryProps = {
   refreshToken?: number;
+  initialDocumentId?: number | null;
+  initialSourceType?: string;
 };
 
 export function KnowledgeDocumentLibrary({
   refreshToken = 0,
+  initialDocumentId = null,
+  initialSourceType = "",
 }: KnowledgeDocumentLibraryProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [documents, setDocuments] = useState<KnowledgeDocumentListItem[]>([]);
-  const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(initialDocumentId);
   const [selectedDocument, setSelectedDocument] = useState<KnowledgeDocumentDetailResponse | null>(null);
   const [chunks, setChunks] = useState<KnowledgeChunkPreview[]>([]);
   const [chunkLoading, setChunkLoading] = useState(false);
   const [query, setQuery] = useState("");
   const [equipmentType, setEquipmentType] = useState("摩托车发动机");
   const [equipmentModel, setEquipmentModel] = useState("");
-  const [sourceType, setSourceType] = useState("");
+  const [sourceType, setSourceType] = useState(initialSourceType || "");
 
   useEffect(() => {
-    void loadDocuments();
-  }, [refreshToken]);
+    void loadDocuments({
+      preferredDocumentId: initialDocumentId,
+      preferredSourceType: initialSourceType || "",
+    });
+  }, [refreshToken, initialDocumentId, initialSourceType]);
+
+  useEffect(() => {
+    setSelectedDocumentId(initialDocumentId);
+  }, [initialDocumentId]);
+
+  useEffect(() => {
+    setSourceType(initialSourceType || "");
+  }, [initialSourceType]);
 
   useEffect(() => {
     if (!selectedDocumentId) {
@@ -45,21 +60,45 @@ export function KnowledgeDocumentLibrary({
     void Promise.all([loadDocumentDetail(selectedDocumentId), loadChunks(selectedDocumentId)]);
   }, [selectedDocumentId]);
 
-  async function loadDocuments() {
+  async function loadDocuments(options?: {
+    preferredDocumentId?: number | null;
+    preferredSourceType?: string;
+  }) {
     setLoading(true);
     setError(null);
     try {
+      const preferredSourceType = options?.preferredSourceType ?? sourceType;
+      const preferredDocumentId =
+        options?.preferredDocumentId !== undefined
+          ? options.preferredDocumentId
+          : selectedDocumentId || initialDocumentId;
       const payload = await getKnowledgeDocuments({
         query,
         equipment_type: equipmentType,
         equipment_model: equipmentModel,
-        source_type: sourceType,
+        source_type: preferredSourceType,
+        limit: preferredDocumentId ? 24 : 12,
       });
-      setDocuments(payload.documents);
+
+      let nextDocuments = payload.documents;
+
+      if (preferredDocumentId && !nextDocuments.some((document) => document.id === preferredDocumentId)) {
+        try {
+          const focusedDocument = await getKnowledgeDocumentDetail(preferredDocumentId);
+          nextDocuments = [focusedDocument, ...nextDocuments];
+        } catch {
+          // Ignore focus failures and keep the fetched list.
+        }
+      }
+
+      setDocuments(nextDocuments);
       setSelectedDocumentId((current) => {
-        if (!payload.documents.length) return null;
-        if (current && payload.documents.some((document) => document.id === current)) return current;
-        return payload.documents[0]?.id ?? null;
+        if (!nextDocuments.length) return null;
+        if (preferredDocumentId && nextDocuments.some((document) => document.id === preferredDocumentId)) {
+          return preferredDocumentId;
+        }
+        if (current && nextDocuments.some((document) => document.id === current)) return current;
+        return nextDocuments[0]?.id ?? null;
       });
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "文档列表加载失败");
@@ -120,6 +159,7 @@ export function KnowledgeDocumentLibrary({
           <div className="tableSummary">
             <span>当前命中文档：{documents.length}</span>
             {selectedDocument ? <span>已选文档：#{selectedDocument.id}</span> : null}
+            {initialDocumentId ? <span>来源回溯模式</span> : null}
           </div>
           <table>
             <thead>
