@@ -67,6 +67,10 @@ class MaintenanceTask(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
+    work_order_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    asset_code: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    report_source: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    priority: Mapped[str] = mapped_column(String(30), default="medium", nullable=False, index=True)
     equipment_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     equipment_model: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     maintenance_level: Mapped[str] = mapped_column(String(30), nullable=False, index=True)

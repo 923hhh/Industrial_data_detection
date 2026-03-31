@@ -25,6 +25,10 @@ def _build_task_response(payload: dict) -> MaintenanceTaskResponse:
     return MaintenanceTaskResponse(
         id=payload["id"],
         title=payload["title"],
+        work_order_id=payload.get("work_order_id"),
+        asset_code=payload.get("asset_code"),
+        report_source=payload.get("report_source"),
+        priority=payload.get("priority") or "medium",
         equipment_type=payload["equipment_type"],
         equipment_model=payload.get("equipment_model"),
         maintenance_level=payload["maintenance_level"],
@@ -125,10 +129,26 @@ async def update_maintenance_task_step(
 )
 async def list_maintenance_history(
     limit: int = Query(default=10, ge=1, le=50, description="历史记录返回上限"),
+    status_filter: str | None = Query(
+        default=None,
+        alias="status",
+        description="按任务状态过滤：pending / in_progress / completed / skipped",
+    ),
+    priority_filter: str | None = Query(
+        default=None,
+        alias="priority",
+        description="按优先级过滤：low / medium / high / urgent",
+    ),
+    work_order_id: str | None = Query(default=None, description="按工单编号模糊过滤"),
     session: AsyncSession = Depends(get_session),
 ) -> MaintenanceTaskHistoryResponse:
     service = MaintenanceTaskService(session)
-    tasks = await service.list_history(limit=limit)
+    tasks = await service.list_history(
+        limit=limit,
+        status_filter=status_filter,
+        priority_filter=priority_filter,
+        work_order_id=work_order_id,
+    )
     return MaintenanceTaskHistoryResponse(
         total=len(tasks),
         tasks=[MaintenanceTaskHistoryItem(**item) for item in tasks],

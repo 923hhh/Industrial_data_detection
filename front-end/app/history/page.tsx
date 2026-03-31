@@ -2,7 +2,7 @@ import { SectionCard } from "@/components/section-card";
 import { getCases, getTaskHistory } from "@/lib/api";
 
 export default async function HistoryPage() {
-  const [tasks, cases] = await Promise.all([getTaskHistory(20), getCases(20)]);
+  const [tasks, cases] = await Promise.all([getTaskHistory({ limit: 20 }), getCases({ limit: 20 })]);
 
   return (
     <div className="page">
@@ -36,4 +36,3 @@ export default async function HistoryPage() {
     </div>
   );
 }
-

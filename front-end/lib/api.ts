@@ -37,9 +37,20 @@ export async function getWorkbenchOverview(): Promise<WorkbenchOverviewResponse 
   }
 }
 
-export async function getTaskHistory(limit = 10): Promise<MaintenanceTaskHistoryResponse | null> {
+export async function getTaskHistory(params?: {
+  limit?: number;
+  status?: string;
+  priority?: string;
+  work_order_id?: string;
+}): Promise<MaintenanceTaskHistoryResponse | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/history?limit=${limit}`, {
+    const search = new URLSearchParams();
+    search.set("limit", String(params?.limit ?? 10));
+    if (params?.status?.trim()) search.set("status", params.status.trim());
+    if (params?.priority?.trim()) search.set("priority", params.priority.trim());
+    if (params?.work_order_id?.trim()) search.set("work_order_id", params.work_order_id.trim());
+
+    const response = await fetch(`${API_BASE_URL}/api/v1/history?${search.toString()}`, {
       cache: "no-store",
     });
     return await parseJson<MaintenanceTaskHistoryResponse>(response);
@@ -90,9 +101,20 @@ export async function getMaintenanceTaskExport(taskId: number): Promise<Maintena
   return parseJson<MaintenanceTaskExportResponse>(response);
 }
 
-export async function getCases(limit = 10): Promise<MaintenanceCaseListResponse | null> {
+export async function getCases(params?: {
+  limit?: number;
+  status?: string;
+  priority?: string;
+  work_order_id?: string;
+}): Promise<MaintenanceCaseListResponse | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/cases?limit=${limit}`, {
+    const search = new URLSearchParams();
+    search.set("limit", String(params?.limit ?? 10));
+    if (params?.status?.trim()) search.set("status", params.status.trim());
+    if (params?.priority?.trim()) search.set("priority", params.priority.trim());
+    if (params?.work_order_id?.trim()) search.set("work_order_id", params.work_order_id.trim());
+
+    const response = await fetch(`${API_BASE_URL}/api/v1/cases?${search.toString()}`, {
       cache: "no-store",
     });
     return await parseJson<MaintenanceCaseListResponse>(response);

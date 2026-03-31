@@ -28,6 +28,10 @@ def build_task_payload(status: str = "in_progress", completed_steps: int = 0) ->
     return {
         "id": 101,
         "title": "摩托车发动机 LX200 / 启动困难检修任务",
+        "work_order_id": "WO-20260331-01",
+        "asset_code": "ENG-LX200-01",
+        "report_source": "巡检上报",
+        "priority": "high",
         "equipment_type": "摩托车发动机",
         "equipment_model": "LX200",
         "maintenance_level": "standard",
@@ -96,6 +100,10 @@ async def test_create_maintenance_task_endpoint():
             response = await client.post(
                 "/api/v1/tasks",
                 json={
+                    "work_order_id": "WO-20260331-01",
+                    "asset_code": "ENG-LX200-01",
+                    "report_source": "巡检上报",
+                    "priority": "high",
                     "equipment_type": "摩托车发动机",
                     "equipment_model": "LX200",
                     "maintenance_level": "standard",
@@ -108,6 +116,8 @@ async def test_create_maintenance_task_endpoint():
     assert response.status_code == 201
     data = response.json()
     assert data["title"] == "摩托车发动机 LX200 / 启动困难检修任务"
+    assert data["work_order_id"] == "WO-20260331-01"
+    assert data["priority"] == "high"
     assert data["total_steps"] == 3
     assert data["advice_card"]
 
@@ -139,6 +149,10 @@ async def test_list_maintenance_history_endpoint():
         {
             "id": 101,
             "title": "摩托车发动机 LX200 / 启动困难检修任务",
+            "work_order_id": "WO-20260331-01",
+            "asset_code": "ENG-LX200-01",
+            "report_source": "巡检上报",
+            "priority": "high",
             "equipment_type": "摩托车发动机",
             "equipment_model": "LX200",
             "maintenance_level": "standard",
@@ -153,15 +167,25 @@ async def test_list_maintenance_history_endpoint():
     with patch(
         "app.routers.tasks.MaintenanceTaskService.list_history",
         new=AsyncMock(return_value=mocked_history),
-    ):
+    ) as mocked_list_history:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.get("/api/v1/history?limit=5")
+            response = await client.get(
+                "/api/v1/history?limit=5&status=in_progress&priority=high&work_order_id=WO-20260331"
+            )
 
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 1
+    assert data["tasks"][0]["work_order_id"] == "WO-20260331-01"
+    assert data["tasks"][0]["priority"] == "high"
     assert data["tasks"][0]["equipment_model"] == "LX200"
+    mocked_list_history.assert_awaited_once_with(
+        limit=5,
+        status_filter="in_progress",
+        priority_filter="high",
+        work_order_id="WO-20260331",
+    )
 
 
 @pytest.mark.asyncio

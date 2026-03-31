@@ -28,6 +28,10 @@ def build_case_payload(status: str = "pending_review", source_document_id: int |
     return {
         "id": 301,
         "title": "摩托车发动机 LX200 启动困难案例",
+        "work_order_id": "WO-20260331-01",
+        "asset_code": "ENG-LX200-01",
+        "report_source": "巡检上报",
+        "priority": "high",
         "equipment_type": "摩托车发动机",
         "equipment_model": "LX200",
         "fault_type": "启动困难",
@@ -89,6 +93,10 @@ async def test_create_maintenance_case_endpoint():
                 "/api/v1/cases",
                 json={
                     "title": "摩托车发动机 LX200 启动困难案例",
+                    "work_order_id": "WO-20260331-01",
+                    "asset_code": "ENG-LX200-01",
+                    "report_source": "巡检上报",
+                    "priority": "high",
                     "equipment_type": "摩托车发动机",
                     "equipment_model": "LX200",
                     "fault_type": "启动困难",
@@ -120,6 +128,8 @@ async def test_create_maintenance_case_endpoint():
     data = response.json()
     assert data["status"] == "pending_review"
     assert data["task_id"] == 101
+    assert data["work_order_id"] == "WO-20260331-01"
+    assert data["priority"] == "high"
     assert data["knowledge_refs"][0]["chunk_id"] == 11
 
 
@@ -130,6 +140,10 @@ async def test_list_maintenance_cases_endpoint():
         {
             "id": 301,
             "title": "摩托车发动机 LX200 启动困难案例",
+            "work_order_id": "WO-20260331-01",
+            "asset_code": "ENG-LX200-01",
+            "report_source": "巡检上报",
+            "priority": "high",
             "equipment_type": "摩托车发动机",
             "equipment_model": "LX200",
             "fault_type": "启动困难",
@@ -144,15 +158,25 @@ async def test_list_maintenance_cases_endpoint():
     with patch(
         "app.routers.cases.MaintenanceCaseService.list_cases",
         new=AsyncMock(return_value=mocked_cases),
-    ):
+    ) as mocked_list_cases:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.get("/api/v1/cases?limit=5&status=pending_review")
+            response = await client.get(
+                "/api/v1/cases?limit=5&status=pending_review&priority=high&work_order_id=WO-20260331"
+            )
 
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 1
+    assert data["cases"][0]["work_order_id"] == "WO-20260331-01"
+    assert data["cases"][0]["priority"] == "high"
     assert data["cases"][0]["status"] == "pending_review"
+    mocked_list_cases.assert_awaited_once_with(
+        limit=5,
+        status_filter="pending_review",
+        priority_filter="high",
+        work_order_id="WO-20260331",
+    )
 
 
 @pytest.mark.asyncio

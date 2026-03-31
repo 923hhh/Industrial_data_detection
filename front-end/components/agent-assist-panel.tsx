@@ -290,6 +290,10 @@ export function AgentAssistPanel({
 
       const payload = await createMaintenanceTask({
         title,
+        work_order_id: result.request_context?.work_order_id || null,
+        asset_code: result.request_context?.asset_code || null,
+        report_source: result.request_context?.report_source || null,
+        priority: result.request_context?.priority || draft.priority,
         equipment_type: equipmentType,
         equipment_model: equipmentModel,
         maintenance_level: result.request_context?.maintenance_level || draft.maintenanceLevel,

@@ -34,9 +34,17 @@ class MaintenanceCaseService:
         """Create a maintenance case pending review."""
         task = await self._load_task(data.task_id) if data.task_id else None
         knowledge_refs = self._normalize_knowledge_refs(data.knowledge_refs, task)
+        work_order_id = data.work_order_id or getattr(task, "work_order_id", None)
+        asset_code = data.asset_code or getattr(task, "asset_code", None)
+        report_source = data.report_source or getattr(task, "report_source", None)
+        priority = data.priority or getattr(task, "priority", None) or "medium"
 
         case = MaintenanceCase(
             title=data.title,
+            work_order_id=work_order_id,
+            asset_code=asset_code,
+            report_source=report_source,
+            priority=priority,
             equipment_type=data.equipment_type,
             equipment_model=data.equipment_model,
             fault_type=data.fault_type,
@@ -83,17 +91,27 @@ class MaintenanceCaseService:
         *,
         limit: int = 20,
         status_filter: str | None = None,
+        priority_filter: str | None = None,
+        work_order_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """Return recent maintenance cases with optional status filter."""
         stmt = select(MaintenanceCase).order_by(MaintenanceCase.updated_at.desc()).limit(limit)
         if status_filter:
             stmt = stmt.where(MaintenanceCase.status == status_filter)
+        if priority_filter:
+            stmt = stmt.where(MaintenanceCase.priority == priority_filter)
+        if work_order_id:
+            stmt = stmt.where(MaintenanceCase.work_order_id.ilike(f"%{work_order_id.strip()}%"))
 
         cases = (await self.session.execute(stmt)).scalars().all()
         return [
             {
                 "id": item.id,
                 "title": item.title,
+                "work_order_id": item.work_order_id,
+                "asset_code": item.asset_code,
+                "report_source": item.report_source,
+                "priority": item.priority,
                 "equipment_type": item.equipment_type,
                 "equipment_model": item.equipment_model,
                 "fault_type": item.fault_type,
@@ -182,6 +200,10 @@ class MaintenanceCaseService:
         return {
             "id": case.id,
             "title": case.title,
+            "work_order_id": case.work_order_id,
+            "asset_code": case.asset_code,
+            "report_source": case.report_source,
+            "priority": case.priority,
             "equipment_type": case.equipment_type,
             "equipment_model": case.equipment_model,
             "fault_type": case.fault_type,
@@ -340,6 +362,10 @@ class MaintenanceCaseService:
         corrections = await self._load_corrections(case.id)
         lines = [
             f"案例标题：{case.title}",
+            f"工单编号：{case.work_order_id or '未标注'}",
+            f"设备编号：{case.asset_code or '未标注'}",
+            f"报修来源：{case.report_source or '未标注'}",
+            f"优先级：{self._format_priority(case.priority)}",
             f"设备类型：{case.equipment_type}",
             f"设备型号：{case.equipment_model or '未标注'}",
             f"故障类型：{case.fault_type or '未标注'}",
@@ -459,3 +485,11 @@ class MaintenanceCaseService:
             )
         )
         await self.session.flush()
+
+    def _format_priority(self, priority: str | None) -> str:
+        return {
+            "low": "低",
+            "medium": "中",
+            "high": "高",
+            "urgent": "紧急",
+        }.get(priority or "medium", priority or "medium")

@@ -25,6 +25,10 @@ def _build_case_response(payload: dict) -> MaintenanceCaseResponse:
     return MaintenanceCaseResponse(
         id=payload["id"],
         title=payload["title"],
+        work_order_id=payload.get("work_order_id"),
+        asset_code=payload.get("asset_code"),
+        report_source=payload.get("report_source"),
+        priority=payload.get("priority") or "medium",
         equipment_type=payload["equipment_type"],
         equipment_model=payload.get("equipment_model"),
         fault_type=payload.get("fault_type"),
@@ -87,10 +91,21 @@ async def list_maintenance_cases(
         alias="status",
         description="按案例状态过滤：pending_review / approved / rejected",
     ),
+    priority_filter: str | None = Query(
+        default=None,
+        alias="priority",
+        description="按优先级过滤：low / medium / high / urgent",
+    ),
+    work_order_id: str | None = Query(default=None, description="按工单编号模糊过滤"),
     session: AsyncSession = Depends(get_session),
 ) -> MaintenanceCaseListResponse:
     service = MaintenanceCaseService(session)
-    cases = await service.list_cases(limit=limit, status_filter=status_filter)
+    cases = await service.list_cases(
+        limit=limit,
+        status_filter=status_filter,
+        priority_filter=priority_filter,
+        work_order_id=work_order_id,
+    )
     return MaintenanceCaseListResponse(
         total=len(cases),
         cases=[MaintenanceCaseListItem(**item) for item in cases],

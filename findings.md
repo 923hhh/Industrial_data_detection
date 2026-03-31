@@ -99,6 +99,8 @@
 | 案例沉淀页先复用现有 `POST /api/v1/cases`、`GET /api/v1/cases/{id}`、`POST /api/v1/cases/{id}/corrections`、`POST /api/v1/cases/{id}/review` 打通前端闭环 | 当前重点是把已有案例能力接到正式前端，而不是新增一层中间接口 |
 | 任务详情页直接跳到 `/cases/new?taskId=...` 并预填步骤、总结和知识引用 | 这样最符合“任务执行完成后立即沉淀案例”的业务习惯，也避免重复录入 |
 | 知识中心通过 `documentId` 与 `sourceType` 查询参数承接业务页来源回溯 | 避免为案例来源回看再新建中间页，直接复用现有知识文档库与分段预览能力 |
+| 工单编号、设备编号、报修来源和优先级正式下沉到 `maintenance_tasks` 与 `maintenance_cases` | 主链路已经打通后，最大的缺口是正式业务字段没有进入主数据，导致任务/案例页成品感不足 |
+| `/tasks` 与 `/cases` 先升级为“服务端筛选 + 结果统计 + 详情跳转”的轻量运营页 | 先用最小成本补足业务页质感和演示可控性，再决定是否继续做更重的前端状态管理和分页 |
 
 ## Issues Encountered
 | Issue | Resolution |

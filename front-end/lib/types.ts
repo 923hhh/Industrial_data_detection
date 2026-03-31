@@ -8,6 +8,10 @@ export type WorkbenchStatCard = {
 export type WorkbenchTaskSummary = {
   id: number;
   title: string;
+  work_order_id?: string | null;
+  asset_code?: string | null;
+  report_source?: string | null;
+  priority?: string | null;
   equipment_type: string;
   equipment_model?: string | null;
   maintenance_level: string;
@@ -20,6 +24,10 @@ export type WorkbenchTaskSummary = {
 export type WorkbenchCaseSummary = {
   id: number;
   title: string;
+  work_order_id?: string | null;
+  asset_code?: string | null;
+  report_source?: string | null;
+  priority?: string | null;
   equipment_type: string;
   equipment_model?: string | null;
   status: string;
@@ -224,6 +232,10 @@ export type AgentAssistResponse = {
 export type MaintenanceCaseSummary = {
   id: number;
   title: string;
+  work_order_id?: string | null;
+  asset_code?: string | null;
+  report_source?: string | null;
+  priority?: string | null;
   equipment_type: string;
   equipment_model?: string | null;
   fault_type?: string | null;
@@ -268,6 +280,10 @@ export type MaintenanceTaskStep = {
 export type MaintenanceTaskResponse = {
   id: number;
   title: string;
+  work_order_id?: string | null;
+  asset_code?: string | null;
+  report_source?: string | null;
+  priority?: string | null;
   equipment_type: string;
   equipment_model?: string | null;
   maintenance_level: string;
@@ -307,6 +323,10 @@ export type MaintenanceCaseCorrection = {
 export type MaintenanceCaseResponse = {
   id: number;
   title: string;
+  work_order_id?: string | null;
+  asset_code?: string | null;
+  report_source?: string | null;
+  priority?: string | null;
   equipment_type: string;
   equipment_model?: string | null;
   fault_type?: string | null;

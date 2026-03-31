@@ -35,6 +35,13 @@ const CASE_STATUS_TONES: Record<string, string> = {
   rejected: "status-muted",
 };
 
+const PRIORITY_LABELS: Record<string, string> = {
+  low: "低",
+  medium: "中",
+  high: "高",
+  urgent: "紧急",
+};
+
 const CORRECTION_LABELS: Record<string, string> = {
   retrieval_result: "检索结果",
   model_output: "模型输出",
@@ -144,6 +151,10 @@ export function CaseReviewPanel({ initialCase }: CaseReviewPanelProps) {
               <ul className="simpleList">
                 <li>案例 ID：{caseDetail.id}</li>
                 <li>关联任务：{caseDetail.task_id ? `#${caseDetail.task_id}` : "无"}</li>
+                <li>工单编号：{caseDetail.work_order_id || "未填写"}</li>
+                <li>设备编号：{caseDetail.asset_code || "未填写"}</li>
+                <li>报修来源：{caseDetail.report_source || "未填写"}</li>
+                <li>工单优先级：{PRIORITY_LABELS[caseDetail.priority || "medium"] || caseDetail.priority || "中"}</li>
                 <li>设备类型：{caseDetail.equipment_type}</li>
                 <li>设备型号：{caseDetail.equipment_model || "未填写"}</li>
                 <li>知识文档：{caseDetail.source_document_id ? `#${caseDetail.source_document_id}` : "未入库"}</li>

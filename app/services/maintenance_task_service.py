@@ -171,6 +171,10 @@ class MaintenanceTaskService:
 
         task = MaintenanceTask(
             title=data.title or self._build_task_title(data),
+            work_order_id=data.work_order_id,
+            asset_code=data.asset_code,
+            report_source=data.report_source,
+            priority=data.priority or "medium",
             equipment_type=data.equipment_type,
             equipment_model=data.equipment_model,
             maintenance_level=data.maintenance_level,
@@ -271,6 +275,10 @@ class MaintenanceTaskService:
         return {
             "id": task.id,
             "title": task.title,
+            "work_order_id": task.work_order_id,
+            "asset_code": task.asset_code,
+            "report_source": task.report_source,
+            "priority": task.priority,
             "equipment_type": task.equipment_type,
             "equipment_model": task.equipment_model,
             "maintenance_level": task.maintenance_level,
@@ -286,7 +294,14 @@ class MaintenanceTaskService:
             "updated_at": task.updated_at,
         }
 
-    async def list_history(self, limit: int = 20) -> list[dict[str, Any]]:
+    async def list_history(
+        self,
+        *,
+        limit: int = 20,
+        status_filter: str | None = None,
+        priority_filter: str | None = None,
+        work_order_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Return recent task history."""
         stmt = (
             select(MaintenanceTask)
@@ -294,11 +309,21 @@ class MaintenanceTaskService:
             .order_by(MaintenanceTask.updated_at.desc())
             .limit(limit)
         )
+        if status_filter:
+            stmt = stmt.where(MaintenanceTask.status == status_filter)
+        if priority_filter:
+            stmt = stmt.where(MaintenanceTask.priority == priority_filter)
+        if work_order_id:
+            stmt = stmt.where(MaintenanceTask.work_order_id.ilike(f"%{work_order_id.strip()}%"))
         tasks = (await self.session.execute(stmt)).scalars().all()
         return [
             {
                 "id": task.id,
                 "title": task.title,
+                "work_order_id": task.work_order_id,
+                "asset_code": task.asset_code,
+                "report_source": task.report_source,
+                "priority": task.priority,
                 "equipment_type": task.equipment_type,
                 "equipment_model": task.equipment_model,
                 "maintenance_level": task.maintenance_level,
@@ -415,7 +440,9 @@ class MaintenanceTaskService:
         return (
             f"智能建议：当前任务聚焦于 {data.equipment_type}（{model}）的“{fault_type}”问题。"
             f"请围绕“{symptom}”优先执行安全隔离、故障现象复核和关键部件排查。"
-            f"本次建议主要依据 {source_titles} 生成，若现场现象与引用知识不一致，应先记录差异再继续操作。"
+            f"本次建议主要依据 {source_titles} 生成，"
+            f"{self._build_context_hint(data)}"
+            f"若现场现象与引用知识不一致，应先记录差异再继续操作。"
         )
 
     def _render_instruction(
@@ -464,6 +491,7 @@ class MaintenanceTaskService:
 
         return (
             f"《{task['title']}》当前状态为{status_text}，共 {total} 个标准步骤，已完成 {completed} 个。"
+            f"{self._build_export_context_line(task)}"
             f"本次作业主要依据 {sources} 生成作业指引，建议结合现场备注继续复核未完成步骤。"
         )
 
@@ -472,3 +500,37 @@ class MaintenanceTaskService:
         if len(condensed) <= limit:
             return condensed
         return condensed[:limit] + "..."
+
+    def _build_context_hint(self, data: MaintenanceTaskCreate) -> str:
+        context_parts = []
+        if data.work_order_id:
+            context_parts.append(f"工单编号 {data.work_order_id}")
+        if data.asset_code:
+            context_parts.append(f"设备编号 {data.asset_code}")
+        if data.report_source:
+            context_parts.append(f"报修来源 {data.report_source}")
+        if data.priority:
+            context_parts.append(f"优先级 {self._format_priority(data.priority)}")
+        if not context_parts:
+            return ""
+        return f"当前任务上下文为：{'，'.join(context_parts)}。"
+
+    def _build_export_context_line(self, task: dict[str, Any]) -> str:
+        context_parts = []
+        if task.get("work_order_id"):
+            context_parts.append(f"工单 {task['work_order_id']}")
+        if task.get("asset_code"):
+            context_parts.append(f"设备 {task['asset_code']}")
+        if task.get("priority"):
+            context_parts.append(f"优先级 {self._format_priority(task['priority'])}")
+        if not context_parts:
+            return ""
+        return f"{'，'.join(context_parts)}。"
+
+    def _format_priority(self, priority: str) -> str:
+        return {
+            "low": "低",
+            "medium": "中",
+            "high": "高",
+            "urgent": "紧急",
+        }.get(priority, priority)

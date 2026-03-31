@@ -23,6 +23,10 @@ class MaintenanceTaskCreate(BaseModel):
     """Create a maintenance task from selected knowledge results."""
 
     title: str | None = Field(default=None, description="检修任务标题")
+    work_order_id: str | None = Field(default=None, description="工单编号")
+    asset_code: str | None = Field(default=None, description="设备编号")
+    report_source: str | None = Field(default=None, description="报修来源")
+    priority: str | None = Field(default=None, description="工单优先级")
     equipment_type: str = Field(..., min_length=1, description="设备类型")
     equipment_model: str | None = Field(default=None, description="设备型号")
     maintenance_level: str = Field(default="standard", description="检修等级")
@@ -32,6 +36,9 @@ class MaintenanceTaskCreate(BaseModel):
 
     @field_validator(
         "title",
+        "work_order_id",
+        "asset_code",
+        "report_source",
         "equipment_type",
         "equipment_model",
         "maintenance_level",
@@ -53,6 +60,17 @@ class MaintenanceTaskCreate(BaseModel):
         allowed = {"routine", "standard", "emergency"}
         if normalized not in allowed:
             raise ValueError("maintenance_level 仅支持 routine、standard、emergency。")
+        return normalized
+
+    @field_validator("priority")
+    @classmethod
+    def normalize_priority(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip().lower()
+        allowed = {"low", "medium", "high", "urgent"}
+        if normalized not in allowed:
+            raise ValueError("priority 仅支持 low、medium、high、urgent。")
         return normalized
 
     @model_validator(mode="after")
@@ -107,6 +125,10 @@ class MaintenanceTaskResponse(BaseModel):
 
     id: int
     title: str
+    work_order_id: str | None = None
+    asset_code: str | None = None
+    report_source: str | None = None
+    priority: str = "medium"
     equipment_type: str
     equipment_model: str | None = None
     maintenance_level: str
@@ -127,6 +149,10 @@ class MaintenanceTaskHistoryItem(BaseModel):
 
     id: int
     title: str
+    work_order_id: str | None = None
+    asset_code: str | None = None
+    report_source: str | None = None
+    priority: str = "medium"
     equipment_type: str
     equipment_model: str | None = None
     maintenance_level: str

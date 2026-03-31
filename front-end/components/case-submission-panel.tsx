@@ -14,6 +14,10 @@ type CaseSubmissionPanelProps = {
 
 type CaseDraft = {
   title: string;
+  workOrderId: string;
+  assetCode: string;
+  reportSource: string;
+  priority: string;
   equipmentType: string;
   equipmentModel: string;
   faultType: string;
@@ -51,6 +55,10 @@ function buildInitialDraft(
 ): CaseDraft {
   return {
     title: task ? `${task.title}案例` : "",
+    workOrderId: task?.work_order_id || "",
+    assetCode: task?.asset_code || "",
+    reportSource: task?.report_source || "",
+    priority: task?.priority || "medium",
     equipmentType: task?.equipment_type || "摩托车发动机",
     equipmentModel: task?.equipment_model || "",
     faultType: task?.fault_type || "",
@@ -77,6 +85,10 @@ export function CaseSubmissionPanel({
     try {
       const payload = await createMaintenanceCase({
         title: draft.title,
+        work_order_id: draft.workOrderId || null,
+        asset_code: draft.assetCode || null,
+        report_source: draft.reportSource || null,
+        priority: draft.priority || null,
         equipment_type: draft.equipmentType,
         equipment_model: draft.equipmentModel || null,
         fault_type: draft.faultType || null,
@@ -111,6 +123,10 @@ export function CaseSubmissionPanel({
               <h3>{initialTask.title}</h3>
               <ul className="simpleList">
                 <li>任务 ID：{initialTask.id}</li>
+                <li>工单编号：{initialTask.work_order_id || "未填写"}</li>
+                <li>设备编号：{initialTask.asset_code || "未填写"}</li>
+                <li>报修来源：{initialTask.report_source || "未填写"}</li>
+                <li>工单优先级：{initialTask.priority || "medium"}</li>
                 <li>设备类型：{initialTask.equipment_type}</li>
                 <li>设备型号：{initialTask.equipment_model || "未填写"}</li>
                 <li>故障类型：{initialTask.fault_type || "未填写"}</li>
@@ -145,6 +161,39 @@ export function CaseSubmissionPanel({
               value={draft.title}
               onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
             />
+          </label>
+          <label>
+            <span>工单编号</span>
+            <input
+              value={draft.workOrderId}
+              onChange={(event) => setDraft((current) => ({ ...current, workOrderId: event.target.value }))}
+            />
+          </label>
+          <label>
+            <span>设备编号</span>
+            <input
+              value={draft.assetCode}
+              onChange={(event) => setDraft((current) => ({ ...current, assetCode: event.target.value }))}
+            />
+          </label>
+          <label>
+            <span>报修来源</span>
+            <input
+              value={draft.reportSource}
+              onChange={(event) => setDraft((current) => ({ ...current, reportSource: event.target.value }))}
+            />
+          </label>
+          <label>
+            <span>工单优先级</span>
+            <select
+              value={draft.priority}
+              onChange={(event) => setDraft((current) => ({ ...current, priority: event.target.value }))}
+            >
+              <option value="low">低</option>
+              <option value="medium">中</option>
+              <option value="high">高</option>
+              <option value="urgent">紧急</option>
+            </select>
           </label>
           <label>
             <span>设备类型</span>

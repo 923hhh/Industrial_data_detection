@@ -32,6 +32,13 @@ const MAINTENANCE_LEVEL_LABELS: Record<string, string> = {
   emergency: "应急处置",
 };
 
+const PRIORITY_LABELS: Record<string, string> = {
+  low: "低",
+  medium: "中",
+  high: "高",
+  urgent: "紧急",
+};
+
 function formatDate(value?: string | null): string {
   if (!value) {
     return "未记录";
@@ -128,6 +135,10 @@ export function TaskExecutionPanel({
             <article className="resultCard">
               <h3>任务摘要</h3>
               <ul className="simpleList">
+                <li>工单编号：{task.work_order_id || "未填写"}</li>
+                <li>设备编号：{task.asset_code || "未填写"}</li>
+                <li>报修来源：{task.report_source || "未填写"}</li>
+                <li>工单优先级：{PRIORITY_LABELS[task.priority || "medium"] || task.priority || "中"}</li>
                 <li>设备类型：{task.equipment_type}</li>
                 <li>设备型号：{task.equipment_model || "未填写"}</li>
                 <li>故障类型：{task.fault_type || "未填写"}</li>

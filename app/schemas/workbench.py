@@ -18,6 +18,10 @@ class WorkbenchTaskSummary(BaseModel):
 
     id: int
     title: str
+    work_order_id: str | None = None
+    asset_code: str | None = None
+    report_source: str | None = None
+    priority: str = "medium"
     equipment_type: str
     equipment_model: str | None = None
     maintenance_level: str
@@ -32,6 +36,10 @@ class WorkbenchCaseSummary(BaseModel):
 
     id: int
     title: str
+    work_order_id: str | None = None
+    asset_code: str | None = None
+    report_source: str | None = None
+    priority: str = "medium"
     equipment_type: str
     equipment_model: str | None = None
     status: str
@@ -48,4 +56,3 @@ class WorkbenchOverviewResponse(BaseModel):
     agent_capabilities: list[str] = Field(default_factory=list)
     recent_tasks: list[WorkbenchTaskSummary] = Field(default_factory=list)
     recent_cases: list[WorkbenchCaseSummary] = Field(default_factory=list)
-

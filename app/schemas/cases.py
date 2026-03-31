@@ -10,6 +10,10 @@ class MaintenanceCaseCreate(BaseModel):
     """Create a maintenance case from task execution or manual input."""
 
     title: str = Field(..., min_length=1, description="案例标题")
+    work_order_id: str | None = Field(default=None, description="工单编号")
+    asset_code: str | None = Field(default=None, description="设备编号")
+    report_source: str | None = Field(default=None, description="报修来源")
+    priority: str | None = Field(default=None, description="工单优先级")
     equipment_type: str = Field(..., min_length=1, description="设备类型")
     equipment_model: str | None = Field(default=None, description="设备型号")
     fault_type: str | None = Field(default=None, description="故障类型")
@@ -23,6 +27,9 @@ class MaintenanceCaseCreate(BaseModel):
 
     @field_validator(
         "title",
+        "work_order_id",
+        "asset_code",
+        "report_source",
         "equipment_type",
         "equipment_model",
         "fault_type",
@@ -50,6 +57,17 @@ class MaintenanceCaseCreate(BaseModel):
         if isinstance(value, list):
             return [str(item).strip() for item in value if str(item).strip()]
         raise ValueError("processing_steps 必须是字符串列表或多行文本。")
+
+    @field_validator("priority")
+    @classmethod
+    def normalize_priority(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip().lower()
+        allowed = {"low", "medium", "high", "urgent"}
+        if normalized not in allowed:
+            raise ValueError("priority 仅支持 low、medium、high、urgent。")
+        return normalized
 
     @model_validator(mode="after")
     def validate_case(self) -> "MaintenanceCaseCreate":
@@ -126,6 +144,10 @@ class MaintenanceCaseResponse(BaseModel):
 
     id: int
     title: str
+    work_order_id: str | None = None
+    asset_code: str | None = None
+    report_source: str | None = None
+    priority: str = "medium"
     equipment_type: str
     equipment_model: str | None = None
     fault_type: str | None = None
@@ -151,6 +173,10 @@ class MaintenanceCaseListItem(BaseModel):
 
     id: int
     title: str
+    work_order_id: str | None = None
+    asset_code: str | None = None
+    report_source: str | None = None
+    priority: str = "medium"
     equipment_type: str
     equipment_model: str | None = None
     fault_type: str | None = None

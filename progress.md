@@ -767,3 +767,39 @@
   - `front-end/components/case-review-panel.tsx` (updated)
   - `progress.md` (updated)
   - `findings.md` (updated)
+
+### 工单信息下沉到任务与案例实体，并升级任务/案例运营页
+- **Status:** phase 3 business context complete
+- Actions taken:
+  - 为 `maintenance_tasks` 与 `maintenance_cases` 正式补充工单编号、设备编号、报修来源和优先级字段，并新增 Alembic 迁移
+  - 扩展任务与案例的创建、详情和列表接口，将工单上下文正式写入实体而不再只停留在 Agent 协作结果里
+  - 将 Agent 协作页创建任务时的工单上下文直接下发到正式任务接口，并在任务沉淀案例时继续透传到案例实体
+  - 升级 `/tasks` 和 `/cases` 为可筛选的业务列表页，支持按工单编号、状态、优先级过滤，并展示当前结果统计
+  - 在任务详情页、案例创建页和案例详情页补齐工单上下文展示，强化“工单 -> 任务 -> 案例 -> 知识”的正式业务感
+  - 验证 `front-end` 的 `npm run typecheck` 通过
+  - 验证 `pytest -q tests/test_phase15_tasks.py tests/test_phase16_cases.py tests/test_phase18_workbench_agents.py` 结果为 `13 passed`
+  - 验证全量 `pytest -q` 结果保持为 `60 passed, 4 skipped`
+- Files created/modified:
+  - `app/models/tasks.py` (updated)
+  - `app/models/knowledge.py` (updated)
+  - `app/schemas/tasks.py` (updated)
+  - `app/schemas/cases.py` (updated)
+  - `app/schemas/workbench.py` (updated)
+  - `app/services/maintenance_task_service.py` (updated)
+  - `app/services/case_service.py` (updated)
+  - `app/routers/tasks.py` (updated)
+  - `app/routers/cases.py` (updated)
+  - `alembic/versions/f2a6b7c8d9e1_add_work_order_fields_to_task_and_case.py` (created)
+  - `front-end/lib/api.ts` (updated)
+  - `front-end/lib/types.ts` (updated)
+  - `front-end/components/agent-assist-panel.tsx` (updated)
+  - `front-end/components/task-execution-panel.tsx` (updated)
+  - `front-end/components/case-submission-panel.tsx` (updated)
+  - `front-end/components/case-review-panel.tsx` (updated)
+  - `front-end/app/tasks/page.tsx` (updated)
+  - `front-end/app/cases/page.tsx` (updated)
+  - `front-end/app/history/page.tsx` (updated)
+  - `tests/test_phase15_tasks.py` (updated)
+  - `tests/test_phase16_cases.py` (updated)
+  - `progress.md` (updated)
+  - `findings.md` (updated)
