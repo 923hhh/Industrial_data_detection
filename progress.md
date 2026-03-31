@@ -827,3 +827,20 @@
   - `front-end/components/case-submission-panel.tsx` (updated)
   - `progress.md` (updated)
   - `findings.md` (updated)
+
+### 正式作业单导出页与打印视图落地
+- **Status:** phase 3 export page complete
+- Actions taken:
+  - 新增 `/tasks/[taskId]/export` 打印友好页，正式汇总工单上下文、设备信息、结构化步骤、执行备注和知识依据
+  - 新增导出页顶部操作区，支持一键打印、返回任务详情和继续沉淀案例
+  - 将任务详情页补充“导出作业单”入口，使执行链路可以直接进入正式导出视图
+  - 在全局样式中新增导出页白底作业单样式和 `@media print` 打印规则，打印时自动隐藏侧边栏与操作区
+  - 验证 `front-end` 的 `npm run typecheck` 通过
+  - 验证全量 `pytest -q` 结果保持为 `60 passed, 4 skipped`
+- Files created/modified:
+  - `front-end/app/tasks/[taskId]/export/page.tsx` (created)
+  - `front-end/components/task-export-actions.tsx` (created)
+  - `front-end/components/task-execution-panel.tsx` (updated)
+  - `front-end/app/globals.css` (updated)
+  - `progress.md` (updated)
+  - `findings.md` (updated)

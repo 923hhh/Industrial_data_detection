@@ -161,6 +161,9 @@ export function TaskExecutionPanel({
                 >
                   {refreshingExport ? "刷新中..." : "刷新导出摘要"}
                 </button>
+                <Link href={`/tasks/${task.id}/export`} className="inlineActionLink">
+                  导出作业单
+                </Link>
                 <Link href={`/cases/new?taskId=${task.id}`} className="inlineActionLink">
                   沉淀案例
                 </Link>

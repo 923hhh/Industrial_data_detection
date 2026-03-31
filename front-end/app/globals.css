@@ -543,6 +543,145 @@ select {
   background: rgba(3, 10, 18, 0.75);
 }
 
+.exportPage {
+  display: grid;
+  gap: 1rem;
+}
+
+.exportSheet {
+  border: 1px solid rgba(14, 26, 43, 0.12);
+  border-radius: 32px;
+  background: #f6f9fc;
+  color: #122033;
+  padding: 2rem;
+  box-shadow: 0 24px 70px rgba(1, 10, 23, 0.18);
+}
+
+.exportHeader,
+.exportStepHeader,
+.exportInlineGrid,
+.exportSignatureGrid {
+  display: grid;
+  gap: 1rem;
+}
+
+.exportHeader {
+  grid-template-columns: minmax(0, 1.5fr) minmax(240px, 0.5fr);
+  align-items: start;
+  margin-bottom: 1.5rem;
+}
+
+.exportLead,
+.exportMuted {
+  color: #51657f;
+}
+
+.exportStatusCard,
+.exportMetaItem,
+.exportBlock,
+.exportStepCard,
+.exportReferenceCard,
+.exportSignatureItem,
+.exportInlineItem {
+  border: 1px solid rgba(18, 32, 51, 0.12);
+  border-radius: 22px;
+  background: white;
+}
+
+.exportStatusCard,
+.exportBlock,
+.exportReferenceCard,
+.exportStepCard,
+.exportSignatureItem {
+  padding: 1rem;
+}
+
+.exportStatusCard {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.exportStatusCard p,
+.exportStatusCard span,
+.exportMetaItem span,
+.exportInlineItem span {
+  color: #51657f;
+}
+
+.exportStatusCard strong,
+.exportMetaItem strong,
+.exportInlineItem strong {
+  font-size: 1rem;
+}
+
+.exportSection {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.exportSection h2,
+.exportBlock h3,
+.exportReferenceCard h3,
+.exportStepCard h3 {
+  margin: 0;
+}
+
+.exportMetaGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.exportMetaItem,
+.exportInlineItem {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.9rem 1rem;
+}
+
+.exportStepList,
+.exportReferenceList {
+  display: grid;
+  gap: 1rem;
+}
+
+.exportStepHeader {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.exportStepMeta {
+  display: grid;
+  gap: 0.45rem;
+  justify-items: end;
+  color: #51657f;
+  text-align: right;
+}
+
+.exportInlineGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0.9rem;
+}
+
+.exportWarning {
+  color: #b54c4c;
+  font-weight: 700;
+}
+
+.exportSignatureGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.signatureLine {
+  min-height: 48px;
+  border-bottom: 1px solid rgba(18, 32, 51, 0.25);
+}
+
+.printHidden {
+  display: flex;
+}
+
 @media (max-width: 1100px) {
   .shell {
     grid-template-columns: 1fr;
@@ -563,7 +702,49 @@ select {
   .detailGrid,
   .presetGrid,
   .intakeGrid,
-  .summaryGrid {
+  .summaryGrid,
+  .exportHeader,
+  .exportMetaGrid,
+  .exportInlineGrid,
+  .exportSignatureGrid,
+  .exportStepHeader {
     grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  :root {
+    color-scheme: light;
+  }
+
+  html,
+  body {
+    background: white;
+    color: #122033;
+  }
+
+  .shell {
+    display: block;
+    min-height: auto;
+  }
+
+  .sidebar,
+  .printHidden {
+    display: none !important;
+  }
+
+  .mainContent {
+    padding: 0;
+  }
+
+  .exportSheet {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .exportSection {
+    break-inside: avoid;
   }
 }
