@@ -85,10 +85,42 @@ async def test_agent_assist_endpoint():
         "run_id": "agent-run-123",
         "status": "completed",
         "summary": "已完成知识召回、步骤规划和风险校验。",
+        "request_context": {
+            "work_order_id": "WO-20260331-01",
+            "asset_code": "ENG-LX200-01",
+            "report_source": "巡检上报",
+            "priority": "high",
+            "maintenance_level": "standard",
+            "equipment_type": "摩托车发动机",
+            "equipment_model": "LX200",
+            "fault_type": "启动困难",
+            "symptom_description": "发动机冷启动困难，伴随火花塞积碳",
+            "selected_chunk_ids": [11, 12],
+            "has_image": False,
+        },
+        "execution_brief": {
+            "status": "ready",
+            "decision": "知识依据、步骤预案和风险提示已形成，可进入标准检修执行准备。",
+            "recommended_path": "标准检修流程",
+            "next_actions": ["先锁定 2 条知识依据，并记录章节或页码。"],
+        },
         "effective_query": "冷启动困难 火花塞 积碳",
         "effective_keywords": ["冷启动困难", "火花塞", "积碳"],
         "image_analysis": None,
         "knowledge_results": [],
+        "related_cases": [
+            {
+                "id": 5,
+                "title": "火花塞积碳复盘案例",
+                "equipment_type": "摩托车发动机",
+                "equipment_model": "LX200",
+                "fault_type": "启动困难",
+                "status": "approved",
+                "task_id": 2,
+                "updated_at": datetime.now(timezone.utc),
+                "match_reason": "同型号 LX200、已审核入库",
+            }
+        ],
         "task_plan_preview": [
             {
                 "step_order": 1,
@@ -133,6 +165,9 @@ async def test_agent_assist_endpoint():
     assert payload["run_id"] == "agent-run-123"
     assert payload["agents"][0]["agent_name"] == "KnowledgeRetrieverAgent"
     assert payload["task_plan_preview"][0]["title"] == "检修前安全隔离"
+    assert payload["request_context"]["work_order_id"] == "WO-20260331-01"
+    assert payload["execution_brief"]["status"] == "ready"
+    assert payload["related_cases"][0]["title"] == "火花塞积碳复盘案例"
 
 
 @pytest.mark.asyncio
@@ -169,9 +204,11 @@ async def test_agent_assist_supports_selected_chunk_only_input():
             ]
         )
     )
+    service.case_service.recommend_cases = AsyncMock(return_value=[])
 
     payload = await service.assist(AgentAssistRequest(selected_chunk_ids=[11]))
 
     service.knowledge_service.search_multimodal.assert_not_called()
     assert payload["task_plan_preview"][0]["title"] == "检修前安全确认"
     assert payload["agents"][0]["agent_name"] == "KnowledgeRetrieverAgent"
+    assert payload["request_context"]["selected_chunk_ids"] == [11]

@@ -36,7 +36,8 @@ a {
 
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
 }
 
@@ -60,13 +61,31 @@ button:disabled {
 }
 
 input,
-textarea {
+textarea,
+select {
   width: 100%;
   border: 1px solid var(--border);
   border-radius: 16px;
   background: rgba(7, 17, 31, 0.55);
   color: var(--text);
   padding: 0.9rem 1rem;
+}
+
+select {
+  appearance: none;
+}
+
+.secondaryButton,
+.tagButton {
+  background: rgba(14, 26, 43, 0.82);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+.secondaryButton:hover,
+.tagButton:hover {
+  border-color: rgba(67, 212, 255, 0.35);
 }
 
 .fileInput {
@@ -187,6 +206,30 @@ textarea {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.operationsLayout,
+.detailGrid,
+.presetGrid,
+.intakeGrid {
+  display: grid;
+  gap: 1rem;
+}
+
+.operationsLayout {
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+}
+
+.detailGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.presetGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.intakeGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .sectionCard {
   border-radius: 28px;
   padding: 1.25rem;
@@ -278,6 +321,10 @@ textarea {
   gap: 0.45rem;
 }
 
+.fullSpan {
+  grid-column: 1 / -1;
+}
+
 .toggleRow {
   display: inline-flex;
   gap: 0.6rem;
@@ -294,6 +341,11 @@ textarea {
 .panelStack {
   display: grid;
   gap: 1rem;
+}
+
+.stackList {
+  display: grid;
+  gap: 0.85rem;
 }
 
 .infoStrip {
@@ -366,6 +418,76 @@ textarea {
   background: rgba(8, 18, 32, 0.6);
 }
 
+.stepCard {
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 1rem;
+  background: rgba(8, 18, 32, 0.6);
+}
+
+.tagRow {
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.tagButton,
+.tag {
+  border-radius: 999px;
+  padding: 0.55rem 0.9rem;
+}
+
+.tag {
+  border: 1px solid rgba(67, 212, 255, 0.24);
+  background: rgba(67, 212, 255, 0.08);
+  color: var(--cyan);
+}
+
+.selectionSummary,
+.cardTitleRow,
+.inlineRunRow {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.selectionSummary,
+.cardTitleRow {
+  justify-content: space-between;
+}
+
+.inlineRunRow input {
+  flex: 1 1 260px;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--border);
+  font-weight: 700;
+}
+
+.status-ready {
+  color: var(--green);
+  border-color: rgba(53, 208, 127, 0.32);
+  background: rgba(53, 208, 127, 0.08);
+}
+
+.status-review {
+  color: var(--amber);
+  border-color: rgba(255, 184, 77, 0.32);
+  background: rgba(255, 184, 77, 0.08);
+}
+
+.status-pending {
+  color: var(--cyan);
+  border-color: rgba(67, 212, 255, 0.32);
+  background: rgba(67, 212, 255, 0.08);
+}
+
 .thumbnailPreview {
   width: min(100%, 360px);
   max-height: 220px;
@@ -390,7 +512,11 @@ textarea {
   .twoGrid,
   .agentGrid,
   .libraryLayout,
-  .compactFormGrid {
+  .compactFormGrid,
+  .operationsLayout,
+  .detailGrid,
+  .presetGrid,
+  .intakeGrid {
     grid-template-columns: 1fr;
   }
 }

@@ -9,6 +9,10 @@ from app.schemas.knowledge import KnowledgeImageAnalysis, KnowledgeSearchHit
 class AgentAssistRequest(BaseModel):
     """Unified request payload for agent-based assistance."""
 
+    work_order_id: str | None = Field(default=None, description="工单编号")
+    asset_code: str | None = Field(default=None, description="设备编号")
+    report_source: str | None = Field(default=None, description="报修来源")
+    priority: str = Field(default="medium", description="工单优先级")
     query: str | None = Field(default=None, description="用户当前检修问题或故障描述")
     equipment_type: str | None = Field(default=None, description="设备类型")
     equipment_model: str | None = Field(default=None, description="设备型号")
@@ -24,6 +28,9 @@ class AgentAssistRequest(BaseModel):
 
     @field_validator(
         "query",
+        "work_order_id",
+        "asset_code",
+        "report_source",
         "equipment_type",
         "equipment_model",
         "fault_type",
@@ -50,6 +57,15 @@ class AgentAssistRequest(BaseModel):
             raise ValueError("maintenance_level 仅支持 routine、standard、emergency。")
         return normalized
 
+    @field_validator("priority")
+    @classmethod
+    def normalize_priority(cls, value: str) -> str:
+        normalized = (value or "medium").strip().lower()
+        allowed = {"low", "medium", "high", "urgent"}
+        if normalized not in allowed:
+            raise ValueError("priority 仅支持 low、medium、high、urgent。")
+        return normalized
+
     @model_validator(mode="after")
     def validate_agent_inputs(self) -> "AgentAssistRequest":
         if not any(
@@ -66,6 +82,31 @@ class AgentAssistRequest(BaseModel):
         if self.image_base64 and not (self.image_mime_type or "").startswith("image/"):
             raise ValueError("上传故障图片时，image_mime_type 必须是 image/ 开头的有效类型。")
         return self
+
+
+class AgentRequestContext(BaseModel):
+    """Business intake summary echoed back to the workbench."""
+
+    work_order_id: str | None = None
+    asset_code: str | None = None
+    report_source: str | None = None
+    priority: str = "medium"
+    maintenance_level: str = "standard"
+    equipment_type: str | None = None
+    equipment_model: str | None = None
+    fault_type: str | None = None
+    symptom_description: str | None = None
+    selected_chunk_ids: list[int] = Field(default_factory=list)
+    has_image: bool = False
+
+
+class AgentExecutionBrief(BaseModel):
+    """Decision summary for whether the plan can move into execution."""
+
+    status: str
+    decision: str
+    recommended_path: str
+    next_actions: list[str] = Field(default_factory=list)
 
 
 class AgentTaskPreviewStep(BaseModel):
@@ -89,19 +130,35 @@ class AgentRunStep(BaseModel):
     citations: list[str] = Field(default_factory=list)
 
 
+class AgentRelatedCase(BaseModel):
+    """Recommended similar maintenance case."""
+
+    id: int
+    title: str
+    equipment_type: str
+    equipment_model: str | None = None
+    fault_type: str | None = None
+    status: str
+    task_id: int | None = None
+    updated_at: datetime | None = None
+    match_reason: str
+
+
 class AgentAssistResponse(BaseModel):
     """Unified response payload for agent collaboration."""
 
     run_id: str
     status: str
     summary: str
+    request_context: AgentRequestContext | None = None
+    execution_brief: AgentExecutionBrief | None = None
     effective_query: str | None = None
     effective_keywords: list[str] = Field(default_factory=list)
     image_analysis: KnowledgeImageAnalysis | None = None
     knowledge_results: list[KnowledgeSearchHit] = Field(default_factory=list)
+    related_cases: list[AgentRelatedCase] = Field(default_factory=list)
     task_plan_preview: list[AgentTaskPreviewStep] = Field(default_factory=list)
     risk_findings: list[str] = Field(default_factory=list)
     case_suggestions: list[str] = Field(default_factory=list)
     agents: list[AgentRunStep] = Field(default_factory=list)
     created_at: datetime
-

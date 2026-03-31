@@ -106,6 +106,74 @@ class MaintenanceCaseService:
             for item in cases
         ]
 
+    async def recommend_cases(
+        self,
+        *,
+        equipment_type: str | None = None,
+        equipment_model: str | None = None,
+        fault_type: str | None = None,
+        limit: int = 3,
+    ) -> list[dict[str, Any]]:
+        """Return recent similar cases for the agent workbench."""
+        stmt = (
+            select(MaintenanceCase)
+            .where(MaintenanceCase.status.in_(["approved", "pending_review"]))
+            .order_by(MaintenanceCase.updated_at.desc())
+            .limit(max(limit * 4, 8))
+        )
+        if equipment_type:
+            stmt = stmt.where(MaintenanceCase.equipment_type == equipment_type)
+
+        cases = list((await self.session.execute(stmt)).scalars().all())
+        if not cases:
+            return []
+
+        ranked: list[tuple[int, float, dict[str, Any]]] = []
+        for item in cases:
+            score = 0
+            reasons: list[str] = []
+            if equipment_type and item.equipment_type == equipment_type:
+                score += 2
+                reasons.append("同设备类型")
+            if equipment_model and item.equipment_model == equipment_model:
+                score += 3
+                reasons.append(f"同型号 {equipment_model}")
+            if fault_type and item.fault_type:
+                if fault_type == item.fault_type:
+                    score += 3
+                    reasons.append(f"同故障类型 {fault_type}")
+                elif fault_type in item.fault_type or item.fault_type in fault_type:
+                    score += 2
+                    reasons.append(f"故障相近：{item.fault_type}")
+            if item.status == "approved":
+                score += 1
+                reasons.append("已审核入库")
+
+            ranked.append(
+                (
+                    score,
+                    item.updated_at.timestamp() if item.updated_at else 0.0,
+                    {
+                        "id": item.id,
+                        "title": item.title,
+                        "equipment_type": item.equipment_type,
+                        "equipment_model": item.equipment_model,
+                        "fault_type": item.fault_type,
+                        "status": item.status,
+                        "task_id": item.task_id,
+                        "updated_at": item.updated_at,
+                        "match_reason": "、".join(reasons) if reasons else "最近可参考案例",
+                    },
+                )
+            )
+
+        ranked.sort(key=lambda value: (value[0], value[1]), reverse=True)
+        recommendations = [payload for score, _, payload in ranked if score > 0][:limit]
+        if recommendations:
+            return recommendations
+
+        return [payload for _, _, payload in ranked[:limit]]
+
     async def get_case_detail(self, case_id: int) -> dict[str, Any]:
         """Return full case detail including manual corrections."""
         case = await self._load_case(case_id)

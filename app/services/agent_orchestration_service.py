@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.agents import AgentAssistRequest
 from app.schemas.knowledge import KnowledgeSearchRequest
 from app.schemas.tasks import MaintenanceTaskCreate
+from app.services.case_service import MaintenanceCaseService
 from app.services.knowledge_service import KnowledgeService
 from app.services.maintenance_task_service import MaintenanceTaskService
 
@@ -40,6 +41,7 @@ class AgentOrchestrationService:
         self.session = session
         self.knowledge_service = KnowledgeService(session)
         self.task_service = MaintenanceTaskService(session)
+        self.case_service = MaintenanceCaseService(session)
 
     async def assist(self, request: AgentAssistRequest) -> dict[str, Any]:
         """Run the agent collaboration pipeline and persist a lightweight run snapshot."""
@@ -80,7 +82,21 @@ class AgentOrchestrationService:
         knowledge_refs = await self.task_service._load_knowledge_refs(selected_chunk_ids)
         task_preview = await self._build_task_preview(request, knowledge_refs)
         risk_findings = self._build_risk_findings(request, task_preview, knowledge_refs)
-        case_suggestions = self._build_case_suggestions(request, knowledge_refs)
+        related_cases = await self.case_service.recommend_cases(
+            equipment_type=request.equipment_type,
+            equipment_model=request.equipment_model,
+            fault_type=request.fault_type or retrieval_payload.get("effective_query"),
+            limit=3,
+        )
+        case_suggestions = self._build_case_suggestions(request, knowledge_refs, related_cases)
+        execution_brief = self._build_execution_brief(
+            request,
+            retrieval_results,
+            selected_chunk_ids,
+            task_preview,
+            risk_findings,
+            related_cases,
+        )
 
         agents = [
             {
@@ -108,19 +124,30 @@ class AgentOrchestrationService:
                 "agent_name": "CaseCuratorAgent",
                 "title": "案例沉淀建议",
                 "status": "completed",
-                "summary": f"已输出 {len(case_suggestions)} 条案例沉淀与审核建议。",
-                "citations": [item["title"] for item in knowledge_refs[:2]],
+                "summary": (
+                    f"已输出 {len(case_suggestions)} 条案例沉淀建议，"
+                    f"并推荐 {len(related_cases)} 条相似案例。"
+                ),
+                "citations": [item["title"] for item in knowledge_refs[:1]]
+                + [item["title"] for item in related_cases[:1]],
             },
         ]
 
         run_payload = {
             "run_id": f"agent-run-{uuid4().hex[:12]}",
             "status": "completed",
-            "summary": self._build_run_summary(retrieval_results, task_preview, risk_findings),
+            "summary": self._build_run_summary(retrieval_results, task_preview, risk_findings, related_cases),
+            "request_context": self._build_request_context(
+                request,
+                retrieval_payload.get("effective_query"),
+                selected_chunk_ids,
+            ),
+            "execution_brief": execution_brief,
             "effective_query": retrieval_payload["effective_query"],
             "effective_keywords": retrieval_payload.get("effective_keywords") or [],
             "image_analysis": retrieval_payload["image_analysis"],
             "knowledge_results": retrieval_results,
+            "related_cases": related_cases,
             "task_plan_preview": task_preview,
             "risk_findings": risk_findings,
             "case_suggestions": case_suggestions,
@@ -191,6 +218,7 @@ class AgentOrchestrationService:
         self,
         request: AgentAssistRequest,
         knowledge_refs: list[dict[str, Any]],
+        related_cases: list[dict[str, Any]],
     ) -> list[str]:
         suggestions = [
             "完成检修后立即沉淀案例，保留处理步骤、结论和差异项。",
@@ -200,9 +228,77 @@ class AgentOrchestrationService:
             suggestions.append(
                 f"建议优先保留 {knowledge_refs[0]['title']} 的引用截图与页码，便于后续答辩展示。"
             )
+        if related_cases:
+            suggestions.append(f"可先对照案例《{related_cases[0]['title']}》检查是否存在相同处理路径。")
         if request.equipment_model:
             suggestions.append(f"案例标题中保留型号 {request.equipment_model}，提升后续精准命中率。")
         return suggestions[:4]
+
+    def _build_request_context(
+        self,
+        request: AgentAssistRequest,
+        effective_query: str | None,
+        selected_chunk_ids: list[int],
+    ) -> dict[str, Any]:
+        return {
+            "work_order_id": request.work_order_id,
+            "asset_code": request.asset_code,
+            "report_source": request.report_source,
+            "priority": request.priority,
+            "maintenance_level": request.maintenance_level,
+            "equipment_type": request.equipment_type,
+            "equipment_model": request.equipment_model,
+            "fault_type": request.fault_type,
+            "symptom_description": effective_query or request.query,
+            "selected_chunk_ids": list(selected_chunk_ids),
+            "has_image": bool(request.image_base64),
+        }
+
+    def _build_execution_brief(
+        self,
+        request: AgentAssistRequest,
+        knowledge_results: list[dict[str, Any]],
+        selected_chunk_ids: list[int],
+        task_preview: list[dict[str, Any]],
+        risk_findings: list[str],
+        related_cases: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        recommended_path = {
+            "routine": "例行检修流程",
+            "standard": "标准检修流程",
+            "emergency": "应急检修流程",
+        }.get(request.maintenance_level, "标准检修流程")
+
+        if not knowledge_results and not selected_chunk_ids:
+            status = "need_more_input"
+            decision = "当前知识依据不足，需补充更明确的故障描述、设备型号或故障图片后再下发预案。"
+        elif request.maintenance_level == "emergency":
+            status = "review_required" if risk_findings else "ready"
+            decision = "当前工单进入应急处置模式，建议先隔离风险源，再执行最小闭环排查。"
+        elif len(risk_findings) >= 4:
+            status = "review_required"
+            decision = "风险提醒较多，建议由班组长先复核知识引用和现场现象，再执行标准步骤。"
+        else:
+            status = "ready"
+            decision = "知识依据、步骤预案和风险提示已形成，可进入标准检修执行准备。"
+
+        next_actions: list[str] = []
+        if knowledge_results:
+            next_actions.append(f"先锁定 {max(1, len(selected_chunk_ids))} 条知识依据，并记录章节或页码。")
+        else:
+            next_actions.append("补充设备型号、故障部位或现场图片，重新触发协作。")
+        if task_preview:
+            next_actions.append(f"优先执行“{task_preview[0]['title']}”，再进入现场现象核对。")
+        if related_cases:
+            next_actions.append(f"对照案例《{related_cases[0]['title']}》检查是否存在相同处理分支。")
+        next_actions.append("完成检修后沉淀案例并提交审核回流。")
+
+        return {
+            "status": status,
+            "decision": decision,
+            "recommended_path": recommended_path,
+            "next_actions": next_actions[:4],
+        }
 
     def _build_retrieval_summary(self, effective_query: str | None, results: list[dict[str, Any]]) -> str:
         if not results:
@@ -218,9 +314,10 @@ class AgentOrchestrationService:
         knowledge_results: list[dict[str, Any]],
         task_preview: list[dict[str, Any]],
         risk_findings: list[str],
+        related_cases: list[dict[str, Any]],
     ) -> str:
         return (
             f"本次协作已完成知识召回、作业步骤规划、风险校验和案例沉淀建议。"
             f"当前共命中 {len(knowledge_results)} 条知识，生成 {len(task_preview)} 个步骤，"
-            f"识别 {len(risk_findings)} 条风险提醒。"
+            f"识别 {len(risk_findings)} 条风险提醒，并推荐 {len(related_cases)} 条相似案例。"
         )

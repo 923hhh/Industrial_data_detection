@@ -678,3 +678,32 @@
   - `README.md` (updated)
   - `docs/SOFTBEI_FUNCTIONAL_DESIGN.md` (updated)
   - `findings.md` (updated)
+
+## Session: 2026-03-31 (Phase 23 / 第三阶段多智能体主线升级)
+
+### Agent 协作页升级为正式业务协作中心
+- **Status:** phase 3 first cut complete
+- Actions taken:
+  - 扩展 `POST /api/v1/agents/assist` 与 `GET /api/v1/agents/runs/{id}` 返回结构，新增工单上下文 `request_context`、执行建议 `execution_brief` 和相似案例 `related_cases`
+  - 在 `MaintenanceCaseService` 中新增规则化相似案例推荐，优先按设备类型、型号、故障类型和审核状态做轻量打分排序
+  - 将正式前端 `/agents` 从单一文本面板升级为业务协作页，补齐工单编号、设备编号、报修来源、优先级、检修模式、故障图片上传和场景预设
+  - 新增“知识依据锁定 -> 按已锁定知识刷新预案”交互，正式使用 `selected_chunk_ids` 而不再只展示默认协作结果
+  - 新增 Run ID 回放入口，使 Agent 协作记录可在答辩现场直接复盘
+  - 全量回归时发现旧 `SensorService.count()` 聚合写法失效，已顺手修复为 `func.count()` 查询
+  - 验证 `pytest -q tests/test_phase18_workbench_agents.py` 结果为 `3 passed`
+  - 验证 `front-end` 的 `npm run typecheck` 通过
+  - 验证全量 `pytest -q` 结果更新为 `64 passed`
+- Files created/modified:
+  - `app/schemas/agents.py` (updated)
+  - `app/routers/agents.py` (updated)
+  - `app/services/agent_orchestration_service.py` (updated)
+  - `app/services/case_service.py` (updated)
+  - `app/services/sensor_service.py` (updated)
+  - `tests/test_phase18_workbench_agents.py` (updated)
+  - `front-end/app/agents/page.tsx` (updated)
+  - `front-end/components/agent-assist-panel.tsx` (updated)
+  - `front-end/app/globals.css` (updated)
+  - `front-end/lib/api.ts` (updated)
+  - `front-end/lib/types.ts` (updated)
+  - `progress.md` (updated)
+  - `findings.md` (updated)

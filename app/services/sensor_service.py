@@ -7,7 +7,7 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.sensor_data import SensorData
@@ -127,6 +127,6 @@ class SensorService:
     async def count(self) -> int:
         """返回传感器记录总数"""
         result = await self.session.execute(
-            select(SensorData).with_only_columns(SensorData.id.count())
+            select(func.count()).select_from(SensorData)
         )
         return result.scalar_one() or 0

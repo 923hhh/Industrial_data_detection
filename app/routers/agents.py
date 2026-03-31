@@ -4,7 +4,15 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.agents import AgentAssistRequest, AgentAssistResponse, AgentRunStep, AgentTaskPreviewStep
+from app.schemas.agents import (
+    AgentAssistRequest,
+    AgentAssistResponse,
+    AgentExecutionBrief,
+    AgentRelatedCase,
+    AgentRequestContext,
+    AgentRunStep,
+    AgentTaskPreviewStep,
+)
 from app.schemas.knowledge import KnowledgeImageAnalysis, KnowledgeSearchHit
 from app.shared.database import get_session
 from app.services.agent_orchestration_service import AgentOrchestrationService
@@ -18,6 +26,16 @@ def _build_agent_response(payload: dict) -> AgentAssistResponse:
         run_id=payload["run_id"],
         status=payload["status"],
         summary=payload["summary"],
+        request_context=(
+            AgentRequestContext(**payload["request_context"])
+            if payload.get("request_context") is not None
+            else None
+        ),
+        execution_brief=(
+            AgentExecutionBrief(**payload["execution_brief"])
+            if payload.get("execution_brief") is not None
+            else None
+        ),
         effective_query=payload.get("effective_query"),
         effective_keywords=payload.get("effective_keywords") or [],
         image_analysis=(
@@ -26,6 +44,7 @@ def _build_agent_response(payload: dict) -> AgentAssistResponse:
             else None
         ),
         knowledge_results=[KnowledgeSearchHit(**item) for item in payload.get("knowledge_results", [])],
+        related_cases=[AgentRelatedCase(**item) for item in payload.get("related_cases", [])],
         task_plan_preview=[AgentTaskPreviewStep(**item) for item in payload.get("task_plan_preview", [])],
         risk_findings=payload.get("risk_findings", []),
         case_suggestions=payload.get("case_suggestions", []),
@@ -73,4 +92,3 @@ async def get_agent_run(
     if payload is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定的 Agent 协作记录不存在。")
     return _build_agent_response(payload)
-

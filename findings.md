@@ -19,6 +19,7 @@
 - 当前全量测试结果已更新为 `56 passed, 4 skipped`
 - 当前全量测试结果已更新为 `58 passed, 4 skipped`
 - 当前全量测试结果已更新为 `60 passed, 4 skipped`
+- 当前全量测试结果已更新为 `64 passed`
 - 仓库此前缺少面向评审和部署的正式 README、部署文档、CI workflow 和 Dockerfile
 
 ## Technical Decisions
@@ -90,6 +91,10 @@
 | OCR 先采用“多模态模型提取 + 明确 fallback 提示”策略 | 当前比赛阶段优先交付稳定可演示的图片导入与图片检索入口，不提前引入本地 OCR 引擎依赖 |
 | 图片型知识导入与正式图片检索共用 OCR/视觉抽取能力 | 避免导入链路和检索链路各自维护一套图片理解逻辑，减少后续前端和 Agent 层重复接线 |
 | 正式知识中心的图片上传入口同时承担“知识检索”和“知识导入”两种多模态触点 | 第二阶段需要尽快把 OCR、图片上传和正式前端串成一条业务链，而不是继续停留在静态联调页 |
+| 第三阶段先把 `/agents` 重构为“工单受理 -> 知识依据锁定 -> 步骤预案 -> 风险控制 -> 案例回流 -> Run 回放”的业务页 | 当前最缺的是主链路成品感，不是继续堆单点 Agent 说明卡 |
+| Agent 协作响应补 `request_context`、`execution_brief` 和 `related_cases` 三类结构化结果 | 正式业务页需要展示工单上下文、是否可执行的判断以及相似案例，而不应再从字符串摘要里二次拼装 |
+| 相似案例推荐先复用现有 `maintenance_cases` 做规则打分召回 | 先在不新增索引和迁移的前提下交付“案例推荐”亮点，后续再考虑更复杂的混合召回 |
+| `SensorService.count()` 改为 `select(func.count()).select_from(SensorData)` | `SensorData.id.count()` 在当前 SQLAlchemy 写法下会直接抛异常，影响全量回归 |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -100,6 +105,7 @@
 | alembic 运行在系统 Python 但 aiosqlite 在 venv | 使用 venv Python (`venv/Scripts/python.exe`) 运行 alembic |
 | Phase 10 循环导入：graph.py → nodes/__init__ → supervisor.py → graph.py.DiagnosisState | 将 DiagnosisState 抽取到独立文件 app/agents/state.py |
 | 当前工作区对新建文件型 SQLite 库的 DDL 验证会出现 `disk I/O error` | TODO-3 验证改用 SQLite 共享内存库，避免文件系统噪声影响迁移真实性判断 |
+| 全量回归时 `SensorService.count()` 因 ORM 列对象不存在 `.count()` 而失败 | 改为 `func.count()` 聚合查询后，全量 `pytest -q` 恢复为 `64 passed` |
 
 ## Resources
 <!-- 有用的链接 -->

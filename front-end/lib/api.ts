@@ -152,4 +152,11 @@ export async function assistWithAgents(payload: Record<string, unknown>): Promis
   return parseJson<AgentAssistResponse>(response);
 }
 
+export async function getAgentRun(runId: string): Promise<AgentAssistResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/agents/runs/${runId}`, {
+    cache: "no-store",
+  });
+  return parseJson<AgentAssistResponse>(response);
+}
+
 export { API_BASE_URL };

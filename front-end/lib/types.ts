@@ -162,6 +162,27 @@ export type AgentTaskPreviewStep = {
   confirmation_text?: string | null;
 };
 
+export type AgentRequestContext = {
+  work_order_id?: string | null;
+  asset_code?: string | null;
+  report_source?: string | null;
+  priority: string;
+  maintenance_level: string;
+  equipment_type?: string | null;
+  equipment_model?: string | null;
+  fault_type?: string | null;
+  symptom_description?: string | null;
+  selected_chunk_ids: number[];
+  has_image: boolean;
+};
+
+export type AgentExecutionBrief = {
+  status: string;
+  decision: string;
+  recommended_path: string;
+  next_actions: string[];
+};
+
 export type AgentRunStep = {
   agent_name: string;
   title: string;
@@ -170,14 +191,29 @@ export type AgentRunStep = {
   citations: string[];
 };
 
+export type AgentRelatedCase = {
+  id: number;
+  title: string;
+  equipment_type: string;
+  equipment_model?: string | null;
+  fault_type?: string | null;
+  status: string;
+  task_id?: number | null;
+  updated_at?: string | null;
+  match_reason: string;
+};
+
 export type AgentAssistResponse = {
   run_id: string;
   status: string;
   summary: string;
+  request_context?: AgentRequestContext | null;
+  execution_brief?: AgentExecutionBrief | null;
   effective_query?: string | null;
   effective_keywords: string[];
   image_analysis?: KnowledgeImageAnalysis | null;
   knowledge_results: KnowledgeSearchHit[];
+  related_cases: AgentRelatedCase[];
   task_plan_preview: AgentTaskPreviewStep[];
   risk_findings: string[];
   case_suggestions: string[];
