@@ -128,7 +128,7 @@ async def test_knowledge_import_upload_rejects_non_pdf():
         )
 
     assert response.status_code == 400
-    assert "PDF" in response.json()["detail"] or "PNG" in response.json()["detail"]
+    assert "PDF" in response.json()["message"] or "PNG" in response.json()["message"]
 
 
 @pytest.mark.asyncio

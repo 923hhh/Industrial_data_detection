@@ -1,9 +1,10 @@
 """Knowledge base APIs for 软件杯检修知识系统."""
 import logging
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import AppError
 from app.schemas.knowledge_imports import (
     KnowledgeChunkPreview,
     KnowledgeChunkPreviewResponse,
@@ -90,7 +91,11 @@ async def preview_knowledge_import(
 ) -> KnowledgeImportPreviewResponse:
     filename = (file.filename or "").strip()
     if not filename:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="上传文件必须包含文件名。")
+        raise AppError(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            error_code="knowledge_import_invalid_filename",
+            message="上传文件必须包含文件名。",
+        )
 
     logger.info(
         "knowledge_import_preview filename=%s content_type=%s equipment_type=%s equipment_model=%s replace_existing=%s",
@@ -115,7 +120,11 @@ async def preview_knowledge_import(
             replace_existing=replace_existing,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        raise AppError(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            error_code="knowledge_import_invalid_request",
+            message=str(exc),
+        ) from exc
     return KnowledgeImportPreviewResponse(**payload)
 
 
@@ -159,7 +168,11 @@ async def import_knowledge_document(
 ) -> KnowledgeImportJobResponse:
     filename = (file.filename or "").strip()
     if not filename:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="上传文件必须包含文件名。")
+        raise AppError(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            error_code="knowledge_import_invalid_filename",
+            message="上传文件必须包含文件名。",
+        )
 
     logger.info(
         "knowledge_import_upload filename=%s content_type=%s equipment_type=%s equipment_model=%s replace_existing=%s",
@@ -184,7 +197,11 @@ async def import_knowledge_document(
             replace_existing=replace_existing,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        raise AppError(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            error_code="knowledge_import_invalid_request",
+            message=str(exc),
+        ) from exc
     KnowledgeImportWorker.schedule_job(payload["id"])
     return _build_import_job_response(payload)
 
@@ -205,8 +222,17 @@ async def retry_knowledge_import_job(
         payload = await service.retry_job(job_id)
     except ValueError as exc:
         message = str(exc)
-        status_code = status.HTTP_404_NOT_FOUND if "不存在" in message else status.HTTP_400_BAD_REQUEST
-        raise HTTPException(status_code=status_code, detail=message) from exc
+        if "不存在" in message:
+            raise AppError(
+                status_code=status.HTTP_404_NOT_FOUND,
+                error_code="knowledge_import_job_not_found",
+                message=message,
+            ) from exc
+        raise AppError(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            error_code="knowledge_import_retry_invalid",
+            message=message,
+        ) from exc
     KnowledgeImportWorker.schedule_job(job_id)
     return _build_import_job_response(payload)
 
@@ -225,7 +251,11 @@ async def get_knowledge_import_job(
     try:
         payload = await service.get_import_job(job_id)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        raise AppError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            error_code="knowledge_import_job_not_found",
+            message=str(exc),
+        ) from exc
     return _build_import_job_response(payload)
 
 
@@ -273,7 +303,11 @@ async def get_knowledge_document_detail(
     try:
         payload = await service.get_document_detail(document_id)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        raise AppError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            error_code="knowledge_document_not_found",
+            message=str(exc),
+        ) from exc
     return KnowledgeDocumentDetailResponse(**payload)
 
 
@@ -293,7 +327,11 @@ async def get_knowledge_document_chunks(
     try:
         chunks = await service.list_document_chunks(document_id, limit=limit)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        raise AppError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            error_code="knowledge_document_not_found",
+            message=str(exc),
+        ) from exc
     return KnowledgeChunkPreviewResponse(
         document_id=document_id,
         total=len(chunks),

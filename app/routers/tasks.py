@@ -1,10 +1,11 @@
 """Maintenance task workflow APIs for TODO-SB-4."""
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
+from app.core.errors import AppError
 from app.schemas.tasks import (
     MaintenanceTaskCreate,
     MaintenanceTaskExportResponse,
@@ -90,7 +91,11 @@ async def get_maintenance_task(
     try:
         payload = await service.get_task_detail(task_id)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        raise AppError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            error_code="maintenance_task_not_found",
+            message=str(exc),
+        ) from exc
     return _build_task_response(payload)
 
 
@@ -117,7 +122,11 @@ async def update_maintenance_task_step(
     try:
         payload = await service.update_task_step(task_id, step_id, request)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        raise AppError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            error_code="maintenance_task_step_not_found",
+            message=str(exc),
+        ) from exc
     return _build_task_response(payload)
 
 
@@ -170,7 +179,11 @@ async def export_maintenance_task(
     try:
         payload = await service.export_task(task_id)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        raise AppError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            error_code="maintenance_task_not_found",
+            message=str(exc),
+        ) from exc
 
     return MaintenanceTaskExportResponse(
         task=_build_task_response(payload["task"]),

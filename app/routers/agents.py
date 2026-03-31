@@ -1,9 +1,10 @@
 """Agent orchestration APIs for the formal workbench."""
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import AppError
 from app.schemas.agents import (
     AgentAssistRequest,
     AgentAssistResponse,
@@ -90,5 +91,9 @@ async def get_agent_run(
     service = AgentOrchestrationService(session)
     payload = await service.get_run(run_id)
     if payload is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定的 Agent 协作记录不存在。")
+        raise AppError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            error_code="agent_run_not_found",
+            message="指定的 Agent 协作记录不存在。",
+        )
     return _build_agent_response(payload)

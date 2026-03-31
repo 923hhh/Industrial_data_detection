@@ -12,6 +12,7 @@ from fastapi.responses import StreamingResponse
 from app.agents import run_multi_agent_diagnosis
 from app.agents.graph import get_diagnosis_graph
 from app.agents.state import DiagnosisState
+from app.core.errors import AppError
 from app.schemas.diagnosis import DiagnosisRequest, DiagnosisResponse
 
 router = APIRouter(prefix="/api/v1", tags=["诊断"])
@@ -65,10 +66,12 @@ async def diagnose(request: DiagnosisRequest) -> DiagnosisResponse:
             request.start_time,
             request.end_time,
         )
-        raise HTTPException(
+        raise AppError(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"诊断执行失败: {str(e)}"
-        )
+            error_code="diagnosis_execution_failed",
+            message="诊断执行失败，请稍后重试。",
+            details={"exception": e.__class__.__name__},
+        ) from e
 
 
 # ============================================================

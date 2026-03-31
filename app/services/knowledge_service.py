@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import re
+from time import perf_counter
 from typing import Any
 
 from sqlalchemy import case, func, literal, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.metrics import increment_counter, observe_duration
 from app.models.knowledge import DeviceModel, KnowledgeChunk, KnowledgeDocument
 from app.schemas.knowledge import KnowledgeDocumentCreate, KnowledgeSearchRequest
 from app.services.image_analysis_service import FaultImageAnalysisService
@@ -321,6 +323,7 @@ class KnowledgeService:
 
     async def search_multimodal(self, request: KnowledgeSearchRequest) -> dict[str, Any]:
         """Search knowledge with optional image-derived retrieval hints."""
+        started_at = perf_counter()
         image_analysis = None
 
         if request.image_base64:
@@ -350,6 +353,18 @@ class KnowledgeService:
 
         search_request = request.model_copy(update={"query": effective_query})
         results = await self.search(search_request)
+        result_status = "hit" if results else "miss"
+        increment_counter(
+            "knowledge_search_requests_total",
+            has_image=bool(request.image_base64),
+            result_status=result_status,
+        )
+        observe_duration(
+            "knowledge_search_duration_ms",
+            (perf_counter() - started_at) * 1000,
+            has_image=bool(request.image_base64),
+            result_status=result_status,
+        )
 
         return {
             "query": request.query,

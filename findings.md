@@ -111,6 +111,9 @@
 | Agent 协作 Run 先采用“数据库单表持久化完整 JSON 快照”而不是拆分多张明细表 | 当前主要诉求是服务重启后可回放、前端接口稳定和迁移成本可控，先保证主链路稳定，再决定是否细化查询模型 |
 | 知识导入异步任务先采用“任务记录表持久化文件载荷 + 进程内最小 worker” | 这能在不引入 Redis/Celery 的前提下交付可恢复的异步导入能力，并支持失败重试和服务重启后续跑 |
 | 应用启动时对 `pending / processing` 导入任务做恢复调度，但异常只记录日志不阻塞服务启动 | 演示环境最重要的是服务能起来，导入队列恢复失败不应反向拖垮整个 API 启动 |
+| 统一错误响应固定为 `error_code + message + request_id + details` | 前端不应继续依赖零散 `detail` 字符串判断失败原因，后端也需要为排障和日志关联提供稳定契约 |
+| `X-Request-ID` 通过中间件透传或生成，并同步进入响应头和日志上下文 | 这样一次失败请求可以在浏览器、接口日志和业务错误记录之间直接串起来，适合演示环境快速排障 |
+| 基础指标先采用进程内 JSON 快照 `/api/v1/system/metrics`，不提前引入 Prometheus 等外部栈 | 当前目标是低成本补齐可观测性和验收能力，而不是扩展完整监控平台 |
 
 ## Issues Encountered
 | Issue | Resolution |
@@ -122,6 +125,7 @@
 | Phase 10 循环导入：graph.py → nodes/__init__ → supervisor.py → graph.py.DiagnosisState | 将 DiagnosisState 抽取到独立文件 app/agents/state.py |
 | 当前工作区对新建文件型 SQLite 库的 DDL 验证会出现 `disk I/O error` | TODO-3 验证改用 SQLite 共享内存库，避免文件系统噪声影响迁移真实性判断 |
 | 全量回归时 `SensorService.count()` 因 ORM 列对象不存在 `.count()` 而失败 | 改为 `func.count()` 聚合查询后，全量 `pytest -q` 恢复为 `60 passed, 4 skipped` |
+| 前后端此前对失败请求仅依赖裸 `detail` 文案和控制台日志，缺少可关联的请求追踪 | 本轮补 `request_id`、统一错误体和进程内指标端点后，失败请求已可通过错误码和请求 ID 快速定位 |
 
 ## Resources
 <!-- 有用的链接 -->

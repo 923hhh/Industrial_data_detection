@@ -1,10 +1,11 @@
 """Maintenance case upload, review and correction APIs for TODO-SB-5."""
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
+from app.core.errors import AppError
 from app.schemas.cases import (
     MaintenanceCaseCorrectionCreate,
     MaintenanceCaseCorrectionResponse,
@@ -74,7 +75,11 @@ async def create_maintenance_case(
     try:
         payload = await service.create_case(request)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        raise AppError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            error_code="maintenance_case_dependency_not_found",
+            message=str(exc),
+        ) from exc
     return _build_case_response(payload)
 
 
@@ -126,7 +131,11 @@ async def get_maintenance_case(
     try:
         payload = await service.get_case_detail(case_id)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        raise AppError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            error_code="maintenance_case_not_found",
+            message=str(exc),
+        ) from exc
     return _build_case_response(payload)
 
 
@@ -151,7 +160,11 @@ async def add_maintenance_case_correction(
     try:
         payload = await service.add_correction(case_id, request)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        raise AppError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            error_code="maintenance_case_not_found",
+            message=str(exc),
+        ) from exc
     return _build_case_response(payload)
 
 
@@ -177,5 +190,9 @@ async def review_maintenance_case(
     try:
         payload = await service.review_case(case_id, request)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        raise AppError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            error_code="maintenance_case_not_found",
+            message=str(exc),
+        ) from exc
     return _build_case_response(payload)

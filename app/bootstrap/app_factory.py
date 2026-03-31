@@ -1,6 +1,7 @@
 """Central FastAPI application factory."""
 from fastapi import FastAPI
 
+from app.bootstrap.exception_handlers import register_exception_handlers
 from app.bootstrap.lifespan import lifespan
 from app.bootstrap.middleware import register_middlewares
 from app.bootstrap.router_registry import register_routers
@@ -22,6 +23,7 @@ def create_app() -> FastAPI:
         redoc_url="/redoc",
     )
 
+    register_exception_handlers(app)
     register_middlewares(app, cors_origins=settings.cors_origins)
     register_routers(app)
     return app

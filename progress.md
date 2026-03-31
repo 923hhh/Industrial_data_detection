@@ -900,3 +900,41 @@
   - `todo_softbei.md` (updated)
   - `progress.md` (updated)
   - `findings.md` (updated)
+
+### TODO-SB-9B 请求 ID、统一错误码与基础指标日志
+- **Status:** complete
+- Actions taken:
+  - 新增 `request_context`、统一错误响应和进程内基础指标三套核心基础设施，后端错误响应正式收敛为 `error_code + message + request_id + details`
+  - 在中间件中补 `X-Request-ID` 透传/生成、请求起止日志、HTTP 请求计数与耗时统计，并将 `request_id` 注入所有标准库日志
+  - 在应用装配层接入全局异常处理，统一处理 `AppError`、`HTTPException`、请求校验错误和未捕获异常
+  - 将 Agent、任务、案例、知识导入、知识文档和诊断主链路从零散 `HTTPException(detail=...)` 收口到稳定错误码
+  - 新增 `/api/v1/system/metrics` 指标快照接口，并为 Agent 协作、知识导入、知识检索补业务级计数与耗时指标
+  - 升级前端 `front-end/lib/api.ts`，优先解析后端结构化错误消息、错误码和请求 ID
+  - 新增 `tests/test_phase20_observability.py`，覆盖请求 ID 回传、统一错误体和指标快照
+  - 验证 `pytest -q tests/test_phase20_observability.py tests/test_phase18_workbench_agents.py tests/test_phase19_knowledge_imports.py` 结果为 `18 passed`
+  - 验证 `front-end` 的 `npm run typecheck` 通过
+  - 验证全量 `pytest -q` 结果更新为 `64 passed, 4 skipped`
+- Files created/modified:
+  - `app/core/request_context.py` (created)
+  - `app/core/errors.py` (created)
+  - `app/core/metrics.py` (created)
+  - `app/core/logging.py` (updated)
+  - `app/bootstrap/exception_handlers.py` (created)
+  - `app/bootstrap/app_factory.py` (updated)
+  - `app/bootstrap/middleware.py` (updated)
+  - `app/bootstrap/router_registry.py` (updated)
+  - `app/routers/observability.py` (created)
+  - `app/routers/agents.py` (updated)
+  - `app/routers/tasks.py` (updated)
+  - `app/routers/cases.py` (updated)
+  - `app/routers/knowledge.py` (updated)
+  - `app/routers/diagnosis.py` (updated)
+  - `app/services/agent_orchestration_service.py` (updated)
+  - `app/services/knowledge_import_service.py` (updated)
+  - `app/services/knowledge_service.py` (updated)
+  - `front-end/lib/api.ts` (updated)
+  - `tests/test_phase19_knowledge_imports.py` (updated)
+  - `tests/test_phase20_observability.py` (created)
+  - `todo_softbei.md` (updated)
+  - `progress.md` (updated)
+  - `findings.md` (updated)

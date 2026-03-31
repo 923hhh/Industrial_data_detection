@@ -19,11 +19,34 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:8000";
 
 async function parseJson<T>(response: Response): Promise<T> {
+  const rawText = await response.text();
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `Request failed with status ${response.status}`);
+    let message = rawText || `Request failed with status ${response.status}`;
+
+    if (rawText) {
+      try {
+        const payload = JSON.parse(rawText) as {
+          message?: string;
+          error_code?: string;
+          request_id?: string;
+        };
+        if (payload.message) {
+          message = payload.message;
+          if (payload.error_code) {
+            message += ` [${payload.error_code}]`;
+          }
+          if (payload.request_id) {
+            message += ` (request: ${payload.request_id})`;
+          }
+        }
+      } catch {
+        // Fall back to raw text when the response body is not JSON.
+      }
+    }
+
+    throw new Error(message);
   }
-  return (await response.json()) as T;
+  return JSON.parse(rawText) as T;
 }
 
 export async function getWorkbenchOverview(): Promise<WorkbenchOverviewResponse | null> {

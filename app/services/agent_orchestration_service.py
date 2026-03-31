@@ -9,6 +9,7 @@ from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.metrics import increment_counter, observe_duration
 from app.models.knowledge import AgentRun
 from app.schemas.agents import AgentAssistRequest
 from app.schemas.knowledge import KnowledgeSearchRequest
@@ -29,6 +30,12 @@ class AgentOrchestrationService:
 
     async def assist(self, request: AgentAssistRequest) -> dict[str, Any]:
         """Run the agent collaboration pipeline and persist a run snapshot."""
+        started_at = datetime.now(timezone.utc)
+        increment_counter(
+            "agent_assist_requests_total",
+            maintenance_level=request.maintenance_level,
+            has_image=bool(request.image_base64),
+        )
         retrieval_payload = {
             "query": request.query,
             "effective_query": request.query,
@@ -139,6 +146,13 @@ class AgentOrchestrationService:
             "created_at": datetime.now(timezone.utc),
         }
         await self._store_run(run_payload)
+        duration_ms = int((datetime.now(timezone.utc) - started_at).total_seconds() * 1000)
+        observe_duration(
+            "agent_assist_duration_ms",
+            duration_ms,
+            maintenance_level=request.maintenance_level,
+            result_status=run_payload["status"],
+        )
         return run_payload
 
     async def get_run(self, run_id: str) -> dict[str, Any] | None:
@@ -165,6 +179,7 @@ class AgentOrchestrationService:
         )
         self.session.add(record)
         await self.session.commit()
+        increment_counter("agent_runs_persisted_total", status=payload["status"])
 
     async def _build_task_preview(
         self,

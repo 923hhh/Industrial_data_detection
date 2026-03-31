@@ -3,11 +3,13 @@ from __future__ import annotations
 
 import mimetypes
 from datetime import datetime
+from time import perf_counter
 from typing import Any
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.metrics import increment_counter, observe_duration
 from app.integrations.pdf_import import PdfKnowledgeImportService
 from app.models.knowledge import KnowledgeChunk, KnowledgeDocument, KnowledgeImportJob
 from app.schemas.knowledge import KnowledgeDocumentCreate
@@ -66,6 +68,7 @@ class KnowledgeImportService:
         self.session.add(job)
         await self.session.commit()
         await self.session.refresh(job)
+        increment_counter("knowledge_import_jobs_accepted_total", import_type=import_type)
         return self._serialize_job(job, processing_note=processing_note)
 
     async def retry_job(self, job_id: int) -> dict[str, Any]:
@@ -87,10 +90,12 @@ class KnowledgeImportService:
         job.updated_at = datetime.utcnow()
         await self.session.commit()
         await self.session.refresh(job)
+        increment_counter("knowledge_import_jobs_retried_total", import_type=job.import_type)
         return self._serialize_job(job)
 
     async def process_job(self, job_id: int) -> dict[str, Any]:
         """Process one queued job inside a worker-owned session."""
+        started_at = perf_counter()
         processing_note: str | None = None
         job = await self._load_job(job_id)
         if job.status == "completed":
@@ -161,6 +166,16 @@ class KnowledgeImportService:
             job.updated_at = job.finished_at
             await self.session.commit()
             await self.session.refresh(job)
+            increment_counter(
+                "knowledge_import_jobs_completed_total",
+                import_type=job.import_type,
+            )
+            observe_duration(
+                "knowledge_import_processing_ms",
+                (perf_counter() - started_at) * 1000,
+                import_type=job.import_type,
+                status="completed",
+            )
             return self._serialize_job(job, processing_note=processing_note)
         except Exception as exc:
             await self.session.rollback()
@@ -171,6 +186,16 @@ class KnowledgeImportService:
             job.updated_at = job.finished_at
             await self.session.commit()
             await self.session.refresh(job)
+            increment_counter(
+                "knowledge_import_jobs_failed_total",
+                import_type=job.import_type,
+            )
+            observe_duration(
+                "knowledge_import_processing_ms",
+                (perf_counter() - started_at) * 1000,
+                import_type=job.import_type,
+                status="failed",
+            )
             return self._serialize_job(job, processing_note=processing_note)
 
     async def list_restartable_job_ids(self, limit: int = 20) -> list[int]:
