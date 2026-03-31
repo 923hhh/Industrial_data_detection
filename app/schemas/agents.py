@@ -118,6 +118,9 @@ class AgentTaskPreviewStep(BaseModel):
     risk_warning: str | None = None
     caution: str | None = None
     confirmation_text: str | None = None
+    required_tools: list[str] = Field(default_factory=list)
+    required_materials: list[str] = Field(default_factory=list)
+    estimated_minutes: int | None = None
 
 
 class AgentRunStep(BaseModel):

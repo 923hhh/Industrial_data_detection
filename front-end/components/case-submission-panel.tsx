@@ -44,7 +44,10 @@ function buildDefaultProcessingSteps(task?: MaintenanceTaskResponse | null): str
               ? "已跳过"
               : "待执行";
       const noteText = step.completion_note ? `；备注：${step.completion_note}` : "";
-      return `${step.step_order}. ${step.title}（${statusText}）${noteText || `；操作：${step.instruction}`}`;
+      const toolText = step.required_tools.length ? `；工具：${step.required_tools.join(" / ")}` : "";
+      const materialText = step.required_materials.length ? `；材料：${step.required_materials.join(" / ")}` : "";
+      const durationText = step.estimated_minutes ? `；预计耗时：${step.estimated_minutes} 分钟` : "";
+      return `${step.step_order}. ${step.title}（${statusText}）${noteText || `；操作：${step.instruction}`}${toolText}${materialText}${durationText}`;
     })
     .join("\n");
 }

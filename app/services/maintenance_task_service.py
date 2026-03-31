@@ -155,6 +155,85 @@ GENERIC_TEMPLATE_CATALOG = {
 }
 
 
+STEP_RESOURCE_HINTS: dict[str, dict[str, Any]] = {
+    "检修前安全确认": {
+        "required_tools": ["绝缘手套", "防护眼镜", "工位照明灯"],
+        "required_materials": ["停机挂牌", "检修记录表"],
+        "estimated_minutes": 8,
+    },
+    "确认故障现象与外观状态": {
+        "required_tools": ["手电筒", "观察镜", "拍照终端"],
+        "required_materials": ["现场点检表"],
+        "estimated_minutes": 12,
+    },
+    "执行关键部件排查": {
+        "required_tools": ["火花塞套筒", "万用表", "扭矩扳手"],
+        "required_materials": ["清洁布", "检修记录卡"],
+        "estimated_minutes": 20,
+    },
+    "实施维修与复装": {
+        "required_tools": ["套筒工具组", "扭矩扳手", "间隙尺"],
+        "required_materials": ["清洗剂", "润滑脂", "替换零件"],
+        "estimated_minutes": 25,
+    },
+    "试车复核与结果归档": {
+        "required_tools": ["试车检测表", "拍照终端"],
+        "required_materials": ["结果归档单"],
+        "estimated_minutes": 15,
+    },
+    "检修前安全隔离": {
+        "required_tools": ["绝缘手套", "防护眼镜", "隔离挂牌"],
+        "required_materials": ["停机挂牌", "安全确认单"],
+        "estimated_minutes": 10,
+    },
+    "故障现象与知识来源核对": {
+        "required_tools": ["知识引用清单", "手电筒", "拍照终端"],
+        "required_materials": ["故障复核表"],
+        "estimated_minutes": 12,
+    },
+    "关键部件逐项排查": {
+        "required_tools": ["火花塞套筒", "万用表", "压缩压力表"],
+        "required_materials": ["检修记录卡", "清洁布"],
+        "estimated_minutes": 25,
+    },
+    "实施维修与参数复核": {
+        "required_tools": ["扭矩扳手", "套筒工具组", "间隙尺"],
+        "required_materials": ["替换零件", "润滑脂", "清洗剂"],
+        "estimated_minutes": 30,
+    },
+    "试车验证与结果确认": {
+        "required_tools": ["试车检测表", "拍照终端"],
+        "required_materials": ["结果确认单"],
+        "estimated_minutes": 18,
+    },
+    "结果归档与经验沉淀": {
+        "required_tools": ["归档终端", "引用清单"],
+        "required_materials": ["案例沉淀表", "导出摘要"],
+        "estimated_minutes": 10,
+    },
+    "立即隔离风险源": {
+        "required_tools": ["绝缘手套", "急停装置", "隔离挂牌"],
+        "required_materials": ["应急处置单"],
+        "estimated_minutes": 6,
+    },
+    "快速定位关键异常": {
+        "required_tools": ["手电筒", "万用表", "观察镜"],
+        "required_materials": ["异常记录表"],
+        "estimated_minutes": 10,
+    },
+    "实施应急处理": {
+        "required_tools": ["套筒工具组", "扭矩扳手", "万用表"],
+        "required_materials": ["应急替换件", "清洗剂"],
+        "estimated_minutes": 18,
+    },
+    "恢复验证与升级判断": {
+        "required_tools": ["试车检测表", "拍照终端"],
+        "required_materials": ["升级判断单"],
+        "estimated_minutes": 12,
+    },
+}
+
+
 class MaintenanceTaskService:
     """Service layer for standardized maintenance workflow."""
 
@@ -200,6 +279,9 @@ class MaintenanceTaskService:
                 risk_warning=template_step.risk_warning,
                 caution=template_step.caution,
                 confirmation_text=template_step.confirmation_text,
+                required_tools=self._normalize_step_items(template_step.required_tools),
+                required_materials=self._normalize_step_items(template_step.required_materials),
+                estimated_minutes=template_step.estimated_minutes,
                 status="pending",
                 knowledge_refs=knowledge_refs,
             )
@@ -359,6 +441,7 @@ class MaintenanceTaskService:
         )
         template = (await self.session.execute(stmt)).scalar_one_or_none()
         if template is not None:
+            self._sync_template_step_resources(template)
             return template
 
         catalog = DEFAULT_TEMPLATE_CATALOG.get(equipment_type, GENERIC_TEMPLATE_CATALOG)
@@ -375,6 +458,7 @@ class MaintenanceTaskService:
         await self.session.flush()
 
         for index, item in enumerate(template_spec["steps"], start=1):
+            resource_hint = self._get_step_resource_hint(item["title"])
             self.session.add(
                 MaintenanceTaskTemplateStep(
                     template_id=template.id,
@@ -384,6 +468,13 @@ class MaintenanceTaskService:
                     risk_warning=item.get("risk_warning"),
                     caution=item.get("caution"),
                     confirmation_text=item.get("confirmation_text"),
+                    required_tools=self._normalize_step_items(
+                        item.get("required_tools") or resource_hint["required_tools"]
+                    ),
+                    required_materials=self._normalize_step_items(
+                        item.get("required_materials") or resource_hint["required_materials"]
+                    ),
+                    estimated_minutes=item.get("estimated_minutes") or resource_hint["estimated_minutes"],
                 )
             )
 
@@ -477,6 +568,9 @@ class MaintenanceTaskService:
             "risk_warning": step.risk_warning,
             "caution": step.caution,
             "confirmation_text": step.confirmation_text,
+            "required_tools": self._normalize_step_items(step.required_tools),
+            "required_materials": self._normalize_step_items(step.required_materials),
+            "estimated_minutes": step.estimated_minutes,
             "status": step.status,
             "completion_note": step.completion_note,
             "completed_at": step.completed_at,
@@ -488,10 +582,20 @@ class MaintenanceTaskService:
         total = task["total_steps"]
         status_text = "已完成" if task["status"] == "completed" else "进行中"
         sources = "、".join(ref["title"] for ref in task["source_refs"][:3]) or "无外部知识引用"
+        tools = "、".join(
+            list(
+                dict.fromkeys(
+                    tool
+                    for step in task.get("steps", [])
+                    for tool in step.get("required_tools", [])
+                )
+            )[:4]
+        )
 
         return (
             f"《{task['title']}》当前状态为{status_text}，共 {total} 个标准步骤，已完成 {completed} 个。"
             f"{self._build_export_context_line(task)}"
+            f"{f'建议准备工具：{tools}。' if tools else ''}"
             f"本次作业主要依据 {sources} 生成作业指引，建议结合现场备注继续复核未完成步骤。"
         )
 
@@ -534,3 +638,24 @@ class MaintenanceTaskService:
             "high": "高",
             "urgent": "紧急",
         }.get(priority, priority)
+
+    def _get_step_resource_hint(self, title: str) -> dict[str, Any]:
+        return STEP_RESOURCE_HINTS.get(
+            title,
+            {"required_tools": [], "required_materials": [], "estimated_minutes": None},
+        )
+
+    def _normalize_step_items(self, values: list[str] | None) -> list[str]:
+        if not values:
+            return []
+        return [str(item).strip() for item in values if str(item).strip()]
+
+    def _sync_template_step_resources(self, template: MaintenanceTaskTemplate) -> None:
+        for step in template.steps:
+            resource_hint = self._get_step_resource_hint(step.title)
+            if not step.required_tools:
+                step.required_tools = self._normalize_step_items(resource_hint["required_tools"])
+            if not step.required_materials:
+                step.required_materials = self._normalize_step_items(resource_hint["required_materials"])
+            if step.estimated_minutes is None:
+                step.estimated_minutes = resource_hint["estimated_minutes"]

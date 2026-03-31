@@ -114,6 +114,9 @@ class MaintenanceTaskStepResponse(BaseModel):
     risk_warning: str | None = None
     caution: str | None = None
     confirmation_text: str | None = None
+    required_tools: list[str] = Field(default_factory=list)
+    required_materials: list[str] = Field(default_factory=list)
+    estimated_minutes: int | None = None
     status: str
     completion_note: str | None = None
     completed_at: datetime | None = None

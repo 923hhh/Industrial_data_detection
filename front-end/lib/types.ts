@@ -168,6 +168,9 @@ export type AgentTaskPreviewStep = {
   risk_warning?: string | null;
   caution?: string | null;
   confirmation_text?: string | null;
+  required_tools: string[];
+  required_materials: string[];
+  estimated_minutes?: number | null;
 };
 
 export type AgentRequestContext = {
@@ -271,6 +274,9 @@ export type MaintenanceTaskStep = {
   risk_warning?: string | null;
   caution?: string | null;
   confirmation_text?: string | null;
+  required_tools: string[];
+  required_materials: string[];
+  estimated_minutes?: number | null;
   status: string;
   completion_note?: string | null;
   completed_at?: string | null;

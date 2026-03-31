@@ -196,6 +196,11 @@ export function TaskExecutionPanel({
                 </div>
 
                 <p>{step.instruction}</p>
+                {step.estimated_minutes ? <p className="muted">预计耗时：约 {step.estimated_minutes} 分钟</p> : null}
+                {step.required_tools.length ? <p className="muted">工具：{step.required_tools.join(" / ")}</p> : null}
+                {step.required_materials.length ? (
+                  <p className="muted">材料：{step.required_materials.join(" / ")}</p>
+                ) : null}
                 {step.risk_warning ? <p className="errorText">风险：{step.risk_warning}</p> : null}
                 {step.caution ? <p className="muted">注意：{step.caution}</p> : null}
                 {step.confirmation_text ? <p className="muted">确认：{step.confirmation_text}</p> : null}

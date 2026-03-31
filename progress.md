@@ -803,3 +803,27 @@
   - `tests/test_phase16_cases.py` (updated)
   - `progress.md` (updated)
   - `findings.md` (updated)
+
+### 结构化检修步骤输出升级为正式作业卡
+- **Status:** phase 3 structured steps complete
+- Actions taken:
+  - 为模板步骤和任务步骤正式补充工具、材料和预计耗时字段，并新增 Alembic 迁移
+  - 在任务服务中增加统一的步骤资源映射，对已有模板缺失的步骤元数据做兼容补齐
+  - 将 Agent 预案和正式任务详情同步升级为“操作说明 + 工具 + 材料 + 风险 + 预计耗时”的结构化作业卡
+  - 将案例沉淀预填文本同步带入步骤所需工具、材料和预计耗时，便于后续审核和经验回流
+  - 验证 `front-end` 的 `npm run typecheck` 通过
+  - 验证 `pytest -q tests/test_phase15_tasks.py tests/test_phase16_cases.py tests/test_phase18_workbench_agents.py` 结果为 `13 passed`
+  - 验证全量 `pytest -q` 结果保持为 `60 passed, 4 skipped`
+- Files created/modified:
+  - `app/models/tasks.py` (updated)
+  - `app/schemas/tasks.py` (updated)
+  - `app/schemas/agents.py` (updated)
+  - `app/services/maintenance_task_service.py` (updated)
+  - `app/services/agent_orchestration_service.py` (updated)
+  - `alembic/versions/a7c3d5e9f0b1_add_structured_step_fields.py` (created)
+  - `front-end/lib/types.ts` (updated)
+  - `front-end/components/agent-assist-panel.tsx` (updated)
+  - `front-end/components/task-execution-panel.tsx` (updated)
+  - `front-end/components/case-submission-panel.tsx` (updated)
+  - `progress.md` (updated)
+  - `findings.md` (updated)

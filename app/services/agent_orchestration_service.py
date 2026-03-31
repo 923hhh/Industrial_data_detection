@@ -190,6 +190,13 @@ class AgentOrchestrationService:
                     "risk_warning": template_step.risk_warning,
                     "caution": template_step.caution,
                     "confirmation_text": template_step.confirmation_text,
+                    "required_tools": self.task_service._normalize_step_items(
+                        getattr(template_step, "required_tools", None)
+                    ),
+                    "required_materials": self.task_service._normalize_step_items(
+                        getattr(template_step, "required_materials", None)
+                    ),
+                    "estimated_minutes": getattr(template_step, "estimated_minutes", None),
                 }
             )
         return preview_steps
