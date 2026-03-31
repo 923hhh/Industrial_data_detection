@@ -293,3 +293,36 @@ export type MaintenanceTaskExportResponse = {
   exported_at: string;
   export_summary: string;
 };
+
+export type MaintenanceCaseCorrection = {
+  id: number;
+  correction_target: string;
+  original_content?: string | null;
+  corrected_content: string;
+  note?: string | null;
+  status: string;
+  created_at?: string | null;
+};
+
+export type MaintenanceCaseResponse = {
+  id: number;
+  title: string;
+  equipment_type: string;
+  equipment_model?: string | null;
+  fault_type?: string | null;
+  task_id?: number | null;
+  symptom_description: string;
+  processing_steps: string[];
+  resolution_summary?: string | null;
+  attachment_name?: string | null;
+  attachment_url?: string | null;
+  knowledge_refs: KnowledgeReference[];
+  status: string;
+  reviewer_name?: string | null;
+  review_note?: string | null;
+  reviewed_at?: string | null;
+  source_document_id?: number | null;
+  corrections: MaintenanceCaseCorrection[];
+  created_at?: string | null;
+  updated_at?: string | null;
+};

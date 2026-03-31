@@ -728,3 +728,26 @@
   - `front-end/app/globals.css` (updated)
   - `progress.md` (updated)
   - `findings.md` (updated)
+
+### 任务执行后进入案例沉淀与审核详情
+- **Status:** phase 3 case handoff complete
+- Actions taken:
+  - 补充正式前端案例 API 与类型定义，支持创建案例、获取详情、提交人工修正和审核通过/驳回
+  - 新增 `front-end/app/cases/new/page.tsx`，支持从任务详情页通过 `taskId` 预填案例沉淀表单
+  - 新增 `front-end/app/cases/[caseId]/page.tsx` 与案例审核面板，支持查看案例详情、知识引用、人工修正和审核操作
+  - 将任务详情页中的案例入口升级为“沉淀案例”，直接跳转到正式案例创建页
+  - 将案例列表页升级为支持查看详情和手动新建案例
+  - 验证 `npm run typecheck` 通过
+  - 验证 `pytest -q tests/test_phase15_tasks.py tests/test_phase16_cases.py tests/test_phase18_workbench_agents.py` 结果为 `13 passed`
+  - 验证全量 `pytest -q` 结果保持为 `64 passed`
+- Files created/modified:
+  - `front-end/lib/api.ts` (updated)
+  - `front-end/lib/types.ts` (updated)
+  - `front-end/components/case-submission-panel.tsx` (created)
+  - `front-end/components/case-review-panel.tsx` (created)
+  - `front-end/app/cases/new/page.tsx` (created)
+  - `front-end/app/cases/[caseId]/page.tsx` (created)
+  - `front-end/app/cases/page.tsx` (updated)
+  - `front-end/components/task-execution-panel.tsx` (updated)
+  - `progress.md` (updated)
+  - `findings.md` (updated)

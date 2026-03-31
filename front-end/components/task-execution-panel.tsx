@@ -150,8 +150,8 @@ export function TaskExecutionPanel({
                 >
                   {refreshingExport ? "刷新中..." : "刷新导出摘要"}
                 </button>
-                <Link href="/cases" className="inlineActionLink">
-                  进入案例中心
+                <Link href={`/cases/new?taskId=${task.id}`} className="inlineActionLink">
+                  沉淀案例
                 </Link>
               </div>
             </article>

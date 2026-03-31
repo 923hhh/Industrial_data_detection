@@ -8,6 +8,7 @@ import type {
   KnowledgeImportJobResponse,
   KnowledgeSearchResponse,
   MaintenanceCaseListResponse,
+  MaintenanceCaseResponse,
   MaintenanceTaskExportResponse,
   MaintenanceTaskResponse,
   MaintenanceTaskHistoryResponse,
@@ -98,6 +99,54 @@ export async function getCases(limit = 10): Promise<MaintenanceCaseListResponse 
   } catch {
     return null;
   }
+}
+
+export async function createMaintenanceCase(
+  payload: Record<string, unknown>,
+): Promise<MaintenanceCaseResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/cases`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  return parseJson<MaintenanceCaseResponse>(response);
+}
+
+export async function getMaintenanceCase(caseId: number): Promise<MaintenanceCaseResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/cases/${caseId}`, {
+    cache: "no-store",
+  });
+  return parseJson<MaintenanceCaseResponse>(response);
+}
+
+export async function addMaintenanceCaseCorrection(
+  caseId: number,
+  payload: Record<string, unknown>,
+): Promise<MaintenanceCaseResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/cases/${caseId}/corrections`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  return parseJson<MaintenanceCaseResponse>(response);
+}
+
+export async function reviewMaintenanceCase(
+  caseId: number,
+  payload: Record<string, unknown>,
+): Promise<MaintenanceCaseResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/cases/${caseId}/review`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  return parseJson<MaintenanceCaseResponse>(response);
 }
 
 export async function searchKnowledge(payload: Record<string, unknown>): Promise<KnowledgeSearchResponse> {

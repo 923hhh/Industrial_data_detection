@@ -97,6 +97,8 @@
 | `SensorService.count()` 改为 `select(func.count()).select_from(SensorData)` | `SensorData.id.count()` 在当前 SQLAlchemy 写法下会直接抛异常，影响全量回归 |
 | Agent 协作页直接复用现有 `POST /api/v1/tasks` 和 `GET /api/v1/tasks/{id}` 打通正式任务链路 | 当前优先级是把已存在的任务能力接入正式前端，而不是再造一套专用 Agent 下发接口 |
 | 正式任务执行页先采用“任务总览 + 步骤执行 + 知识引用 + 导出摘要刷新”的最小闭环 | 先让评委能从 Agent 页面一路走到任务执行，再继续补更完整的工单和案例联动 |
+| 案例沉淀页先复用现有 `POST /api/v1/cases`、`GET /api/v1/cases/{id}`、`POST /api/v1/cases/{id}/corrections`、`POST /api/v1/cases/{id}/review` 打通前端闭环 | 当前重点是把已有案例能力接到正式前端，而不是新增一层中间接口 |
+| 任务详情页直接跳到 `/cases/new?taskId=...` 并预填步骤、总结和知识引用 | 这样最符合“任务执行完成后立即沉淀案例”的业务习惯，也避免重复录入 |
 
 ## Issues Encountered
 | Issue | Resolution |
