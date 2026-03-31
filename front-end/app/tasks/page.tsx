@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { SectionCard } from "@/components/section-card";
 import { getTaskHistory } from "@/lib/api";
 
@@ -12,7 +14,10 @@ export default async function TasksPage() {
         <p>这里承接由知识引用驱动的标准化检修任务、步骤状态和导出结果。</p>
       </section>
 
-      <SectionCard title="最近任务" description="当前先接任务历史接口，后续再补任务创建和步骤执行交互。">
+      <SectionCard
+        title="最近任务"
+        description="当前任务中心已支持进入详情执行页，后续会继续补工单信息、案例沉淀联动和正式导出。"
+      >
         <div className="tableCard">
           <table>
             <thead>
@@ -21,6 +26,7 @@ export default async function TasksPage() {
                 <th>状态</th>
                 <th>设备</th>
                 <th>进度</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -32,6 +38,11 @@ export default async function TasksPage() {
                   <td>
                     {task.completed_steps}/{task.total_steps}
                   </td>
+                  <td>
+                    <Link href={`/tasks/${task.id}`} className="inlineActionLink">
+                      进入执行
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -41,4 +52,3 @@ export default async function TasksPage() {
     </div>
   );
 }
-

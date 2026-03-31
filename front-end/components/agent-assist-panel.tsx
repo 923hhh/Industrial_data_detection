@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useState } from "react";
+import { useRouter } from "next/navigation";
 
-import { assistWithAgents, getAgentRun } from "@/lib/api";
+import { assistWithAgents, createMaintenanceTask, getAgentRun } from "@/lib/api";
 import { SectionCard } from "@/components/section-card";
 import type {
   AgentAssistResponse,
@@ -149,6 +150,7 @@ export function AgentAssistPanel({
   recentTasks,
   recentCases,
 }: AgentAssistPanelProps) {
+  const router = useRouter();
   const [draft, setDraft] = useState<IntakeDraft>({
     workOrderId: SCENARIO_PRESETS[0].workOrderId,
     assetCode: SCENARIO_PRESETS[0].assetCode,
@@ -164,6 +166,7 @@ export function AgentAssistPanel({
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [replayLoading, setReplayLoading] = useState(false);
+  const [creatingTask, setCreatingTask] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AgentAssistResponse | null>(null);
   const [selectedChunkIds, setSelectedChunkIds] = useState<number[]>([]);
@@ -253,6 +256,55 @@ export function AgentAssistPanel({
       setError(loadError instanceof Error ? loadError.message : "Run 回放失败");
     } finally {
       setReplayLoading(false);
+    }
+  }
+
+  async function handleCreateTask() {
+    if (!result) {
+      setError("请先完成一次 Agent 协作，再创建正式任务。");
+      return;
+    }
+
+    setCreatingTask(true);
+    setError(null);
+    try {
+      const topKnowledge = result.knowledge_results[0];
+      const equipmentType =
+        result.request_context?.equipment_type || topKnowledge?.equipment_type || draft.equipmentType || "摩托车发动机";
+      const equipmentModel =
+        result.request_context?.equipment_model || topKnowledge?.equipment_model || draft.equipmentModel || null;
+      const faultType =
+        result.request_context?.fault_type || topKnowledge?.fault_type || draft.faultType || null;
+      const symptomDescription =
+        result.request_context?.symptom_description || result.effective_query || draft.query || null;
+      const sourceChunkIds = selectedChunkIds.length
+        ? selectedChunkIds
+        : result.request_context?.selected_chunk_ids || [];
+
+      const titlePrefix = result.request_context?.work_order_id
+        ? `${result.request_context.work_order_id} · `
+        : "";
+      const title = `${titlePrefix}${equipmentModel || equipmentType}${
+        faultType ? ` / ${faultType}` : ""
+      }检修任务`;
+
+      const payload = await createMaintenanceTask({
+        title,
+        equipment_type: equipmentType,
+        equipment_model: equipmentModel,
+        maintenance_level: result.request_context?.maintenance_level || draft.maintenanceLevel,
+        fault_type: faultType,
+        symptom_description: symptomDescription,
+        source_chunk_ids: sourceChunkIds,
+      });
+
+      startTransition(() => {
+        router.push(`/tasks/${payload.id}`);
+      });
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : "任务创建失败");
+    } finally {
+      setCreatingTask(false);
     }
   }
 
@@ -518,6 +570,12 @@ export function AgentAssistPanel({
               </div>
 
               <p>{result.summary}</p>
+
+              <div className="buttonRow">
+                <button type="button" onClick={handleCreateTask} disabled={creatingTask}>
+                  {creatingTask ? "创建中..." : "创建正式任务并进入执行"}
+                </button>
+              </div>
 
               <div className="detailGrid">
                 <article className="resultCard">

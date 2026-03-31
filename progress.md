@@ -707,3 +707,24 @@
   - `front-end/lib/types.ts` (updated)
   - `progress.md` (updated)
   - `findings.md` (updated)
+
+### Agent 协作下发正式任务并进入执行页
+- **Status:** phase 3 task handoff complete
+- Actions taken:
+  - 补充正式前端任务 API 与类型定义，支持创建任务、读取详情、更新步骤状态和刷新导出摘要
+  - 新增 `front-end/app/tasks/[taskId]/page.tsx` 与任务执行面板，正式承接任务总览、步骤执行、知识引用复核和导出摘要展示
+  - 将 `front-end/app/tasks/page.tsx` 升级为支持从任务列表直接进入详情执行页
+  - 将 Agent 协作页接入“创建正式任务并进入执行”按钮，复用当前协作上下文和已锁定知识依据直接创建任务
+  - 验证 `npm run typecheck` 通过
+  - 验证 `pytest -q tests/test_phase15_tasks.py tests/test_phase18_workbench_agents.py` 结果为 `8 passed`
+  - 验证全量 `pytest -q` 结果保持为 `64 passed`
+- Files created/modified:
+  - `front-end/lib/api.ts` (updated)
+  - `front-end/lib/types.ts` (updated)
+  - `front-end/components/task-execution-panel.tsx` (created)
+  - `front-end/app/tasks/[taskId]/page.tsx` (created)
+  - `front-end/app/tasks/page.tsx` (updated)
+  - `front-end/components/agent-assist-panel.tsx` (updated)
+  - `front-end/app/globals.css` (updated)
+  - `progress.md` (updated)
+  - `findings.md` (updated)

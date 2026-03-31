@@ -95,6 +95,8 @@
 | Agent 协作响应补 `request_context`、`execution_brief` 和 `related_cases` 三类结构化结果 | 正式业务页需要展示工单上下文、是否可执行的判断以及相似案例，而不应再从字符串摘要里二次拼装 |
 | 相似案例推荐先复用现有 `maintenance_cases` 做规则打分召回 | 先在不新增索引和迁移的前提下交付“案例推荐”亮点，后续再考虑更复杂的混合召回 |
 | `SensorService.count()` 改为 `select(func.count()).select_from(SensorData)` | `SensorData.id.count()` 在当前 SQLAlchemy 写法下会直接抛异常，影响全量回归 |
+| Agent 协作页直接复用现有 `POST /api/v1/tasks` 和 `GET /api/v1/tasks/{id}` 打通正式任务链路 | 当前优先级是把已存在的任务能力接入正式前端，而不是再造一套专用 Agent 下发接口 |
+| 正式任务执行页先采用“任务总览 + 步骤执行 + 知识引用 + 导出摘要刷新”的最小闭环 | 先让评委能从 Agent 页面一路走到任务执行，再继续补更完整的工单和案例联动 |
 
 ## Issues Encountered
 | Issue | Resolution |

@@ -238,7 +238,58 @@ export type MaintenanceCaseListResponse = {
   cases: MaintenanceCaseSummary[];
 };
 
+export type KnowledgeReference = {
+  chunk_id: number;
+  document_id: number;
+  title: string;
+  source_name: string;
+  equipment_type: string;
+  equipment_model?: string | null;
+  fault_type?: string | null;
+  section_reference?: string | null;
+  page_reference?: string | null;
+  excerpt: string;
+};
+
+export type MaintenanceTaskStep = {
+  id: number;
+  step_order: number;
+  title: string;
+  instruction: string;
+  risk_warning?: string | null;
+  caution?: string | null;
+  confirmation_text?: string | null;
+  status: string;
+  completion_note?: string | null;
+  completed_at?: string | null;
+  knowledge_refs: KnowledgeReference[];
+};
+
+export type MaintenanceTaskResponse = {
+  id: number;
+  title: string;
+  equipment_type: string;
+  equipment_model?: string | null;
+  maintenance_level: string;
+  fault_type?: string | null;
+  symptom_description?: string | null;
+  status: string;
+  advice_card?: string | null;
+  total_steps: number;
+  completed_steps: number;
+  source_refs: KnowledgeReference[];
+  steps: MaintenanceTaskStep[];
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
 export type MaintenanceTaskHistoryResponse = {
   total: number;
   tasks: WorkbenchTaskSummary[];
+};
+
+export type MaintenanceTaskExportResponse = {
+  task: MaintenanceTaskResponse;
+  exported_at: string;
+  export_summary: string;
 };

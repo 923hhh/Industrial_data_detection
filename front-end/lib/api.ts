@@ -8,6 +8,8 @@ import type {
   KnowledgeImportJobResponse,
   KnowledgeSearchResponse,
   MaintenanceCaseListResponse,
+  MaintenanceTaskExportResponse,
+  MaintenanceTaskResponse,
   MaintenanceTaskHistoryResponse,
   WorkbenchOverviewResponse,
 } from "@/lib/types";
@@ -43,6 +45,48 @@ export async function getTaskHistory(limit = 10): Promise<MaintenanceTaskHistory
   } catch {
     return null;
   }
+}
+
+export async function createMaintenanceTask(
+  payload: Record<string, unknown>,
+): Promise<MaintenanceTaskResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/tasks`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  return parseJson<MaintenanceTaskResponse>(response);
+}
+
+export async function getMaintenanceTask(taskId: number): Promise<MaintenanceTaskResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/tasks/${taskId}`, {
+    cache: "no-store",
+  });
+  return parseJson<MaintenanceTaskResponse>(response);
+}
+
+export async function updateMaintenanceTaskStep(
+  taskId: number,
+  stepId: number,
+  payload: Record<string, unknown>,
+): Promise<MaintenanceTaskResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/tasks/${taskId}/steps/${stepId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  return parseJson<MaintenanceTaskResponse>(response);
+}
+
+export async function getMaintenanceTaskExport(taskId: number): Promise<MaintenanceTaskExportResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/export/${taskId}`, {
+    cache: "no-store",
+  });
+  return parseJson<MaintenanceTaskExportResponse>(response);
 }
 
 export async function getCases(limit = 10): Promise<MaintenanceCaseListResponse | null> {
