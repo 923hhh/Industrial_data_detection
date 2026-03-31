@@ -290,6 +290,40 @@ export async function assistWithAgents(payload: Record<string, unknown>): Promis
   return parseJson<AgentAssistResponse>(response);
 }
 
+export function buildAgentAssistStreamUrl(params: {
+  work_order_id?: string | null;
+  asset_code?: string | null;
+  report_source?: string | null;
+  priority?: string | null;
+  query?: string | null;
+  equipment_type?: string | null;
+  equipment_model?: string | null;
+  fault_type?: string | null;
+  maintenance_level?: string | null;
+  limit?: number | null;
+  selected_chunk_ids?: number[];
+  model_provider?: string | null;
+  model_name?: string | null;
+}): string {
+  const search = new URLSearchParams();
+  if (params.work_order_id?.trim()) search.set("work_order_id", params.work_order_id.trim());
+  if (params.asset_code?.trim()) search.set("asset_code", params.asset_code.trim());
+  if (params.report_source?.trim()) search.set("report_source", params.report_source.trim());
+  if (params.priority?.trim()) search.set("priority", params.priority.trim());
+  if (params.query?.trim()) search.set("query", params.query.trim());
+  if (params.equipment_type?.trim()) search.set("equipment_type", params.equipment_type.trim());
+  if (params.equipment_model?.trim()) search.set("equipment_model", params.equipment_model.trim());
+  if (params.fault_type?.trim()) search.set("fault_type", params.fault_type.trim());
+  if (params.maintenance_level?.trim()) search.set("maintenance_level", params.maintenance_level.trim());
+  if (typeof params.limit === "number") search.set("limit", String(params.limit));
+  for (const chunkId of params.selected_chunk_ids ?? []) {
+    search.append("selected_chunk_ids", String(chunkId));
+  }
+  if (params.model_provider?.trim()) search.set("model_provider", params.model_provider.trim());
+  if (params.model_name?.trim()) search.set("model_name", params.model_name.trim());
+  return `${API_BASE_URL}/api/v1/agents/assist/stream?${search.toString()}`;
+}
+
 export async function getAgentRun(runId: string): Promise<AgentAssistResponse> {
   const response = await fetch(`${API_BASE_URL}/api/v1/agents/runs/${runId}`, {
     cache: "no-store",

@@ -995,3 +995,25 @@
   - `todo_softbei.md` (updated)
   - `progress.md` (updated)
   - `findings.md` (updated)
+
+### TODO-SB-10 P0 第二批：正式主链路事件流化
+- **Status:** in progress
+- Actions taken:
+  - 将 Agent 编排重构为可发阶段事件的内部流水线，同步接口和流式接口共用同一套业务逻辑
+  - 新增 `GET /api/v1/agents/assist/stream`，通过 SSE 按阶段推送 `stage_start / stage_finish / tool_call / result / payload / done`
+  - `/agents` 正式业务页接入 `EventSource`，无图片场景默认走流式协作；图片场景继续回退到既有 POST 协作接口
+  - 前端新增“流式执行进度”区域，实时展示知识召回、步骤规划、工具执行和最终协作结论
+  - 新增 `buildAgentAssistStreamUrl`，统一生成正式前端的流式协作 URL 与重复 `selected_chunk_ids` 参数
+  - 新增 `tests/test_phase23_agent_streaming.py`，覆盖 SSE 事件序列和 `selected_chunk_ids` 查询参数解析
+  - 验证 `pytest -q tests/test_phase23_agent_streaming.py tests/test_phase22_agent_guardrails.py tests/test_phase18_workbench_agents.py` 结果为 `7 passed`
+  - 验证 `front-end` 的 `npm run typecheck` 通过
+  - 验证全量 `pytest -q` 结果更新为 `70 passed, 6 skipped`
+- Files created/modified:
+  - `app/services/agent_orchestration_service.py` (updated)
+  - `app/routers/agents.py` (updated)
+  - `front-end/lib/api.ts` (updated)
+  - `front-end/components/agent-assist-panel.tsx` (updated)
+  - `tests/test_phase23_agent_streaming.py` (created)
+  - `todo_softbei.md` (updated)
+  - `progress.md` (updated)
+  - `findings.md` (updated)

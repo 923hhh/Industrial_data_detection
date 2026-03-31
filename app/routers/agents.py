@@ -1,7 +1,11 @@
 """Agent orchestration APIs for the formal workbench."""
+import json
 import logging
+from typing import AsyncGenerator
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
+from fastapi.responses import StreamingResponse
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
@@ -77,6 +81,106 @@ async def assist_with_agents(
     )
     payload = await AgentOrchestrationService(session).assist(request)
     return _build_agent_response(payload)
+
+
+@router.get(
+    "/assist/stream",
+    status_code=status.HTTP_200_OK,
+    summary="Agent 协作流式执行",
+    description="通过 SSE 按阶段推送知识召回、步骤规划、工具执行和最终协作结果，适配正式业务页的流式展示。",
+)
+async def assist_with_agents_stream(
+    work_order_id: str | None = Query(default=None, description="工单编号"),
+    asset_code: str | None = Query(default=None, description="设备编号"),
+    report_source: str | None = Query(default=None, description="报修来源"),
+    priority: str = Query(default="medium", description="工单优先级"),
+    query: str | None = Query(default=None, description="故障描述"),
+    equipment_type: str | None = Query(default=None, description="设备类型"),
+    equipment_model: str | None = Query(default=None, description="设备型号"),
+    fault_type: str | None = Query(default=None, description="故障类型"),
+    maintenance_level: str = Query(default="standard", description="检修等级"),
+    limit: int = Query(default=5, ge=1, le=10, description="知识召回上限"),
+    selected_chunk_ids: list[int] | None = Query(default=None, description="已锁定知识条目"),
+    model_provider: str = Query(default="openai", description="模型提供商"),
+    model_name: str | None = Query(default=None, description="模型名称"),
+    session: AsyncSession = Depends(get_session),
+):
+    try:
+        request = AgentAssistRequest(
+            work_order_id=work_order_id,
+            asset_code=asset_code,
+            report_source=report_source,
+            priority=priority,
+            query=query,
+            equipment_type=equipment_type,
+            equipment_model=equipment_model,
+            fault_type=fault_type,
+            maintenance_level=maintenance_level,
+            limit=limit,
+            selected_chunk_ids=selected_chunk_ids or [],
+            model_provider=model_provider,
+            model_name=model_name,
+        )
+    except ValidationError as exc:
+        raise AppError(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            error_code="agent_stream_invalid_request",
+            message="流式协作请求参数不合法。",
+            details={"errors": exc.errors()},
+        ) from exc
+
+    logger.info(
+        "agent_assist_stream_request equipment_type=%s equipment_model=%s fault_type=%s query_present=%s",
+        request.equipment_type or "",
+        request.equipment_model or "",
+        request.fault_type or "",
+        bool(request.query),
+    )
+    service = AgentOrchestrationService(session)
+
+    async def sse_generator() -> AsyncGenerator[bytes, None]:
+        import asyncio
+
+        queue: asyncio.Queue[dict] = asyncio.Queue()
+
+        async def emit(event: dict) -> None:
+            await queue.put(event)
+
+        runner = asyncio.create_task(service.assist_stream(request, emit))
+        yield b"event: connected\ndata: {\"status\": \"stream_started\"}\n\n"
+
+        try:
+            while True:
+                if runner.done() and queue.empty():
+                    break
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=4)
+                except asyncio.TimeoutError:
+                    yield b": heartbeat\n\n"
+                    continue
+                yield (
+                    f"event: {event['event']}\n"
+                    f"data: {json.dumps(event['data'], ensure_ascii=False)}\n\n"
+                ).encode()
+            await runner
+        except Exception as exc:
+            logger.exception("agent_assist_stream_failed")
+            yield f"event: stream_error\ndata: {json.dumps({'error': str(exc)}, ensure_ascii=False)}\n\n".encode()
+        finally:
+            if not runner.done():
+                runner.cancel()
+
+        yield b"event: done\ndata: {\"status\": \"stream_finished\"}\n\n"
+
+    return StreamingResponse(
+        sse_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.get(

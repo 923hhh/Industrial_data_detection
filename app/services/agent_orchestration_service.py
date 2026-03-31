@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Awaitable, Callable
 from uuid import uuid4
 
 from fastapi.encoders import jsonable_encoder
@@ -24,6 +24,8 @@ from app.services.maintenance_task_service import MaintenanceTaskService
 class AgentOrchestrationService:
     """Coordinate the new multi-agent workbench assistance flow."""
 
+    EventCallback = Callable[[dict[str, Any]], Awaitable[None] | None]
+
     def __init__(self, session: AsyncSession):
         self.session = session
         self.knowledge_service = KnowledgeService(session)
@@ -33,6 +35,30 @@ class AgentOrchestrationService:
 
     async def assist(self, request: AgentAssistRequest) -> dict[str, Any]:
         """Run the agent collaboration pipeline and persist a run snapshot."""
+        return await self._run_pipeline(request)
+
+    async def assist_stream(
+        self,
+        request: AgentAssistRequest,
+        emit: EventCallback,
+    ) -> dict[str, Any]:
+        """Run the same pipeline but surface stage events for SSE clients."""
+        return await self._run_pipeline(request, emit=emit)
+
+    async def get_run(self, run_id: str) -> dict[str, Any] | None:
+        """Fetch a stored agent run snapshot."""
+        stmt = select(AgentRun).where(AgentRun.run_id == run_id)
+        record = (await self.session.execute(stmt)).scalar_one_or_none()
+        if record is None:
+            return None
+        return dict(record.payload)
+
+    async def _run_pipeline(
+        self,
+        request: AgentAssistRequest,
+        emit: EventCallback | None = None,
+    ) -> dict[str, Any]:
+        """Execute the full Agent pipeline with optional stage-level events."""
         started_at = datetime.now(timezone.utc)
         increment_counter(
             "agent_assist_requests_total",
@@ -46,6 +72,16 @@ class AgentOrchestrationService:
             "image_analysis": None,
             "results": [],
         }
+
+        await self._emit_event(
+            emit,
+            "stage_start",
+            {
+                "stage": "retrieval",
+                "title": "知识召回与引用整理",
+                "message": "正在检索知识依据并整理有效查询词。",
+            },
+        )
         if any(
             [
                 request.query,
@@ -73,17 +109,77 @@ class AgentOrchestrationService:
             )
             retrieval_payload = await self.knowledge_service.search_multimodal(knowledge_request)
         retrieval_results = retrieval_payload["results"]
-
         selected_chunk_ids = request.selected_chunk_ids or [
             item["chunk_id"] for item in retrieval_results[: min(3, len(retrieval_results))]
         ]
+        await self._emit_event(
+            emit,
+            "stage_finish",
+            {
+                "stage": "retrieval",
+                "title": "知识召回与引用整理",
+                "summary": self._build_retrieval_summary(retrieval_payload["effective_query"], retrieval_results),
+                "knowledge_count": len(retrieval_results),
+                "selected_chunk_ids": selected_chunk_ids,
+            },
+        )
+
+        await self._emit_event(
+            emit,
+            "stage_start",
+            {
+                "stage": "planning",
+                "title": "作业步骤规划",
+                "message": "正在根据知识依据生成标准化检修步骤。",
+            },
+        )
         knowledge_refs = await self.task_service._load_knowledge_refs(selected_chunk_ids)
         task_preview = await self._build_task_preview(request, knowledge_refs)
+        await self._emit_event(
+            emit,
+            "stage_finish",
+            {
+                "stage": "planning",
+                "title": "作业步骤规划",
+                "summary": f"已生成 {len(task_preview)} 个标准化检修步骤预案。",
+                "step_count": len(task_preview),
+            },
+        )
+
+        await self._emit_event(
+            emit,
+            "stage_start",
+            {
+                "stage": "cases",
+                "title": "案例沉淀建议",
+                "message": "正在查询相似案例并准备沉淀建议。",
+            },
+        )
         related_cases = await self.case_service.recommend_cases(
             equipment_type=request.equipment_type,
             equipment_model=request.equipment_model,
             fault_type=request.fault_type or retrieval_payload.get("effective_query"),
             limit=3,
+        )
+        await self._emit_event(
+            emit,
+            "stage_finish",
+            {
+                "stage": "cases",
+                "title": "案例沉淀建议",
+                "summary": f"已命中 {len(related_cases)} 条相似案例。",
+                "case_count": len(related_cases),
+            },
+        )
+
+        await self._emit_event(
+            emit,
+            "stage_start",
+            {
+                "stage": "tools",
+                "title": "工具执行与合规校验",
+                "message": "正在执行遥测、案例、前置条件和人工授权工具。",
+            },
         )
         tool_chain = await self.tooling_service.run_tool_chain(
             request=request,
@@ -92,6 +188,21 @@ class AgentOrchestrationService:
             related_cases=related_cases,
         )
         tool_calls = tool_chain["tool_calls"]
+        for tool_call in tool_calls:
+            await self._emit_event(
+                emit,
+                "tool_call",
+                {
+                    "tool_name": tool_call["tool_name"],
+                    "title": tool_call["title"],
+                    "status": tool_call["status"],
+                    "summary": tool_call["summary"],
+                    "blocking": tool_call["blocking"],
+                    "requires_human_authorization": tool_call["requires_human_authorization"],
+                    "details": tool_call.get("details") or [],
+                },
+            )
+
         case_suggestions = self._build_case_suggestions(request, knowledge_refs, related_cases)
         risk_findings = self._build_risk_findings(
             request,
@@ -107,6 +218,17 @@ class AgentOrchestrationService:
             related_cases,
             tool_calls,
             risk_findings,
+        )
+        await self._emit_event(
+            emit,
+            "stage_finish",
+            {
+                "stage": "tools",
+                "title": "工具执行与合规校验",
+                "summary": execution_brief["decision"],
+                "authorization_required": execution_brief["authorization_required"],
+                "blocking_issues": execution_brief["blocking_issues"],
+            },
         )
 
         agents = [
@@ -166,6 +288,16 @@ class AgentOrchestrationService:
             "tool_calls": tool_calls,
             "created_at": datetime.now(timezone.utc),
         }
+        await self._emit_event(
+            emit,
+            "result",
+            {
+                "run_id": run_payload["run_id"],
+                "status": run_payload["status"],
+                "summary": run_payload["summary"],
+                "execution_status": execution_brief["status"],
+            },
+        )
         await self._store_run(run_payload)
         duration_ms = int((datetime.now(timezone.utc) - started_at).total_seconds() * 1000)
         observe_duration(
@@ -174,15 +306,25 @@ class AgentOrchestrationService:
             maintenance_level=request.maintenance_level,
             result_status=run_payload["status"],
         )
+        await self._emit_event(
+            emit,
+            "payload",
+            jsonable_encoder(run_payload),
+        )
         return run_payload
 
-    async def get_run(self, run_id: str) -> dict[str, Any] | None:
-        """Fetch a stored agent run snapshot."""
-        stmt = select(AgentRun).where(AgentRun.run_id == run_id)
-        record = (await self.session.execute(stmt)).scalar_one_or_none()
-        if record is None:
-            return None
-        return dict(record.payload)
+    async def _emit_event(
+        self,
+        emit: EventCallback | None,
+        event: str,
+        data: dict[str, Any],
+    ) -> None:
+        """Send one stage event when a stream callback is present."""
+        if emit is None:
+            return
+        result = emit({"event": event, "data": data})
+        if result is not None:
+            await result
 
     async def _store_run(self, payload: dict[str, Any]) -> None:
         """Persist a JSON-safe playback snapshot."""

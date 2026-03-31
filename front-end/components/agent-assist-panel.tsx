@@ -1,9 +1,14 @@
 "use client";
 
-import { startTransition, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { assistWithAgents, createMaintenanceTask, getAgentRun } from "@/lib/api";
+import {
+  assistWithAgents,
+  buildAgentAssistStreamUrl,
+  createMaintenanceTask,
+  getAgentRun,
+} from "@/lib/api";
 import { SectionCard } from "@/components/section-card";
 import type {
   AgentAssistResponse,
@@ -43,6 +48,13 @@ type ScenarioPreset = {
   equipmentModel: string;
   faultType: string;
   query: string;
+};
+
+type StreamEventItem = {
+  id: string;
+  title: string;
+  detail: string;
+  tone: string;
 };
 
 const SCENARIO_PRESETS: ScenarioPreset[] = [
@@ -176,6 +188,7 @@ export function AgentAssistPanel({
   recentCases,
 }: AgentAssistPanelProps) {
   const router = useRouter();
+  const streamRef = useRef<EventSource | null>(null);
   const [draft, setDraft] = useState<IntakeDraft>({
     workOrderId: SCENARIO_PRESETS[0].workOrderId,
     assetCode: SCENARIO_PRESETS[0].assetCode,
@@ -196,6 +209,31 @@ export function AgentAssistPanel({
   const [result, setResult] = useState<AgentAssistResponse | null>(null);
   const [selectedChunkIds, setSelectedChunkIds] = useState<number[]>([]);
   const [replayRunId, setReplayRunId] = useState("");
+  const [streamEvents, setStreamEvents] = useState<StreamEventItem[]>([]);
+
+  useEffect(() => {
+    return () => {
+      streamRef.current?.close();
+      streamRef.current = null;
+    };
+  }, []);
+
+  function closeStream() {
+    streamRef.current?.close();
+    streamRef.current = null;
+  }
+
+  function appendStreamEvent(title: string, detail: string, tone = "status-pending") {
+    setStreamEvents((current) => [
+      ...current,
+      {
+        id: `${Date.now()}-${current.length}`,
+        title,
+        detail,
+        tone,
+      },
+    ]);
+  }
 
   function applyPreset(preset: ScenarioPreset) {
     setDraft({
@@ -220,10 +258,129 @@ export function AgentAssistPanel({
   }
 
   async function handleRun(useSelectedKnowledge = false) {
+    closeStream();
     setLoading(true);
     setError(null);
+    setStreamEvents([]);
     try {
-      const imageBase64 = imageFile ? await toBase64(imageFile) : null;
+      if (!imageFile) {
+        appendStreamEvent("协作连接", "正在建立 Agent 流式协作连接。");
+        const streamUrl = buildAgentAssistStreamUrl({
+          work_order_id: draft.workOrderId || null,
+          asset_code: draft.assetCode || null,
+          report_source: draft.reportSource || null,
+          priority: draft.priority,
+          query: draft.query,
+          equipment_type: draft.equipmentType || null,
+          equipment_model: draft.equipmentModel || null,
+          fault_type: draft.faultType || null,
+          maintenance_level: draft.maintenanceLevel,
+          selected_chunk_ids: useSelectedKnowledge ? selectedChunkIds : [],
+          limit: 6,
+        });
+        const source = new EventSource(streamUrl);
+        streamRef.current = source;
+
+        source.addEventListener("connected", () => {
+          appendStreamEvent("流式连接", "已建立连接，开始接收协作阶段事件。");
+        });
+
+        source.addEventListener("stage_start", (event) => {
+          const payload = JSON.parse((event as MessageEvent).data) as {
+            title?: string;
+            message?: string;
+          };
+          appendStreamEvent(payload.title || "阶段开始", payload.message || "正在执行。");
+        });
+
+        source.addEventListener("stage_finish", (event) => {
+          const payload = JSON.parse((event as MessageEvent).data) as {
+            title?: string;
+            summary?: string;
+            authorization_required?: boolean;
+            blocking_issues?: string[];
+          };
+          const detail = [
+            payload.summary || "已完成当前阶段。",
+            payload.authorization_required ? "当前阶段涉及人工授权。" : "",
+            payload.blocking_issues?.length ? `拦截项：${payload.blocking_issues.join(" / ")}` : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+          appendStreamEvent(payload.title || "阶段完成", detail, "status-ready");
+        });
+
+        source.addEventListener("tool_call", (event) => {
+          const payload = JSON.parse((event as MessageEvent).data) as {
+            title?: string;
+            summary?: string;
+            status?: string;
+            blocking?: boolean;
+            requires_human_authorization?: boolean;
+            details?: string[];
+          };
+          const detail = [
+            payload.summary || "工具已执行。",
+            payload.blocking ? "当前工具触发执行拦截。" : "",
+            payload.requires_human_authorization ? "当前工具要求人工授权。" : "",
+            payload.details?.length ? payload.details.join(" / ") : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+          appendStreamEvent(
+            payload.title || "工具执行",
+            detail,
+            payload.blocking ? "status-review" : "status-ready",
+          );
+        });
+
+        source.addEventListener("result", (event) => {
+          const payload = JSON.parse((event as MessageEvent).data) as {
+            summary?: string;
+            execution_status?: string;
+          };
+          appendStreamEvent(
+            "协作结论",
+            payload.summary || "协作已完成，正在下发最终结果。",
+            payload.execution_status === "ready" ? "status-ready" : "status-review",
+          );
+        });
+
+        source.addEventListener("payload", (event) => {
+          const payload = JSON.parse((event as MessageEvent).data) as AgentAssistResponse;
+          setResult(payload);
+          setReplayRunId(payload.run_id);
+          setSelectedChunkIds(payload.request_context?.selected_chunk_ids ?? []);
+          setLoading(false);
+        });
+
+        source.addEventListener("stream_error", (event) => {
+          const payload = JSON.parse((event as MessageEvent).data) as { error?: string };
+          setError(payload.error || "流式协作失败");
+          appendStreamEvent("流式协作失败", payload.error || "服务端流式执行失败。", "status-pending");
+          closeStream();
+          setLoading(false);
+        });
+
+        source.addEventListener("done", () => {
+          appendStreamEvent("流式结束", "本次协作流已结束，可查看最终结果。", "status-muted");
+          closeStream();
+          setLoading(false);
+        });
+
+        source.onerror = () => {
+          if (streamRef.current) {
+            setError("流式协作连接中断，请重试。");
+            appendStreamEvent("连接中断", "流式连接已中断，已停止当前协作流。", "status-pending");
+            closeStream();
+            setLoading(false);
+          }
+        };
+        return;
+      }
+
+      appendStreamEvent("图片输入回退", "检测到图片输入，本次改用现有同步协作接口。", "status-review");
+      const imageBase64 = await toBase64(imageFile);
       const payload = await assistWithAgents({
         work_order_id: draft.workOrderId || null,
         asset_code: draft.assetCode || null,
@@ -243,14 +400,19 @@ export function AgentAssistPanel({
       setResult(payload);
       setReplayRunId(payload.run_id);
       setSelectedChunkIds(payload.request_context?.selected_chunk_ids ?? []);
+      appendStreamEvent("同步协作完成", "图片协作已完成，已收到最终结果。", "status-ready");
     } catch (runError) {
       setError(runError instanceof Error ? runError.message : "Agent 协作失败");
-    } finally {
       setLoading(false);
+    } finally {
+      if (imageFile) {
+        setLoading(false);
+      }
     }
   }
 
   async function handleLoadRun() {
+    closeStream();
     if (!replayRunId.trim()) {
       setError("请输入需要回放的 Run ID。");
       return;
@@ -258,6 +420,7 @@ export function AgentAssistPanel({
 
     setReplayLoading(true);
     setError(null);
+    setStreamEvents([]);
     try {
       const payload = await getAgentRun(replayRunId.trim());
       setResult(payload);
@@ -580,6 +743,27 @@ export function AgentAssistPanel({
       </div>
 
       {error ? <p className="errorText">{error}</p> : null}
+
+      {streamEvents.length ? (
+        <SectionCard
+          title="流式执行进度"
+          description="P0 第二批已把 `/agents` 主链路升级为阶段事件流，执行中会持续推送阶段状态和工具结果。"
+        >
+          <div className="stackList">
+            {streamEvents.map((item) => (
+              <article key={item.id} className="resultCard">
+                <div className="selectionSummary">
+                  <div className="resultMeta">
+                    <h3>{item.title}</h3>
+                    <p>{item.detail}</p>
+                  </div>
+                  <span className={`statusBadge ${item.tone}`}>{loading ? "进行中" : "已记录"}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </SectionCard>
+      ) : null}
 
       {result ? (
         <div className="panelStack">
