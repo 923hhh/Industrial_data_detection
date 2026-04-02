@@ -311,7 +311,9 @@ def build_anchored_chunk_payloads(
     for segment in segments:
         text = segment["text"] or ""
         candidate = (
-            f"{'\n\n'.join(current_segments)}\n\n{text}".strip() if current_segments else text
+            ("\n\n".join(current_segments) + f"\n\n{text}").strip()
+            if current_segments
+            else text
         )
         if current_segments and len(candidate) > max_chars:
             flush_current()
