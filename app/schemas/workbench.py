@@ -47,6 +47,16 @@ class WorkbenchCaseSummary(BaseModel):
     updated_at: datetime | None = None
 
 
+class WorkbenchMetricHighlight(BaseModel):
+    """Compact metric highlight for evaluation and runtime snapshots."""
+
+    key: str
+    label: str
+    value: str
+    description: str | None = None
+    accent: str = "neutral"
+
+
 class WorkbenchOverviewResponse(BaseModel):
     """Aggregated workbench overview for the formal front-end."""
 
@@ -54,5 +64,7 @@ class WorkbenchOverviewResponse(BaseModel):
     stats: list[WorkbenchStatCard] = Field(default_factory=list)
     featured_queries: list[str] = Field(default_factory=list)
     agent_capabilities: list[str] = Field(default_factory=list)
+    quality_highlights: list[WorkbenchMetricHighlight] = Field(default_factory=list)
+    runtime_highlights: list[WorkbenchMetricHighlight] = Field(default_factory=list)
     recent_tasks: list[WorkbenchTaskSummary] = Field(default_factory=list)
     recent_cases: list[WorkbenchCaseSummary] = Field(default_factory=list)

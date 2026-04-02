@@ -40,8 +40,18 @@ export type WorkbenchOverviewResponse = {
   stats: WorkbenchStatCard[];
   featured_queries: string[];
   agent_capabilities: string[];
+  quality_highlights: WorkbenchMetricHighlight[];
+  runtime_highlights: WorkbenchMetricHighlight[];
   recent_tasks: WorkbenchTaskSummary[];
   recent_cases: WorkbenchCaseSummary[];
+};
+
+export type WorkbenchMetricHighlight = {
+  key: string;
+  label: string;
+  value: string;
+  description?: string | null;
+  accent: string;
 };
 
 export type KnowledgeSearchHit = {

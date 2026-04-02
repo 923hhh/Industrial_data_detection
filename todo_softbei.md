@@ -354,7 +354,7 @@
   - 高风险或应急场景下会明确输出 `authorization_required` 与 `blocking_issues`。
   - `/agents` 和 `/tasks/[id]` 可以直接看到前置条件和授权提示。
 - 依赖关系：依赖 `TODO-SB-4`、`TODO-SB-6`、`TODO-SB-9` 的现有正式链路和后端基础设施。
-- 状态：进行中（第一批“工具注册表 + 合规执行基础”、第二批“正式主链路事件流化”和第三批“层级化知识锚点与可定位检索”已完成，P0 最后一项“评测集与业务指标固化”待继续）
+- 状态：已完成（第一批“工具注册表 + 合规执行基础”、第二批“正式主链路事件流化”、第三批“层级化知识锚点与可定位检索”和第四批“评测集与业务指标固化”已全部完成）
 
 ## 风险清单
 
@@ -448,7 +448,24 @@
   - 已执行全量 `pytest -q` 回归，当前结果更新为 `73 passed, 6 skipped`。
 - 当前遗留问题：
   - 当前锚点抽取仍以规则解析为主，尚未接入更强的章节树解析或图文统一结构化理解。
-  - P0 最后一项“评测集与业务指标固化”仍待继续。
+  - P0 主线已收口，后续更适合进入 Patch 化审核、知识版本化和更强的多模态检索增强。
+
+### 2026-04-02（TODO-SB-10 P0 第四批）
+
+- 已完成 `评测集与业务指标固化`，`TODO-SB-10` 至此全部收口。
+- 当前处理：
+  - 已扩展 `scripts/run_softbei_eval.py`，让评测结果正式覆盖 `Top1 / Top3`、来源锚点覆盖、Agent 协作成功、Run 回放成功、工具调用覆盖和人工授权命中等指标。
+  - 已为评测案例补 `priority`、`maintenance_level` 和 `authorization_expected` 字段，使评测不再只看检索命中，也能覆盖高风险授权判定。
+  - 已扩展 `app/evaluation/softbei_metrics.py`，新增工作台可直接展示的评测快照和运行时业务指标摘要构造逻辑。
+  - 已将 `evaluation/softbei_eval_results.json` 和进程内 `/api/v1/system/metrics` 接入工作台概览，让首页同时展示固定评测成绩和当前运行指标。
+  - 已将正式工作台首页补成“统计卡片 + 固定检索词/Agent 能力 + 评测快照 + 运行指标 + 最近任务/案例”的完整结构。
+- 验证结果：
+  - `pytest -q tests/test_phase17_evaluation.py tests/test_phase18_workbench_agents.py tests/test_phase20_observability.py` 通过，结果为 `10 passed`。
+  - `front-end` 的 `npm run typecheck` 通过。
+  - 已执行全量 `pytest -q` 回归，当前结果更新为 `74 passed, 6 skipped`。
+- 当前遗留问题：
+  - 当前评测仍以固定文本场景为主，尚未把真实图片样本和外部视觉模型调用稳定纳入自动化。
+  - 工作台首页展示的是最近一次落盘评测结果，如需刷新最新指标仍需重新执行 `scripts/run_softbei_eval.py`。
 
 ### 2026-03-28（TODO-SB-3）
 

@@ -69,6 +69,17 @@ def result_matches_case(results: list[dict[str, Any]], case: dict[str, Any]) -> 
     return False
 
 
+def top_result_has_anchor(result: dict[str, Any] | None) -> bool:
+    if not result:
+        return False
+    return bool(
+        result.get("section_path")
+        or result.get("step_anchor")
+        or result.get("page_reference")
+        or result.get("image_anchor")
+    )
+
+
 def build_keyword_baseline_docs(seed_documents: list[dict[str, Any]]) -> list[dict[str, Any]]:
     docs: list[dict[str, Any]] = []
     for doc in seed_documents:
@@ -159,39 +170,88 @@ async def execute_case_flow(client: AsyncClient, case: dict[str, Any]) -> dict[s
     search_data = search_response.json()
 
     retrieval_hit = result_matches_case(search_data["results"], case)
+    top1_hit = result_matches_case(search_data["results"][:1], case)
+    top3_hit = result_matches_case(search_data["results"][:3], case)
+    top_result = search_data["results"][0] if search_data["results"] else None
     citation_ok = False
     if retrieval_hit and search_data["results"]:
-        best = search_data["results"][0]
-        citation_ok = bool(best.get("source_name")) and bool(
-            best.get("section_reference") or best.get("page_reference")
+        citation_ok = bool(top_result.get("source_name")) and bool(
+            top_result.get("section_reference") or top_result.get("page_reference")
         )
 
     record: dict[str, Any] = {
         "case_id": case["id"],
         "category": case["category"],
+        "equipment_model": case.get("equipment_model"),
         "query": case["query"],
         "retrieval_hit": retrieval_hit,
+        "top1_hit": top1_hit,
+        "top3_hit": top3_hit,
+        "same_model_expected": bool(case.get("equipment_model")),
+        "same_model_hit": bool(
+            top_result
+            and case.get("equipment_model")
+            and normalize_text(top_result.get("equipment_model")) == normalize_text(case.get("equipment_model"))
+        ),
         "citation_ok": citation_ok,
+        "anchor_trace_ok": top_result_has_anchor(top_result),
         "workflow_expected": bool(case.get("workflow_expected")),
         "workflow_completed": False,
         "feedback_expected": bool(case.get("feedback_expected")),
         "feedback_hit": False,
+        "agent_expected": bool(case.get("workflow_expected")),
+        "agent_completed": False,
+        "tooling_ok": False,
+        "run_playback_ok": False,
+        "authorization_expected": case.get("authorization_expected"),
+        "authorization_required": None,
+        "authorization_ok": None,
         "result_count": search_data["total"],
-        "top_title": search_data["results"][0]["title"] if search_data["results"] else None,
-        "top_source_name": search_data["results"][0]["source_name"] if search_data["results"] else None,
+        "top_title": top_result["title"] if top_result else None,
+        "top_source_name": top_result["source_name"] if top_result else None,
         "task_id": None,
         "case_record_id": None,
         "approved_document_id": None,
+        "agent_run_id": None,
     }
 
     if not retrieval_hit or not case.get("workflow_expected"):
         return record
 
+    agent_payload = {
+        "query": case["query"],
+        "equipment_type": case["equipment_type"],
+        "equipment_model": case.get("equipment_model"),
+        "fault_type": case.get("fault_type"),
+        "priority": case.get("priority", "medium"),
+        "maintenance_level": case.get("maintenance_level", "standard"),
+        "limit": 5,
+        "selected_chunk_ids": [item["chunk_id"] for item in search_data["results"][:2]],
+    }
+    agent_response = await client.post("/api/v1/agents/assist", json=agent_payload)
+    agent_response.raise_for_status()
+    agent_data = agent_response.json()
+    record["agent_run_id"] = agent_data["run_id"]
+    record["agent_completed"] = bool(agent_data.get("execution_brief")) and agent_data.get("status") == "completed"
+    record["tooling_ok"] = len(agent_data.get("tool_calls") or []) >= 4
+    record["authorization_required"] = (
+        (agent_data.get("execution_brief") or {}).get("authorization_required")
+    )
+    if case.get("authorization_expected") is not None:
+        record["authorization_ok"] = bool(case.get("authorization_expected")) == bool(
+            record["authorization_required"]
+        )
+
+    playback_response = await client.get(f"/api/v1/agents/runs/{agent_data['run_id']}")
+    playback_response.raise_for_status()
+    playback_data = playback_response.json()
+    record["run_playback_ok"] = playback_data.get("run_id") == agent_data["run_id"]
+
     selected_chunk_ids = [item["chunk_id"] for item in search_data["results"][:2]]
     task_payload = {
         "equipment_type": case["equipment_type"],
         "equipment_model": case.get("equipment_model"),
-        "maintenance_level": "standard",
+        "maintenance_level": case.get("maintenance_level", "standard"),
         "fault_type": case.get("fault_type"),
         "symptom_description": case["query"],
         "source_chunk_ids": selected_chunk_ids,
@@ -319,17 +379,75 @@ async def run_evaluation() -> dict[str, Any]:
 
     direct_llm_baseline = {
         "case_count": len(cases),
-        "retrieval": {"hits": 0, "total": len(cases), "hit_rate": 0.0},
-        "citation": {"hits": 0, "total": len(cases), "coverage_rate": 0.0},
+        "retrieval": {
+            "hits": 0,
+            "total": len(cases),
+            "hit_rate": 0.0,
+            "top1_hits": 0,
+            "top1_hit_rate": 0.0,
+            "top3_hits": 0,
+            "top3_hit_rate": 0.0,
+            "same_model_hits": 0,
+            "same_model_total": 0,
+            "same_model_hit_rate": 0.0,
+        },
+        "citation": {
+            "hits": 0,
+            "total": len(cases),
+            "coverage_rate": 0.0,
+            "anchor_hits": 0,
+            "anchor_trace_rate": 0.0,
+        },
         "workflow": {"hits": 0, "total": len(cases), "completion_rate": 0.0},
         "feedback": {"hits": 0, "total": len(cases), "recall_rate": 0.0},
+        "agent": {
+            "hits": 0,
+            "total": len(cases),
+            "success_rate": 0.0,
+            "playback_hits": 0,
+            "playback_rate": 0.0,
+            "tool_hits": 0,
+            "tool_coverage_rate": 0.0,
+            "authorization_hits": 0,
+            "authorization_total": 0,
+            "authorization_hit_rate": 0.0,
+        },
     }
     legacy_diagnosis_baseline = {
         "case_count": len(cases),
-        "retrieval": {"hits": 0, "total": len(cases), "hit_rate": 0.0},
-        "citation": {"hits": 0, "total": len(cases), "coverage_rate": 0.0},
+        "retrieval": {
+            "hits": 0,
+            "total": len(cases),
+            "hit_rate": 0.0,
+            "top1_hits": 0,
+            "top1_hit_rate": 0.0,
+            "top3_hits": 0,
+            "top3_hit_rate": 0.0,
+            "same_model_hits": 0,
+            "same_model_total": 0,
+            "same_model_hit_rate": 0.0,
+        },
+        "citation": {
+            "hits": 0,
+            "total": len(cases),
+            "coverage_rate": 0.0,
+            "anchor_hits": 0,
+            "anchor_trace_rate": 0.0,
+        },
         "workflow": {"hits": 0, "total": len(cases), "completion_rate": 0.0},
         "feedback": {"hits": 0, "total": len(cases), "recall_rate": 0.0},
+        "agent": {
+            "hits": 0,
+            "total": len(cases),
+            "success_rate": 0.0,
+            "playback_hits": 0,
+            "playback_rate": 0.0,
+            "tool_hits": 0,
+            "tool_coverage_rate": 0.0,
+            "authorization_hits": 0,
+            "authorization_total": 0,
+            "authorization_hit_rate": 0.0,
+        },
     }
 
     return {

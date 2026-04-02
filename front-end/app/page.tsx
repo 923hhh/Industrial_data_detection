@@ -41,6 +41,32 @@ export default async function HomePage() {
       </div>
 
       <div className="twoGrid">
+        <SectionCard title="评测快照" description="固定评测集输出的正式指标，优先用于答辩和回归说明。">
+          <div className="threeGrid">
+            {(overview?.quality_highlights ?? []).map((item) => (
+              <article key={item.key} className="resultCard">
+                <p className="eyebrow">{item.label}</p>
+                <h3>{item.value}</h3>
+                {item.description ? <p className="muted">{item.description}</p> : null}
+              </article>
+            ))}
+          </div>
+        </SectionCard>
+
+        <SectionCard title="运行指标" description="当前进程内累计的关键业务指标，用于上线后快速验收。">
+          <div className="threeGrid">
+            {(overview?.runtime_highlights ?? []).map((item) => (
+              <article key={item.key} className="resultCard">
+                <p className="eyebrow">{item.label}</p>
+                <h3>{item.value}</h3>
+                {item.description ? <p className="muted">{item.description}</p> : null}
+              </article>
+            ))}
+          </div>
+        </SectionCard>
+      </div>
+
+      <div className="twoGrid">
         <SectionCard title="最近任务" description="标准化检修任务与进度摘要。">
           <div className="tableCard">
             <table>
@@ -92,4 +118,3 @@ export default async function HomePage() {
     </div>
   );
 }
-

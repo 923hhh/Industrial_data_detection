@@ -2,6 +2,7 @@
 from app.routers.workbench import router
 from app.schemas.workbench import (
     WorkbenchCaseSummary,
+    WorkbenchMetricHighlight,
     WorkbenchOverviewResponse,
     WorkbenchStatCard,
     WorkbenchTaskSummary,
@@ -13,6 +14,7 @@ __all__ = [
     "WorkbenchOverviewService",
     "WorkbenchOverviewResponse",
     "WorkbenchStatCard",
+    "WorkbenchMetricHighlight",
     "WorkbenchTaskSummary",
     "WorkbenchCaseSummary",
 ]

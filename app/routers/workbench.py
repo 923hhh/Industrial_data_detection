@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.workbench import (
     WorkbenchCaseSummary,
+    WorkbenchMetricHighlight,
     WorkbenchOverviewResponse,
     WorkbenchStatCard,
     WorkbenchTaskSummary,
@@ -34,7 +35,12 @@ async def get_workbench_overview(
         stats=[WorkbenchStatCard(**item) for item in payload["stats"]],
         featured_queries=payload["featured_queries"],
         agent_capabilities=payload["agent_capabilities"],
+        quality_highlights=[
+            WorkbenchMetricHighlight(**item) for item in payload.get("quality_highlights", [])
+        ],
+        runtime_highlights=[
+            WorkbenchMetricHighlight(**item) for item in payload.get("runtime_highlights", [])
+        ],
         recent_tasks=[WorkbenchTaskSummary(**item) for item in payload["recent_tasks"]],
         recent_cases=[WorkbenchCaseSummary(**item) for item in payload["recent_cases"]],
     )
-

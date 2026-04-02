@@ -49,6 +49,7 @@ from app.schemas.agents import (
 )
 from app.schemas.workbench import (
     WorkbenchCaseSummary,
+    WorkbenchMetricHighlight,
     WorkbenchOverviewResponse,
     WorkbenchStatCard,
     WorkbenchTaskSummary,
@@ -94,4 +95,5 @@ __all__ = [
     "WorkbenchStatCard",
     "WorkbenchTaskSummary",
     "WorkbenchCaseSummary",
+    "WorkbenchMetricHighlight",
 ]

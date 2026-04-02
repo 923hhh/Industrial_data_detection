@@ -1059,3 +1059,34 @@
   - `todo_softbei.md` (updated)
   - `progress.md` (updated)
   - `findings.md` (updated)
+
+### TODO-SB-10 P0 第四批：评测集与业务指标固化
+- **Status:** complete
+- Actions taken:
+  - 扩展 `scripts/run_softbei_eval.py`，将评测结果正式覆盖 `Top1 / Top3`、来源锚点覆盖、Agent 协作成功、Run 回放成功、工具调用覆盖和人工授权命中
+  - 为 `evaluation/softbei_eval_cases.json` 增补 `priority`、`maintenance_level`、`authorization_expected` 字段，使评测可覆盖高风险授权判定
+  - 扩展 `app/evaluation/softbei_metrics.py`，新增工作台评测快照与运行时业务指标摘要构造逻辑
+  - 将 `evaluation/softbei_eval_results.json` 与进程内 `/api/v1/system/metrics` 接入 `GET /api/v1/workbench/overview`
+  - 工作台首页补“评测快照”和“运行指标”区域，正式展示固定评测成绩与当前业务指标
+  - 扩展 `tests/test_phase17_evaluation.py` 和 `tests/test_phase18_workbench_agents.py`，覆盖新评测指标与工作台概览新字段
+  - 验证 `pytest -q tests/test_phase17_evaluation.py tests/test_phase18_workbench_agents.py tests/test_phase20_observability.py` 结果为 `10 passed`
+  - 验证 `front-end` 的 `npm run typecheck` 通过
+  - 验证全量 `pytest -q` 结果更新为 `74 passed, 6 skipped`
+- Files created/modified:
+  - `app/evaluation/__init__.py` (updated)
+  - `app/evaluation/softbei_metrics.py` (updated)
+  - `app/modules/workbench/__init__.py` (updated)
+  - `app/routers/workbench.py` (updated)
+  - `app/schemas/__init__.py` (updated)
+  - `app/schemas/workbench.py` (updated)
+  - `app/services/workbench_service.py` (updated)
+  - `evaluation/softbei_eval_cases.json` (updated)
+  - `evaluation/softbei_eval_results.json` (updated)
+  - `scripts/run_softbei_eval.py` (updated)
+  - `front-end/app/page.tsx` (updated)
+  - `front-end/lib/types.ts` (updated)
+  - `tests/test_phase17_evaluation.py` (updated)
+  - `tests/test_phase18_workbench_agents.py` (updated)
+  - `todo_softbei.md` (updated)
+  - `progress.md` (updated)
+  - `findings.md` (updated)

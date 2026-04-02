@@ -37,6 +37,24 @@ async def test_workbench_overview_endpoint():
         ],
         "featured_queries": ["火花塞", "冷启动困难"],
         "agent_capabilities": ["KnowledgeRetrieverAgent", "WorkOrderPlannerAgent"],
+        "quality_highlights": [
+            {
+                "key": "eval_top1",
+                "label": "Top1 命中率",
+                "value": "66.67%",
+                "description": "8/12",
+                "accent": "cyan",
+            }
+        ],
+        "runtime_highlights": [
+            {
+                "key": "runtime_search_requests",
+                "label": "知识检索请求",
+                "value": "12",
+                "description": "平均 42 ms",
+                "accent": "blue",
+            }
+        ],
         "recent_tasks": [
             {
                 "id": 1,
@@ -75,6 +93,8 @@ async def test_workbench_overview_endpoint():
     payload = response.json()
     assert payload["stats"][0]["label"] == "知识文档"
     assert payload["featured_queries"] == ["火花塞", "冷启动困难"]
+    assert payload["quality_highlights"][0]["label"] == "Top1 命中率"
+    assert payload["runtime_highlights"][0]["value"] == "12"
     assert payload["recent_tasks"][0]["equipment_model"] == "LX200"
 
 
