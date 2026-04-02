@@ -32,18 +32,15 @@ def upgrade() -> None:
             USING gin (
               to_tsvector(
                 'simple',
-                concat_ws(
-                  ' ',
-                  coalesce(heading, ''),
-                  coalesce(content, ''),
-                  coalesce(equipment_model, ''),
-                  coalesce(fault_type, ''),
-                  coalesce(section_reference, ''),
-                  coalesce(section_path, ''),
-                  coalesce(step_anchor, ''),
-                  coalesce(page_reference, ''),
-                  coalesce(image_anchor, '')
-                )
+                coalesce(heading, '') || ' ' ||
+                coalesce(content, '') || ' ' ||
+                coalesce(equipment_model, '') || ' ' ||
+                coalesce(fault_type, '') || ' ' ||
+                coalesce(section_reference, '') || ' ' ||
+                coalesce(section_path, '') || ' ' ||
+                coalesce(step_anchor, '') || ' ' ||
+                coalesce(page_reference, '') || ' ' ||
+                coalesce(image_anchor, '')
               )
             )
             """
@@ -61,15 +58,12 @@ def downgrade() -> None:
             USING gin (
               to_tsvector(
                 'simple',
-                concat_ws(
-                  ' ',
-                  coalesce(heading, ''),
-                  coalesce(content, ''),
-                  coalesce(equipment_model, ''),
-                  coalesce(fault_type, ''),
-                  coalesce(section_reference, ''),
-                  coalesce(page_reference, '')
-                )
+                coalesce(heading, '') || ' ' ||
+                coalesce(content, '') || ' ' ||
+                coalesce(equipment_model, '') || ' ' ||
+                coalesce(fault_type, '') || ' ' ||
+                coalesce(section_reference, '') || ' ' ||
+                coalesce(page_reference, '')
               )
             )
             """

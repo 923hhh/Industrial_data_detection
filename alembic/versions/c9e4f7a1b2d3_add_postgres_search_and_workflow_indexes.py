@@ -93,13 +93,10 @@ def upgrade() -> None:
             USING gin (
               to_tsvector(
                 'simple',
-                concat_ws(
-                  ' ',
-                  coalesce(title, ''),
-                  coalesce(source_name, ''),
-                  coalesce(equipment_model, ''),
-                  coalesce(fault_type, '')
-                )
+                coalesce(title, '') || ' ' ||
+                coalesce(source_name, '') || ' ' ||
+                coalesce(equipment_model, '') || ' ' ||
+                coalesce(fault_type, '')
               )
             )
             """
@@ -111,15 +108,12 @@ def upgrade() -> None:
             USING gin (
               to_tsvector(
                 'simple',
-                concat_ws(
-                  ' ',
-                  coalesce(heading, ''),
-                  coalesce(content, ''),
-                  coalesce(equipment_model, ''),
-                  coalesce(fault_type, ''),
-                  coalesce(section_reference, ''),
-                  coalesce(page_reference, '')
-                )
+                coalesce(heading, '') || ' ' ||
+                coalesce(content, '') || ' ' ||
+                coalesce(equipment_model, '') || ' ' ||
+                coalesce(fault_type, '') || ' ' ||
+                coalesce(section_reference, '') || ' ' ||
+                coalesce(page_reference, '')
               )
             )
             """
