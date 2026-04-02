@@ -1090,3 +1090,21 @@
   - `todo_softbei.md` (updated)
   - `progress.md` (updated)
   - `findings.md` (updated)
+
+### 文档校正：补充国产化约束、轻量化选型与比赛交付标准
+- **Status:** complete
+- Actions taken:
+  - 根据第十五届软件杯 A 组赛题的真实环境约束，修正需求与技术规划文档中的关键前提，不再把 `LoongArch + 银河麒麟` 视为可忽略条件
+  - 在 `docs/SOFTBEI_REQUIREMENTS_ANALYSIS.md` 中补入 `4 核 CPU + 8GB 内存 + 256GB 硬盘` 资源约束、云端模型优先、知识锚点、Request ID/错误码等 NFR 和正式交付物清单
+  - 在 `docs/SOFTBEI_FUNCTIONAL_DESIGN.md` 中补入轻量化架构原则、统一模型网关、硬状态机证据门禁、轻量 PostgreSQL RAG 以及国产化部署口径
+  - 在 `docs/SOFTBEI_TECH_REVIEW_STATUS.md` 中补入比赛环境约束、为何不应把本地 7B/8B、Milvus、Neo4j、RLHF 作为当前主线，以及必须补入 PRD 的内容
+  - 在 `docs/SOFTBEI_TECH_IMPROVEMENT_PRIORITIES.md` 中补入“做减法”的优先级修正，明确下一步以轻量化可运行闭环、统一模型网关和硬状态机为核心
+  - 更新 `docs/SOFTBEI_SUBMISSION_CHECKLIST.md`，将源码、PPT、7 分钟视频和部署说明明确写成初赛必交材料
+- Files created/modified:
+  - `docs/SOFTBEI_REQUIREMENTS_ANALYSIS.md` (updated)
+  - `docs/SOFTBEI_FUNCTIONAL_DESIGN.md` (updated)
+  - `docs/SOFTBEI_TECH_REVIEW_STATUS.md` (updated)
+  - `docs/SOFTBEI_TECH_IMPROVEMENT_PRIORITIES.md` (updated)
+  - `docs/SOFTBEI_SUBMISSION_CHECKLIST.md` (updated)
+  - `progress.md` (updated)
+  - `findings.md` (updated)
