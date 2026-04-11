@@ -6,6 +6,7 @@ from app.modules.cases import router as cases_router
 from app.modules.diagnosis import router as diagnosis_router
 from app.modules.knowledge import router as knowledge_router
 from app.modules.tasks import router as tasks_router
+from app.modules.mvp_maintenance import router as mvp_maintenance_router
 from app.modules.workbench import router as workbench_router
 from app.routers.health import router as health_router
 from app.routers.observability import router as observability_router
@@ -14,6 +15,8 @@ from app.routers.observability import router as observability_router
 def register_routers(app: FastAPI) -> None:
     """Register all public API routers."""
     app.include_router(health_router)
+    # 检修域契约 API；legacy：tasks / agents / knowledge / cases 等仍保留用于赛题工作台
+    app.include_router(mvp_maintenance_router)
     app.include_router(observability_router)
     app.include_router(workbench_router)
     app.include_router(agents_router)

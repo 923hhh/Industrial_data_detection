@@ -18,6 +18,9 @@ import type {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:8000";
 
+/** 检修域 MVP（`/api/v1/maintenance`），与 legacy 的 tasks/agents/knowledge 并存 */
+export const maintenanceApiBase = `${API_BASE_URL}/api/v1/maintenance`;
+
 async function parseJson<T>(response: Response): Promise<T> {
   const rawText = await response.text();
   if (!response.ok) {

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-02T13:48:26.934143+00:00",
+  "generated_at": "2026-04-11T12:03:00.163680+00:00",
   "environment": {
     "database": "sqlite+aiosqlite temporary database",
     "image_path": "本轮自动评测固定使用文本 + 设备型号，不调用外部视觉模型。",
@@ -250,7 +250,7 @@
       "task_id": 1,
       "case_record_id": 1,
       "approved_document_id": 7,
-      "agent_run_id": "agent-run-37aeee332b4e"
+      "agent_run_id": "agent-run-c06b5aa38233"
     },
     {
       "case_id": "SB-02",
@@ -281,7 +281,7 @@
       "task_id": 2,
       "case_record_id": 2,
       "approved_document_id": null,
-      "agent_run_id": "agent-run-9070d701b010"
+      "agent_run_id": "agent-run-f5e016051551"
     },
     {
       "case_id": "SB-03",
@@ -312,7 +312,7 @@
       "task_id": 3,
       "case_record_id": 3,
       "approved_document_id": null,
-      "agent_run_id": "agent-run-a950d1f516b0"
+      "agent_run_id": "agent-run-7f60e00a8874"
     },
     {
       "case_id": "SB-04",
@@ -343,7 +343,7 @@
       "task_id": 4,
       "case_record_id": 4,
       "approved_document_id": 8,
-      "agent_run_id": "agent-run-b15ce2b2c4a1"
+      "agent_run_id": "agent-run-339eba450367"
     },
     {
       "case_id": "SB-05",
@@ -374,7 +374,7 @@
       "task_id": 5,
       "case_record_id": 5,
       "approved_document_id": null,
-      "agent_run_id": "agent-run-6e6d4241a6a2"
+      "agent_run_id": "agent-run-15a3257f8069"
     },
     {
       "case_id": "SB-06",
@@ -405,7 +405,7 @@
       "task_id": 6,
       "case_record_id": 6,
       "approved_document_id": 9,
-      "agent_run_id": "agent-run-18091ac37c07"
+      "agent_run_id": "agent-run-bddbe5fca973"
     },
     {
       "case_id": "SB-07",
@@ -436,7 +436,7 @@
       "task_id": 7,
       "case_record_id": 7,
       "approved_document_id": null,
-      "agent_run_id": "agent-run-f28d9568e210"
+      "agent_run_id": "agent-run-c0a99e1c7d3e"
     },
     {
       "case_id": "SB-08",
@@ -467,7 +467,7 @@
       "task_id": 8,
       "case_record_id": 8,
       "approved_document_id": 10,
-      "agent_run_id": "agent-run-ee1049c4cd2e"
+      "agent_run_id": "agent-run-fc63b2d3306e"
     },
     {
       "case_id": "SB-09",

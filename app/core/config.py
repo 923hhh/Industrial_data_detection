@@ -33,6 +33,22 @@ class Settings(BaseSettings):
     # CORS 配置
     cors_origins: list[str] = ["*"]
 
+    # 检修域 MVP：JWT 与附件存储（生产环境务必设置强随机 JWT_SECRET_KEY）
+    jwt_secret_key: str = Field(
+        default="dev-mvp-secret-change-me",
+        alias="JWT_SECRET_KEY",
+    )
+    jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
+    access_token_expire_minutes: int = Field(default=60, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
+    maintenance_upload_dir: str = Field(
+        default="./data/mvp_uploads",
+        alias="MAINTENANCE_UPLOAD_DIR",
+    )
+    attachment_sign_secret: str = Field(
+        default="dev-attachment-sign-secret",
+        alias="ATTACHMENT_SIGN_SECRET",
+    )
+
     @field_validator("debug", mode="before")
     @classmethod
     def _normalize_debug(cls, value: object) -> bool:

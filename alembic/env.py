@@ -18,8 +18,16 @@ from sqlalchemy.ext.asyncio import (
 from app.core.config import get_settings
 from app.models import (  # noqa: F401 - 导入所有模型以注册 metadata
     AgentRun,
+    Annotation,
+    ApprovalTask,
+    AuditLog,
+    AuthUser,
     Base,
+    Device,
     DeviceModel,
+    Escalation,
+    FlowTemplate,
+    KnowledgeArticle,
     KnowledgeChunk,
     KnowledgeDocument,
     KnowledgeRelation,
@@ -29,7 +37,17 @@ from app.models import (  # noqa: F401 - 导入所有模型以注册 metadata
     MaintenanceTaskStep,
     MaintenanceTaskTemplate,
     MaintenanceTaskTemplateStep,
+    MvpAttachment,
+    RetrievalSnapshot,
+    Role,
     SensorData,
+    SystemConfig,
+    UserRole,
+    WorkOrder,
+    WorkOrderEvent,
+    WorkOrderFilling,
+    WorkOrderFillingAttachment,
+    WorkOrderMessage,
 )
 
 # Alembic Config 对象
